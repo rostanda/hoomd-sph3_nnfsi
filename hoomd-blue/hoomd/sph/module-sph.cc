@@ -45,7 +45,10 @@ maintainer: dkrach, david.krach@mib.uni-stuttgart.de
 // // #include "RigidBodyIntegrator.h"
 #include "SinglePhaseFlow.h"
 #include "SinglePhaseFlowTV.h"
+#include "SinglePhaseFlowGDGD.h"
+#include "SinglePhaseFlowFS.h"
 #include "TwoPhaseFlow.h"
+#include "TwoPhaseFlowTV.h"
 #include "CustomForceCompute.h"
 
 
@@ -87,6 +90,7 @@ namespace detail
     // void export_TwoPhaseFlow(pybind11::module& m);
     // void export_SPHBaseClass(pybind11::module& m);
     void export_CustomForceCompute(pybind11::module& m);
+    // export_SinglePhaseFlowFS declared via template in SinglePhaseFlowFS.cc
 
     void export_WendlandC2(pybind11::module& m);
     void export_WendlandC4(pybind11::module& m);
@@ -176,6 +180,28 @@ PYBIND11_MODULE(_sph, m){
     export_SinglePhaseFlowTV<cubicspline, linear>(m, "SinglePFTV_CS_L");
     export_SinglePhaseFlowTV<cubicspline, tait>(m, "SinglePFTV_CS_T");
 
+    export_SinglePhaseFlowGDGD<wendlandc2, linear>(m, "SinglePFGDGD_WC2_L");
+    export_SinglePhaseFlowGDGD<wendlandc2, tait>  (m, "SinglePFGDGD_WC2_T");
+    export_SinglePhaseFlowGDGD<wendlandc4, linear>(m, "SinglePFGDGD_WC4_L");
+    export_SinglePhaseFlowGDGD<wendlandc4, tait>  (m, "SinglePFGDGD_WC4_T");
+    export_SinglePhaseFlowGDGD<wendlandc6, linear>(m, "SinglePFGDGD_WC6_L");
+    export_SinglePhaseFlowGDGD<wendlandc6, tait>  (m, "SinglePFGDGD_WC6_T");
+    export_SinglePhaseFlowGDGD<quintic,    linear>(m, "SinglePFGDGD_Q_L");
+    export_SinglePhaseFlowGDGD<quintic,    tait>  (m, "SinglePFGDGD_Q_T");
+    export_SinglePhaseFlowGDGD<cubicspline,linear>(m, "SinglePFGDGD_CS_L");
+    export_SinglePhaseFlowGDGD<cubicspline,tait>  (m, "SinglePFGDGD_CS_T");
+
+    export_SinglePhaseFlowFS<wendlandc2, linear>(m, "SinglePFFS_WC2_L");
+    export_SinglePhaseFlowFS<wendlandc2, tait>  (m, "SinglePFFS_WC2_T");
+    export_SinglePhaseFlowFS<wendlandc4, linear>(m, "SinglePFFS_WC4_L");
+    export_SinglePhaseFlowFS<wendlandc4, tait>  (m, "SinglePFFS_WC4_T");
+    export_SinglePhaseFlowFS<wendlandc6, linear>(m, "SinglePFFS_WC6_L");
+    export_SinglePhaseFlowFS<wendlandc6, tait>  (m, "SinglePFFS_WC6_T");
+    export_SinglePhaseFlowFS<quintic,    linear>(m, "SinglePFFS_Q_L");
+    export_SinglePhaseFlowFS<quintic,    tait>  (m, "SinglePFFS_Q_T");
+    export_SinglePhaseFlowFS<cubicspline,linear>(m, "SinglePFFS_CS_L");
+    export_SinglePhaseFlowFS<cubicspline,tait>  (m, "SinglePFFS_CS_T");
+
     export_TwoPhaseFlow<wendlandc2, linear, linear>(m, "TwoPF_WC2_LL");
     export_TwoPhaseFlow<wendlandc2, linear, tait>(m, "TwoPF_WC2_LT");
     export_TwoPhaseFlow<wendlandc2, tait, linear>(m, "TwoPF_WC2_TL");
@@ -200,6 +226,27 @@ PYBIND11_MODULE(_sph, m){
     export_TwoPhaseFlow<cubicspline, linear, tait>(m, "TwoPF_CS_LT");
     export_TwoPhaseFlow<cubicspline, tait, linear>(m, "TwoPF_CS_TL");
     export_TwoPhaseFlow<cubicspline, tait, tait>(m, "TwoPF_CS_TT");
+
+    export_TwoPhaseFlowTV<wendlandc2, linear, linear>(m, "TwoPFTV_WC2_LL");
+    export_TwoPhaseFlowTV<wendlandc2, linear, tait  >(m, "TwoPFTV_WC2_LT");
+    export_TwoPhaseFlowTV<wendlandc2, tait,   linear>(m, "TwoPFTV_WC2_TL");
+    export_TwoPhaseFlowTV<wendlandc2, tait,   tait  >(m, "TwoPFTV_WC2_TT");
+    export_TwoPhaseFlowTV<wendlandc4, linear, linear>(m, "TwoPFTV_WC4_LL");
+    export_TwoPhaseFlowTV<wendlandc4, linear, tait  >(m, "TwoPFTV_WC4_LT");
+    export_TwoPhaseFlowTV<wendlandc4, tait,   linear>(m, "TwoPFTV_WC4_TL");
+    export_TwoPhaseFlowTV<wendlandc4, tait,   tait  >(m, "TwoPFTV_WC4_TT");
+    export_TwoPhaseFlowTV<wendlandc6, linear, linear>(m, "TwoPFTV_WC6_LL");
+    export_TwoPhaseFlowTV<wendlandc6, linear, tait  >(m, "TwoPFTV_WC6_LT");
+    export_TwoPhaseFlowTV<wendlandc6, tait,   linear>(m, "TwoPFTV_WC6_TL");
+    export_TwoPhaseFlowTV<wendlandc6, tait,   tait  >(m, "TwoPFTV_WC6_TT");
+    export_TwoPhaseFlowTV<quintic,    linear, linear>(m, "TwoPFTV_Q_LL");
+    export_TwoPhaseFlowTV<quintic,    linear, tait  >(m, "TwoPFTV_Q_LT");
+    export_TwoPhaseFlowTV<quintic,    tait,   linear>(m, "TwoPFTV_Q_TL");
+    export_TwoPhaseFlowTV<quintic,    tait,   tait  >(m, "TwoPFTV_Q_TT");
+    export_TwoPhaseFlowTV<cubicspline, linear, linear>(m, "TwoPFTV_CS_LL");
+    export_TwoPhaseFlowTV<cubicspline, linear, tait  >(m, "TwoPFTV_CS_LT");
+    export_TwoPhaseFlowTV<cubicspline, tait,   linear>(m, "TwoPFTV_CS_TL");
+    export_TwoPhaseFlowTV<cubicspline, tait,   tait  >(m, "TwoPFTV_CS_TT");
 
     export_CustomForceCompute(m);
 

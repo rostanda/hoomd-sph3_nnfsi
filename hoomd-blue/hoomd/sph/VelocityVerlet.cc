@@ -118,18 +118,8 @@ void VelocityVerlet::integrateStepOne(uint64_t timestep)
 
     m_exec_conf->msg->notice(9) << "VelocityVerlet: Integrate Step one" << endl;
 
-    // if (m_densitymethod_set == true){
-    //     if ( m_density_method == DENSITYSUMMATION ){
-    //         std::cout << "Using DENSITYSUMMATION in Verlet" << std::endl;
-    //     }
-    //     else if (m_density_method == DENSITYCONTINUITY ){
-    //         std::cout << "Using DENSITYCONTINUITY in Verlet" << std::endl;
-    //     }
-    // }
-
         { // GPU Array Scope
         ArrayHandle<Scalar4> h_vel(m_pdata->getVelocities(), access_location::host, access_mode::readwrite);
-        // ArrayHandle<Scalar3> h_dpe(m_pdata->getDPEs(), access_location::host, access_mode::readwrite);
         ArrayHandle<Scalar> h_density(m_pdata->getDensities(), access_location::host, access_mode::readwrite);
         ArrayHandle<Scalar> h_pressure(m_pdata->getPressures(), access_location::host, access_mode::readwrite);
         ArrayHandle<Scalar3> h_accel(m_pdata->getAccelerations(), access_location::host, access_mode::read);
@@ -142,31 +132,7 @@ void VelocityVerlet::integrateStepOne(uint64_t timestep)
         for (unsigned int group_idx = 0; group_idx < group_size; group_idx++)
             {
             unsigned int j = m_group->getMemberIndex(group_idx);
-            // if (m_zero_force)
-            //     h_accel.data[j].x = h_accel.data[j].y = h_accel.data[j].z = 0.0;
 
-            // Original HOOMD Velocity Verlet Two Step NVE
-            // Scalar dx = h_vel.data[j].x * m_deltaT + Scalar(1.0 / 2.0) * h_accel.data[j].x * m_deltaT * m_deltaT;
-            // Scalar dy = h_vel.data[j].y * m_deltaT + Scalar(1.0 / 2.0) * h_accel.data[j].y * m_deltaT * m_deltaT;
-            // Scalar dz = h_vel.data[j].z * m_deltaT + Scalar(1.0 / 2.0) * h_accel.data[j].z * m_deltaT * m_deltaT;
-
-            // limit the movement of the particles
-            // if (m_limit)
-            //     {
-            //     Scalar len = sqrt(dx * dx + dy * dy + dz * dz);
-            //     if (len > m_limit_val)
-            //         {
-            //         dx = dx / len * m_limit_val;
-            //         dy = dy / len * m_limit_val;
-            //         dz = dz / len * m_limit_val;
-            //         }
-            //     }
-
-            // h_pos.data[j].x += dx;
-            // h_pos.data[j].y += dy;
-            // h_pos.data[j].z += dz;
-
-            // David 
             // dpe(t+deltaT/2) = dpe(t) + (1/2)*dpedt(t)*deltaT
             h_density.data[j] += Scalar(1.0/2.0)*h_dpedt.data[j].x*m_deltaT;
             h_pressure.data[j] += Scalar(1.0/2.0)*h_dpedt.data[j].y*m_deltaT;
@@ -224,21 +190,6 @@ void VelocityVerlet::integrateStepTwo(uint64_t timestep)
             {
             unsigned int j = m_group->getMemberIndex(group_idx);
 
-            // Original HOOMD Velocity Verlet Two Step NVE
-            // if (m_zero_force)
-            //     {
-            //     h_accel.data[j].x = h_accel.data[j].y = h_accel.data[j].z = 0.0;
-            //     }
-            // else
-            //     {
-            //     // first, calculate acceleration from the net force
-            //     Scalar minv = Scalar(1.0) / h_vel.data[j].w;
-            //     h_accel.data[j].x = h_net_force.data[j].x * minv;
-            //     h_accel.data[j].y = h_net_force.data[j].y * minv;
-            //     h_accel.data[j].z = h_net_force.data[j].z * minv;
-            //     }
-
-            // David 
             // first, calculate acceleration from the net force
             Scalar minv = Scalar(1.0) / h_vel.data[j].w;
             h_accel.data[j].x = h_net_force.data[j].x * minv;
@@ -266,22 +217,6 @@ void VelocityVerlet::integrateStepTwo(uint64_t timestep)
             h_vel.data[j].x += Scalar(1.0 / 2.0) * h_accel.data[j].x * m_deltaT;
             h_vel.data[j].y += Scalar(1.0 / 2.0) * h_accel.data[j].y * m_deltaT;
             h_vel.data[j].z += Scalar(1.0 / 2.0) * h_accel.data[j].z * m_deltaT;
-
-            // std::cout << "step 2 vel " << h_vel.data[j].x << std::endl;
-
-
-            // // limit the movement of the particles
-            // if (m_limit)
-            //     {
-            //     Scalar vel = sqrt(h_vel.data[j].x * h_vel.data[j].x + h_vel.data[j].y * h_vel.data[j].y
-            //                       + h_vel.data[j].z * h_vel.data[j].z);
-            //     if ((vel * m_deltaT) > m_limit_val)
-            //         {
-            //         h_vel.data[j].x = h_vel.data[j].x / vel * m_limit_val / m_deltaT;
-            //         h_vel.data[j].y = h_vel.data[j].y / vel * m_limit_val / m_deltaT;
-            //         h_vel.data[j].z = h_vel.data[j].z / vel * m_limit_val / m_deltaT;
-            //         }
-            //     }
             }
         } // End GPU Array Scope
     }

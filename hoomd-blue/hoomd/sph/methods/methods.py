@@ -135,7 +135,7 @@ class VelocityVerlet(Method):
     # @property
     def densitymethod(self):
         # Invert key mapping
-        invD = dict((v,k) for k, v in self.DENSITYMETHODS.iteritems())
+        invD = dict((v,k) for k, v in self.DENSITYMETHODS.items())
         return invD[self._cpp_obj.getDensityMethod()]
 
     # @densitymethod.setter
@@ -214,7 +214,7 @@ class VelocityVerletBasic(Method):
     # @property
     def densitymethod(self):
         # Invert key mapping
-        invD = dict((v,k) for k, v in self.DENSITYMETHODS.iteritems())
+        invD = dict((v,k) for k, v in self.DENSITYMETHODS.items())
         return invD[self._cpp_obj.getDensityMethod()]
 
     # @densitymethod.setter
@@ -303,7 +303,7 @@ class KickDriftKickTV(Method):
     # @property
     def densitymethod(self):
         # Invert key mapping
-        invD = dict((v,k) for k, v in self.DENSITYMETHODS.iteritems())
+        invD = dict((v,k) for k, v in self.DENSITYMETHODS.items())
         return invD[self._cpp_obj.getDensityMethod()]
 
     # @densitymethod.setter
@@ -318,8 +318,8 @@ class KickDriftKickTV(Method):
 
     # @densitymethod.setter
     def setvLimit(self, limit_val):
-        if vlimit_val > 0:
-            self._cpp_obj.setvLimit(vlimit_val)
+        if limit_val > 0:
+            self._cpp_obj.setvLimit(limit_val)
         else:
             raise ValueError("vlimit_val must be positive.")
 

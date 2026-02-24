@@ -80,7 +80,6 @@ from hoomd.data.parameterdicts import ParameterDict, TypeParameterDict
 from hoomd.data.typeparam import TypeParameter
 from hoomd.data.typeconverter import OnlyFrom, OnlyTypes, nonnegative_real
 from hoomd.logging import log
-#from hoomd.mesh import Mesh
 from hoomd.operation import Compute
 
 
@@ -115,20 +114,14 @@ class NeighborList(Compute):
     """
 
     def __init__(self, buffer, exclusions, rebuild_check_delay, check_dist,
-                 # mesh
                  kappa, default_r_cut):
 
         validate_exclusions = OnlyFrom([
-            'bond', 
-            #'angle', 
-            'constraint', 
-            #'dihedral', 
-            # 'special_pair', 
+            'bond',
+            'constraint',
             'body',
             '1-3', '1-4', 'meshbond'
         ])
-
-        # validate_mesh = OnlyTypes(Mesh, allow_none=True)
 
         tp_r_cut = TypeParameter(
             'r_cut', 'particle_types',
@@ -145,18 +138,10 @@ class NeighborList(Compute):
         params["exclusions"] = exclusions
         self._param_dict.update(params)
 
-        # self._mesh = validate_mesh(mesh)
-
         self._in_context_manager = False
 
     def _attach_hook(self):
-        # if self._mesh is not None:
-        #     self._cpp_obj.addMesh(self._mesh._cpp_obj)
         self._cpp_obj.setKernelFactor(self._param_dict._dict["kappa"])
-
-    # def _detach_hook(self):
-    #     if self._mesh is not None:
-    #         self._mesh._detach_hook()
 
     @property
     def cpu_local_nlist_arrays(self):
@@ -386,12 +371,10 @@ class Cell(NeighborList):
                  rebuild_check_delay=1,
                  check_dist=True,
                  deterministic=False,
-                 # mesh=None,
-                 kappa = 3, 
+                 kappa=3,
                  default_r_cut=0.0):
 
         super().__init__(buffer, exclusions, rebuild_check_delay, check_dist,
-                         # mesh
                          kappa, default_r_cut)
 
         self._param_dict.update(
@@ -496,13 +479,11 @@ class Stencil(NeighborList):
                  rebuild_check_delay=1,
                  check_dist=True,
                  deterministic=False,
-                 # mesh=None
-                 kappa = 3,
+                 kappa=3,
                  default_r_cut=0.0
                  ):
 
         super().__init__(buffer, exclusions, rebuild_check_delay, check_dist,
-                         # mesh
                          kappa, default_r_cut=0.0)
 
         params = ParameterDict(deterministic=bool(deterministic),
@@ -573,12 +554,10 @@ class Tree(NeighborList):
                  exclusions=('bond',),
                  rebuild_check_delay=1,
                  check_dist=True,
-                 # mesh=None
-                 kappa = 3,
+                 kappa=3,
                  default_r_cut=0.0):
 
         super().__init__(buffer, exclusions, rebuild_check_delay, check_dist,
-                         #mesh
                          kappa, default_r_cut)
 
     def _attach_hook(self):

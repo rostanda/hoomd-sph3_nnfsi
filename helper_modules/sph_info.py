@@ -44,20 +44,23 @@ import gsd.hoomd
 
 
 def print_decomp_info(sim, device):
-    """
-    
+    """Print MPI domain-decomposition information to stdout.
+
+    Outputs the domain decomposition layout, the positions of the split
+    planes, and the number of particles held by each MPI rank.  Only the
+    domain decomposition and split-plane lines are printed on rank 0; the
+    per-rank particle count is printed by every rank.
 
     Parameters
     ----------
-    sim : hoomd simulation type 
-        DESCRIPTION.
-    device : hoomd device type
-        DESCRIPTION.
-    
+    sim : hoomd.Simulation
+        Active HOOMD simulation object.
+    device : hoomd.device.Device
+        HOOMD device; used to identify rank 0 for selective output.
+
     Returns
     -------
-    Nothing.
-
+    None
     """
 
     # Print the domain decomposition.

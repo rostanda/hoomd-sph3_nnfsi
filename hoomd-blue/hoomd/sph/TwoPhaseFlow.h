@@ -167,9 +167,27 @@ class PYBIND11_EXPORT TwoPhaseFlow : public SPHBaseClass<KT_, SET1_>
             m_compute_solid_forces = true;
             }
 
-        /*! Turn Monaghan type artificial viscosity option on.
-         * \param alpha Volumetric diffusion coefficient for artificial viscosity operator
-         * \param beta Shock diffusion coefficient for artificial viscosity operator
+        /*! Turn Monaghan artificial viscosity (AV) on.
+         *
+         *  Adds a viscous dissipation term to the pressure force for approaching
+         *  fluid particle pairs (v_ij · r_ij < 0) only.  The Monaghan 1992 form:
+         *
+         *    Π_ij = (−α c_max μ_ij + β μ_ij²) / ρ̄_ij
+         *
+         *  where  μ_ij = h̄ (v_ij · r_ij) / (r_ij² + η²),  η = 0.1 h̄,
+         *         c_max is the global maximum speed of sound (from setParams),
+         *         ρ̄_ij = (ρ_i + ρ_j) / 2.
+         *
+         *  The linear term (α) diffuses velocity divergence; the quadratic term (β)
+         *  is a Rankine–Hugoniot correction active only in shock-like conditions.
+         *  For most weakly-compressible flows β = 0 and α ∈ [0.01, 0.1] suffices.
+         *  Applied only to fluid–fluid pairs.  Mutually exclusive with Riemann
+         *  dissipation (activateRiemannDissipation).
+         *
+         *  Reference: Monaghan (1992) Annu. Rev. Astron. Astrophys. 30, 543–574.
+         *
+         * \param alpha  Linear (volumetric) diffusion coefficient
+         * \param beta   Quadratic (shock) diffusion coefficient
          */
         void activateArtificialViscosity(Scalar alpha, Scalar beta)
             {
@@ -185,8 +203,102 @@ class PYBIND11_EXPORT TwoPhaseFlow : public SPHBaseClass<KT_, SET1_>
             m_artificial_viscosity = false;
             }
 
-        /*! Turn Molteni type density diffusion option on.
-         * \param ddiff Diffusion coefficient for artificial density diffusion operator
+        /*! Turn consistent interface pressure (CIP) on.
+         *
+         *  For DENSITYSUMMATION and cross-phase fluid pairs (fluid 1 ↔ fluid 2),
+         *  replaces the standard actual-density-weighted pressure average
+         *
+         *    p̄_ij = (ρ_j · p_i  +  ρ_i · p_j) / (ρ_i + ρ_j)            [standard]
+         *
+         *  with a rest-density-weighted form plus a hydrostatic correction:
+         *
+         *    p̄_ij = (ρ₀ⱼ · p_i  +  ρ₀ᵢ · p_j  +  ρ₀ᵢ ρ₀ⱼ (g · r_ij)) / (ρ₀ᵢ + ρ₀ⱼ)
+         *
+         *  where g = getAcceleration(timestep) is the body-force acceleration and
+         *  r_ij = r_i − r_j.
+         *
+         *  Physical motivation: in hydrostatic equilibrium the pressure gradient is
+         *  ∇p = ρ g, which is discontinuous at a density-ratio interface.  The
+         *  standard density-weighted average introduces a systematic error proportional
+         *  to (ρ₁ − ρ₂) that drives spurious "parasitic" interfacial velocities.
+         *  Rest-density weighting removes this bias; the g · r_ij term ensures the
+         *  discretised pressure gradient exactly reproduces gravity for a static column,
+         *  regardless of density ratio.  Especially beneficial for water/air (ρ ratio
+         *  ~ 1000:1) cases.
+         *
+         *  Same-phase pairs, solid-boundary interactions, and DENSITYCONTINUITY are
+         *  unaffected.  May be combined with Riemann dissipation.
+         *
+         *  Reference: Hu & Adams (2009) J. Comput. Phys. 228(20), 7518–7530.
+         *             Adami, Hu & Adams (2012) J. Comput. Phys. 231(21), 7057–7075.
+         */
+        void activateConsistentInterfacePressure()
+            {
+            m_consistent_interface_pressure = true;
+            }
+
+        /*! Turn consistent interface pressure off.
+         */
+        void deactivateConsistentInterfacePressure()
+            {
+            m_consistent_interface_pressure = false;
+            }
+
+        /*! Turn Riemann-based dissipation on.
+         *
+         *  Replaces Monaghan AV with a physically-motivated dissipation derived from
+         *  the linearised inter-particle Riemann problem.  Uses the harmonic mean of
+         *  acoustic impedances Z = ρ c to handle density and speed-of-sound contrasts
+         *  across the interface naturally:
+         *
+         *    Z*_ij  =  Z_i · Z_j / (Z_i + Z_j),   Z = ρ c        [harmonic impedance]
+         *    u_ij   =  (v_i − v_j) · (r_i − r_j) / (|r_ij| + η)  [signed radial vel.]
+         *    avc    =  −β_R · Z*_ij · u_ij⁻ / ρ̄_ij               (u⁻ = min(u, 0))
+         *
+         *  where ρ̄_ij = (ρ_i + ρ_j) / 2.  Applied only to approaching fluid–fluid
+         *  pairs (v_ij · r_ij < 0).  Mutually exclusive with Monaghan AV.
+         *
+         *  Advantages over Monaghan AV for two-phase flows:
+         *    - No α/β parameters to tune per problem (only one global β_R ≈ 1).
+         *    - Impedance mismatch at the interface is handled automatically:
+         *      Z* → Z_light/2 when Z_heavy >> Z_light (e.g. water/air).
+         *    - Low dissipation in smooth regions; increases only near shocks/interfaces.
+         *
+         *  Reference: Zhang, Hu & Adams (2017) J. Comput. Phys. 340, 439–455.
+         *
+         * \param beta  Dissipation scaling coefficient (default 1.0; reduce towards
+         *              0.5 for smoother flows if over-damping is observed)
+         */
+        void activateRiemannDissipation(Scalar beta = Scalar(1.0))
+            {
+            m_riemann_dissipation = true;
+            m_riemann_beta = beta;
+            }
+
+        /*! Turn Riemann-based dissipation off.
+         */
+        void deactivateRiemannDissipation()
+            {
+            m_riemann_dissipation = false;
+            }
+
+        /*! Turn Molteni–Colagrossi density diffusion on (DENSITYCONTINUITY only).
+         *
+         *  Adds a diffusive correction to dρ/dt to smooth density oscillations:
+         *
+         *    dρ_i/dt += −2 δ h̄ c_max m_j (ρ_i/ρ₀ᵢ − ρ_j/ρ₀ⱼ) (r_ij · ∇W_ij) / (r²+η²)
+         *
+         *  The drive term (ρ_i/ρ₀ᵢ − ρ_j/ρ₀ⱼ) is the rest-density-normalised form
+         *  rather than the original (ρ_i/ρ_j − 1).  The original is non-zero at
+         *  equilibrium when the two phases have different rest densities (ρ₀₁ ≠ ρ₀₂),
+         *  causing unphysical density drift across the interface.  The normalised form
+         *  equals zero at equilibrium for both single- and two-phase flows, correcting
+         *  stratified-flow artefacts.
+         *
+         *  Reference: Molteni & Colagrossi (2009) Comput. Phys. Commun. 180, 861–872.
+         *             Two-phase correction: see also Grenier et al. (2013).
+         *
+         * \param ddiff  Diffusion coefficient δ (typically 0.1; range 0.05–0.2)
          */
         void activateDensityDiffusion(Scalar ddiff)
             {
@@ -213,6 +325,21 @@ class PYBIND11_EXPORT TwoPhaseFlow : public SPHBaseClass<KT_, SET1_>
             m_shepard_renormalization = false;
             }
 
+        /*! Turn periodic density resummation on (DENSITYCONTINUITY only)
+         * \param densreinitfreq Frequency (in timesteps) of density reinitialization
+         */
+        void activateDensityReinitialization(unsigned int densreinitfreq);
+
+        /*! Turn periodic density resummation off.
+         */
+        void deactivateDensityReinitialization()
+            {
+            m_density_reinitialization = false;
+            }
+
+        //! Returns a list of log quantities this compute calculates
+        virtual std::vector<double> getProvidedTimestepQuantities(uint64_t timestep);
+
         /*! Turn Fickian shifting based on particle concentration on
          * \param Used in Computation of CSF
          */
@@ -226,6 +353,27 @@ class PYBIND11_EXPORT TwoPhaseFlow : public SPHBaseClass<KT_, SET1_>
         void deactivateFickianShifting()
             {
             m_fickian_shifting = false;
+            }
+
+        /*! Activate δ⁺-SPH particle shifting (Sun et al. 2017, Comput. Fluids).
+         * Shifts fluid particle positions each step to maintain regularity and
+         * prevent clustering. The interface-normal component is projected out so
+         * that particles cannot cross the fluid-fluid interface.
+         * \param A  Amplitude (default 0.2). Start small (~0.05) for first tests.
+         * \param R  Enhancement coefficient (default 0.2, Sun et al. recommended).
+         * \param n  Enhancement exponent (default 4, Sun et al. recommended).
+         * \param interface_condition  If true, remove normal-shift at interface (recommended).
+         */
+        void activateParticleShifting(Scalar A = Scalar(0.2),
+                                       Scalar R = Scalar(0.2),
+                                       unsigned int n = 4,
+                                       bool interface_condition = true);
+
+        /*! Turn δ⁺-SPH particle shifting off.
+         */
+        void deactivateParticleShifting()
+            {
+            m_particle_shifting = false;
             }
 
         //! Computes forces
@@ -302,8 +450,9 @@ class PYBIND11_EXPORT TwoPhaseFlow : public SPHBaseClass<KT_, SET1_>
         Scalar m_sigma02; //!< Interfacial tension between solid phase and fluid phase2 ( Computed from input )
         Scalar m_omega; //!< Contact angle ( Must be set by user )
 
-        Scalar m_avalpha; //!< Volumetric diffusion coefficient for artificial viscosity operator
-        Scalar m_avbeta; //!< Shock diffusion coefficient for artificial viscosity operator
+        Scalar m_avalpha; //!< Monaghan AV: linear (volumetric) diffusion coefficient α
+        Scalar m_avbeta;  //!< Monaghan AV: quadratic (shock) diffusion coefficient β
+        Scalar m_riemann_beta; //!< Riemann dissipation: scaling coefficient β_R (Zhang et al. 2017)
         Scalar m_ddiff; //!< Diffusion coefficient for Molteni type density diffusion
         unsigned int m_shepardfreq; //!< Time step frequency for Shepard reinitialization
 
@@ -317,18 +466,30 @@ class PYBIND11_EXPORT TwoPhaseFlow : public SPHBaseClass<KT_, SET1_>
         // Flags
         bool m_const_slength; //!< True if using constant smoothing length
         bool m_compute_solid_forces; //!< Set to true if forces acting on solid particle are to be computed
-        bool m_artificial_viscosity; //!< Set to true if Monaghan type artificial viscosity is to be used
+        bool m_artificial_viscosity; //!< True if Monaghan (1992) AV is active (mutually exclusive with Riemann)
+        bool m_riemann_dissipation;  //!< True if Riemann-based dissipation is active (Zhang et al. 2017; mutually exclusive with Monaghan AV)
+        bool m_consistent_interface_pressure; //!< True if Hu & Adams (2009) rest-density-weighted cross-phase pressure is active
         bool m_density_diffusion; //!< Set to true if Molteni type density diffusion is to be used
         bool m_shepard_renormalization; //!< Set to true if Shepard type density reinitialization is to be used
         bool m_params_set; //!< True if parameters are set
         bool m_solid_removed; //!< True if solid Particles have been marked to remove
         bool m_fickian_shifting; //!< True if Fickian Particle Shifting is activated
+        bool m_pressure_initialized; //!< True once pressure has been EOS-initialized (DENSITYCONTINUITY only)
+        bool m_density_reinitialization; //!< True if periodic density resummation is activated
+        unsigned int m_densityreinitfreq; //!< Frequency for density reinitialization
+
+        // Particle shifting (δ⁺-SPH, Sun et al. 2017)
+        bool m_particle_shifting;            //!< True if δ⁺-SPH particle shifting is activated
+        Scalar m_shift_A;                    //!< Shifting amplitude A (default 0.2)
+        Scalar m_shift_R;                    //!< Enhancement coefficient R (default 0.2)
+        unsigned int m_shift_n;              //!< Enhancement exponent n (default 4)
+        bool m_shift_interface_condition;    //!< True to project out interface-normal shift component
 
         // Log parameters
         uint64_t m_log_computed_last_timestep; //!< Last time step where log quantities were computed
 
         // Timestep parameters
-        std::vector<double> m_timestep_list = std::vector<double>(7);  //!< Cache all generated timestep quantities names
+        std::vector<double> m_timestep_list = std::vector<double>(8);  //!< Cache all generated timestep quantities names
 
 
         void mark_solid_particles_toremove(uint64_t timestep);
@@ -353,12 +514,20 @@ class PYBIND11_EXPORT TwoPhaseFlow : public SPHBaseClass<KT_, SET1_>
         */
         void compute_noslip(uint64_t timestep);
 
-        /*! Helper function to compute particle concentration gradient for Fickian shifting 
+        /*! Helper function to compute particle concentration gradient for Fickian shifting
          * within the CSF computation
          * It overwrites h_pressure and the dot product of the gradient is stored in h_energy
          * Paper: Lind et al. 2012
         */
         void compute_particle_concentration_gradient(uint64_t timestep);
+
+        /*! Compute and apply δ⁺-SPH particle position shifts (Sun et al. 2017).
+         * \pre compute_colorgradients() + update_ghost_aux123() must precede this call
+         *      (aux3 must hold up-to-date fluid-fluid interface normals).
+         * \post Fluid particle positions updated by δr_i.
+         * \post For DENSITYCONTINUITY: h_density corrected by ALE remapping term.
+         */
+        void compute_particle_shift(uint64_t timestep);
 
         /*! Helper function to apply Shepard density filter
         * \post Fluid particle densities are recomputed based on the Shepard renormalization
@@ -382,6 +551,10 @@ class PYBIND11_EXPORT TwoPhaseFlow : public SPHBaseClass<KT_, SET1_>
          * \post h_force stores forces acting on fluid particles and .w component stores rate of change of density
          */
         void forcecomputation(uint64_t timestep);
+
+        /*! Helper function that computes the fluid-induced forces on solid particles
+         */
+        virtual void compute_solid_forces(uint64_t timestep);
 
         /*! Helper function to set communication flags and update ghosts densities
         * \param timestep The time step

@@ -40,22 +40,24 @@ import numpy as np
 import itertools
 import gsd.hoomd
 import os
-import array 
 
 
 def sanity_check_input(input_dict):
-    """
-    
+    """Validate the input parameter dictionary read from a simulation input file.
+
+    Raises ``ValueError`` if any parameter is out of range or inconsistent.
+    Called automatically by :func:`get_input_data_from_file`.
 
     Parameters
     ----------
     input_dict : dict
-        all input data from get_input_data_from_file().
+        Parameter dictionary as returned by :func:`get_input_data_from_file`.
+        Must contain the keys: ``rawfilename``, ``kernel``, ``nx``, ``ny``,
+        ``nz``, ``fdensity``, ``fviscosity``, ``delete_flag``, ``porosity``.
 
     Returns
     -------
-    None.
-
+    None
     """
 
     fname = input_dict['rawfilename']
@@ -98,17 +100,43 @@ def sanity_check_input(input_dict):
 
 
 def get_input_data_from_file(inputfile):
-    """
-    
+    """Read simulation input parameters from a structured text file.
+
+    The text file must follow the layout below (two header lines are skipped,
+    then string parameters, then float parameters; the last 7 lines are
+    skipped by the float parser)::
+
+        # SPH simulation input file
+        #
+        path/to/raw_geometry_file.raw
+        WendlandC2
+        0.001       # vsize  – voxel/particle spacing [m]
+        100         # nx     – number of voxels in x
+        50          # ny     – number of voxels in y
+        50          # nz     – number of voxels in z
+        1000.0      # fdensity   – fluid density [kg/m³]
+        0.001       # fviscosity – dynamic viscosity [Pa·s]
+        1           # delete_flag – 1: delete interior solids, 0: keep all
+        0.4         # porosity – volume fraction of void space [0, 1]
+
     Parameters
     ----------
-    inputfile : file
-        .txt file with all input parameter.
+    inputfile : str or path-like
+        Path to the ``.txt`` input file.
 
     Returns
     -------
-    dictonary.
+    dict
+        Dictionary with keys: ``rawfilename`` (str), ``kernel`` (str),
+        ``vsize`` (float64), ``nx`` (int32), ``ny`` (int32), ``nz`` (int32),
+        ``fdensity`` (float64), ``fviscosity`` (float64),
+        ``delete_flag`` (int32), ``porosity`` (float64).
 
+    Raises
+    ------
+    ValueError
+        If any parameter fails the sanity check (see
+        :func:`sanity_check_input`).
     """
     parameter_dict = {}
 

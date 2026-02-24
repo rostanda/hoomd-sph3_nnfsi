@@ -26,9 +26,7 @@
 __device__ inline double4 __ldg(const double4* ptr)
     {
     int4 part1 = __ldg(((int4*)ptr));
-    ;
     int4 part2 = __ldg(((int4*)ptr) + 1);
-    ;
     return make_double4(__hiloint2double(part1.y, part1.x),
                         __hiloint2double(part1.w, part1.z),
                         __hiloint2double(part2.y, part2.x),

@@ -52,9 +52,6 @@ struct SolidFluidTypeBit
         FLUID = 1<<2,
         FLUID1 = FLUID<<1,
         FLUID2 = FLUID<<2,
-        //FLUID3 = FLUID<<3,
-        //FLUID4 = FLUID<<4,
-        //FLUID5 = FLUID<<5,
         };
     };
     

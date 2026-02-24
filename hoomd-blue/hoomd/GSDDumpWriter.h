@@ -139,7 +139,6 @@ class PYBIND11_EXPORT GSDDumpWriter : public Analyzer
             configuration_box,
             particles_N,
             particles_position,
-            // particles_orientation,
             particles_types,
             particles_type,
             particles_mass,
@@ -147,16 +146,12 @@ class PYBIND11_EXPORT GSDDumpWriter : public Analyzer
             particles_density,
             particles_pressure,
             particles_energy,
-            // particles_charge,
-            // particles_diameter,
             particles_body,
-            // particles_inertia,
             particles_velocity,
             particles_aux1,
             particles_aux2,
             particles_aux3,
             particles_aux4,
-            // particles_angmom,
             particles_image,
             };
         };
@@ -184,11 +179,7 @@ class PYBIND11_EXPORT GSDDumpWriter : public Analyzer
 
         SnapshotParticleData<float> particle_data;
         BondData::Snapshot bond_data;
-        // AngleData::Snapshot angle_data;
-        // DihedralData::Snapshot dihedral_data;
-        // ImproperData::Snapshot improper_data;
         ConstraintData::Snapshot constraint_data;
-        // PairData::Snapshot pair_data;
 
         /// Bit flags indicating which particle data fields are present (index by gsd_flag)
         std::bitset<n_gsd_flags> particle_data_present;
@@ -198,11 +189,7 @@ class PYBIND11_EXPORT GSDDumpWriter : public Analyzer
             particle_tags.resize(0);
             particle_data.resize(0);
             bond_data.resize(0);
-            // angle_data.resize(0);
-            // dihedral_data.resize(0);
-            // improper_data.resize(0);
             constraint_data.resize(0);
-            // pair_data.resize(0);
 
             particle_data_present.reset();
             }
@@ -279,11 +266,7 @@ class PYBIND11_EXPORT GSDDumpWriter : public Analyzer
 
     //! Write bond topology
     void writeTopology(BondData::Snapshot& bond,
-                       // AngleData::Snapshot& angle,
-                       // DihedralData::Snapshot& dihedral,
-                       // ImproperData::Snapshot& improper,
                        ConstraintData::Snapshot& constraint
-                       // PairData::Snapshot& pair
                        );
 
     friend void export_GSDDumpWriter(pybind11::module& m);

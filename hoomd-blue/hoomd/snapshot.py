@@ -186,10 +186,7 @@ class Snapshot:
                 snapshot.particles.types = ['A', 'B']
                 snapshot.particles.typeid[:] = [0, 1, 1, 0]
         """
-        # if self.communicator.rank == 0:
         return self._cpp_obj.particles
-        # else:
-        #     raise RuntimeError('Snapshot data is only present on rank 0')
 
     @property
     def bonds(self):
@@ -224,108 +221,6 @@ class Snapshot:
         else:
             raise RuntimeError("Snapshot data is only present on rank 0")
 
-    # @property
-    # def angles(self):
-    #     """Angles.
-
-    #     Attributes:
-    #         angles.N (int): Number of angles.
-
-    #         angles.types (list[str]): Names of the angle types
-
-    #         angles.typeid ((*N*,) `numpy.ndarray` of ``uint32``):
-    #             Angle type id.
-
-    #         angles.group ((*N*, 3) `numpy.ndarray` of ``uint32``):
-    #             Tags of the particles in the angle.
-
-    #     Note:
-    #         Set ``N`` to change the size of the arrays.
-    #     """
-    #     if self.communicator.rank == 0:
-    #         return self._cpp_obj.angles
-    #     else:
-    #         raise RuntimeError('Snapshot data is only present on rank 0')
-
-    # @property
-    # def dihedrals(self):
-    #     """Dihedrals.
-
-    #     Attributes:
-    #         dihedrals.N (int): Number of dihedrals.
-
-    #         dihedrals.types (list[str]): Names of the dihedral types
-
-    #         dihedrals.typeid ((*N*,) `numpy.ndarray` of ``uint32``):
-    #             Dihedral type id.
-
-    #         dihedrals.group ((*N*, 4) `numpy.ndarray` of ``uint32``):
-    #             Tags of the particles in the dihedral.
-
-    #     Note:
-    #         Set ``N`` to change the size of the arrays.
-    #     """
-    #     if self.communicator.rank == 0:
-    #         return self._cpp_obj.dihedrals
-    #     else:
-    #         raise RuntimeError('Snapshot data is only present on rank 0')
-
-    # @property
-    # def impropers(self):
-    #     """Impropers.
-
-    #     Attributes:
-    #         impropers.N (int): Number of impropers.
-
-    #         impropers.types (list[str]): Names of the improper types
-
-    #         impropers.typeid ((*N*,) `numpy.ndarray` of ``uint32``):
-    #             Improper type id.
-
-    #         impropers.group ((*N*, 4) `numpy.ndarray` of ``uint32``):
-    #             Tags of the particles in the improper.
-
-    #     Note:
-    #         Set ``N`` to change the size of the arrays.
-    #     """
-    #     if self.communicator.rank == 0:
-    #         return self._cpp_obj.impropers
-    #     else:
-    #         raise RuntimeError('Snapshot data is only present on rank 0')
-
-    # @property
-    # def pairs(self):
-        """Special pairs.
-
-        Attributes:
-            pairs.N (int): Number of special pairs.
-
-            pairs.types (list[str]): Names of the special pair types
-
-            pairs.typeid ((*N*,) `numpy.ndarray` of ``uint32``):
-                Special pair type id.
-
-            pairs.group ((*N*, 2) `numpy.ndarray` of ``uint32``):
-                Tags of the particles in the special pair.
-
-        Note:
-            Set ``N`` to change the size of the arrays.
-
-        .. rubric:: Example:
-
-        .. code-block:: python
-
-            if snapshot.communicator.rank == 0:
-                snapshot.pairs.N = 2
-                snapshot.pairs.group[:] = [[0, 1], [2, 3]]
-                snapshot.pairs.types = ['A-B']
-                snapshot.pairs.typeid[:] = [0, 0]
-        """
-    #    if self.communicator.rank == 0:
-    #        return self._cpp_obj.pairs
-    #    else:
-    #        raise RuntimeError('Snapshot data is only present on rank 0')
-
     @property
     def constraints(self):
         """Constraints.
@@ -351,46 +246,7 @@ class Snapshot:
                 snapshot.constraints.group[:] = [[0, 1], [2, 3]]
                 snapshot.constraints.value[:] = [1, 1]
         """
-        # if self.communicator.rank == 0:
         return self._cpp_obj.constraints
-        # else:
-        #     raise RuntimeError('Snapshot data is only present on rank 0')
-
-    # @property
-    # def mpcd(self):
-    #     """MPCD data.
-
-    #     Attributes:
-    #         mpcd.N (int): Number of MPCD particles.
-
-    #         mpcd.position ((*N*, 3) `numpy.ndarray` of `float`):
-    #             Particle position :math:`[\\mathrm{length}]`.
-
-    #         mpcd.velocity ((*N*, 3) `numpy.ndarray` of `float`):
-    #             Particle velocity :math:`[\\mathrm{velocity}]`.
-
-    #         mpcd.types (list[str]):
-    #             Names of the particle types.
-
-    #         mpcd.typeid ((*N*, ) `numpy.ndarray` of ``uint32``):
-    #             Particle type id.
-
-    #         mpcd.mass (float): Particle mass.
-
-    #     Note:
-    #         Set ``N`` to change the size of the arrays.
-
-    #     Note:
-    #         This attribute is only available when
-    #         HOOMD-blue is built with the MPCD component.
-    #     """
-    #     if not hoomd.version.mpcd_built:
-    #         raise RuntimeError("MPCD component not built")
-
-    #     if self.communicator.rank == 0:
-    #         return self._cpp_obj.mpcd
-    #     else:
-    #         raise RuntimeError("Snapshot data is only present on rank 0")
 
     @classmethod
     def _from_cpp_snapshot(cls, snapshot, communicator):
@@ -492,16 +348,6 @@ class Snapshot:
                             "auxiliary2", "auxiliary3", "auxiliary4", 
                             ))
 
-            # for section in (
-            #     # "angles", 
-            #     "bonds"
-            #     # "dihedrals", "impropers",
-            #                 # "pairs"
-            #                 ):
-            #     set_properties(getattr(snap,
-            #                            section), getattr(gsd_snap, section),
-            #                    ("N", "types"), ("group", "typeid"))
-
             set_properties(snap.constraints, gsd_snap.constraints, ("N",),
                            ("group", "value"))
 
@@ -541,16 +387,11 @@ class Snapshot:
 
         def set_properties(snap_section, pgsd_snap_section, properties,
                            array_properties):
-            # print(f'snap_section: {snap_section}')
-            # print(f'pgsd_snap_section: {pgsd_snap_section}')
-
             for prop in properties:
-                # print(f'properties: {properties}, prop {prop}\n')
                 pgsd_prop = getattr(pgsd_snap_section, prop, None)
                 if pgsd_prop is not None:
                     setattr(snap_section, prop, pgsd_prop)
             for prop in array_properties:
-                # print(f'array_properties: {array_properties}, prop {prop}\n')
                 pgsd_prop = getattr(pgsd_snap_section, prop, None)
                 if pgsd_prop is not None:
                     getattr(snap_section, prop)[:] = pgsd_prop

@@ -303,8 +303,7 @@ class Plane(WallGeometry):
 
     def __repr__(self):
         """A string representation of the Plane."""
-        return f"Plane(origin={self.origin}, normal={self.normal}, "
-        f"open={self.open})"
+        return f"Plane(origin={self.origin}, normal={self.normal}, open={self.open})"
 
     def to_dict(self):
         """Convert the wall geometry to a dictionary defining the plane.
@@ -312,7 +311,7 @@ class Plane(WallGeometry):
         Returns:
             dict: The geometry in a Python dictionary.
         """
-        return {"origin": self.origin, "normal": self.axis, "open": self.open}
+        return {"origin": self.origin, "normal": self.normal, "open": self.open}
 
 
 class _MetaListIndex:

@@ -38,8 +38,6 @@ from hoomd.sph import _sph
 from hoomd.operation import _HOOMDBaseObject
 import numpy
 
-# Hier in zukunft auch super verwenden
-
 class _StateEquation(_HOOMDBaseObject):
     r"""
     Constructs the equation of state meta class
@@ -79,35 +77,25 @@ class _StateEquation(_HOOMDBaseObject):
         self.SpeedOfSound       = c.item()    if isinstance(c, numpy.generic)    else c
         self.cpp_stateequation.setParams(self.RestDensity,self.SpeedOfSound,self.BackgroundPressure,self.TransportVelocityPressure)
 
-    def pressure(self,rho):
-        self.check_initialization();
-        mrho = rho.item()if isinstance(rho, numpy.generic) else rho
-        return self.cpp_stateequation.Pressure(rho)
+    def pressure(self, rho):
+        self.check_initialization()
+        mrho = rho.item() if isinstance(rho, numpy.generic) else rho
+        return self.cpp_stateequation.Pressure(mrho)
 
 
 class Tait(_StateEquation):
     R""" Tait Equation of state
     """
     def __init__(self):
-        # hoomd.util.print_status_line();
-
-        # Initialize base class
-        _StateEquation.__init__(self, "Tait");
-
-        # create the c++ mirror class
-        self.cpp_stateequation = _sph.Tait();
+        _StateEquation.__init__(self, "Tait")
+        self.cpp_stateequation = _sph.Tait()
 
 class Linear(_StateEquation):
     R""" Linear Equation of state
     """
     def __init__(self):
-        # hoomd.util.print_status_line();
-
-        # Initialize base class
-        _StateEquation.__init__(self, "Linear");
-
-        # create the c++ mirror class
-        self.cpp_stateequation = _sph.Linear();
+        _StateEquation.__init__(self, "Linear")
+        self.cpp_stateequation = _sph.Linear()
 
 __all__ = [
     "Tait",

@@ -73,19 +73,6 @@ namespace hoomd
 {
 namespace sph
 {
-// //! Enum for various density evaluation approaches
-// enum DensityMethod
-// {
-//     DENSITYSUMMATION,    //!< Summation approach
-//     DENSITYCONTINUITY,    //!< Continuity approach
-// };
-
-// //! Enum for various viscosity evaluation approaches
-// enum ViscosityMethod
-// {
-//     HARMONICAVERAGE, //!< Viscosity operator based on inter-particle averaged shear stress
-// };
-
 template<SmoothingKernelType KT_, StateEquationType SET_>
 class PYBIND11_EXPORT SPHBaseClass : public ForceCompute
     {
@@ -110,10 +97,6 @@ class PYBIND11_EXPORT SPHBaseClass : public ForceCompute
          * \param pgroup Group of particles to apply body force to
          */
         void applyBodyForce(uint64_t timestep, std::shared_ptr<ParticleGroup> pgroup);
-        
-// #ifdef ENABLE_HIP
-//         void applyBodyForceGPU(uint64_t timestep, std::shared_ptr<ParticleGroup> pgroup);
-// #endif
 
         /*! Set the volumetric acceleration
          * \param gx Volumetric acceleration in x-Direction
@@ -125,21 +108,6 @@ class PYBIND11_EXPORT SPHBaseClass : public ForceCompute
 
         // Get the volumetric acceleration
         Scalar3 getAcceleration(uint64_t timestep);
-
-        
-// #ifdef ENABLE_MPI
-//         /// The system's communicator.
-//         std::shared_ptr<Communicator> m_comm;
-//         //! Set the communicator to use
-//         void setCommunicator(std::shared_ptr<Communicator> comm)
-//             {
-//             if (!m_comm)
-//                 {
-//                 assert(comm);
-//                 }
-//             Compute::setCommunicator(comm);
-//             }
-// #endif
 
     protected:
         std::shared_ptr<SmoothingKernel<KT_> > m_skernel; //!< The kernel function class this method is associated with
@@ -155,15 +123,6 @@ class PYBIND11_EXPORT SPHBaseClass : public ForceCompute
         Scalar3 m_bodyforce; //!< Volumetric force
         unsigned int m_damptime; //!< Damping time
         bool m_body_acceleration; //!< True if body acceleration has been set and not null
-        
-
-
-    // private:
-    //     //! Connection to the signal notifying when number of particle types changes
-    //     boost::signals2::connection m_num_type_change_connection;
-
-    //     //! Connection to the signal notifying when number of particle types changes
-    //     boost::signals2::connection m_particle_num_change_connection;
     };
 
 

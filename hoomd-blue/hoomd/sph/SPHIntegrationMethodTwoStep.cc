@@ -84,53 +84,6 @@ Scalar SPHIntegrationMethodTwoStep::getTranslationalDOF(std::shared_ptr<Particle
     return m_sysdef->getNDimensions() * intersect_size;
     }
 
-// Scalar SPHIntegrationMethodTwoStep::getRotationalDOF(std::shared_ptr<ParticleGroup> query_group)
-//     {
-//     unsigned int query_group_dof = 0;
-//     unsigned int dimension = m_sysdef->getNDimensions();
-//     ArrayHandle<Scalar3> h_moment_inertia(m_pdata->getMomentsOfInertiaArray(),
-//                                           access_location::host,
-//                                           access_mode::read);
-
-//     for (unsigned int group_idx = 0; group_idx < query_group->getNumMembers(); group_idx++)
-//         {
-//         unsigned int j = query_group->getMemberIndex(group_idx);
-//         if (m_group->isMember(j))
-//             {
-//             if (dimension == 3)
-//                 {
-//                 if (fabs(h_moment_inertia.data[j].x) > 0)
-//                     query_group_dof++;
-
-//                 if (fabs(h_moment_inertia.data[j].y) > 0)
-//                     query_group_dof++;
-
-//                 if (fabs(h_moment_inertia.data[j].z) > 0)
-//                     query_group_dof++;
-//                 }
-//             else
-//                 {
-//                 if (fabs(h_moment_inertia.data[j].z) > 0)
-//                     query_group_dof++;
-//                 }
-//             }
-//         }
-
-// #ifdef ENABLE_MPI
-//     if (m_pdata->getDomainDecomposition())
-//         {
-//         MPI_Allreduce(MPI_IN_PLACE,
-//                       &query_group_dof,
-//                       1,
-//                       MPI_UNSIGNED,
-//                       MPI_SUM,
-//                       m_exec_conf->getMPICommunicator());
-//         }
-// #endif
-
-//     return query_group_dof;
-//     }
-
 /*! Checks that every particle in the group is valid. This method may be called by anyone wishing to
    make this error check.
 

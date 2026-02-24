@@ -265,8 +265,6 @@ class PYBIND11_EXPORT SinglePhaseFlow : public SPHBaseClass<KT_, SET_>
         // Index for rcut pair info -> nlist
         Index2D m_typpair_idx;        //!< Helper class for indexing per type pair arrays
 
-        // std::shared_ptr<nsearch::NeighborList> m_nlist; //!< the neighborlist to use for the computation
-
         // Model parameters
         Scalar m_ch; //!< Smoothing length to use if constant for all particles
         Scalar m_rcut; //!< Cut-off length to use if constant for all particles
@@ -297,8 +295,9 @@ class PYBIND11_EXPORT SinglePhaseFlow : public SPHBaseClass<KT_, SET_>
         bool m_density_diffusion; //!< Set to true if Molteni type density diffusion is to be used
         bool m_shepard_renormalization; //!< Set to true if Shepard type density reinitialization is to be used
         bool m_params_set; //!< True if parameters are set
-        bool m_solid_removed; //!< True if solid Particles have been marked to remove 
-        bool m_density_reinitialization; //!< True if density is reinitialized 
+        bool m_solid_removed; //!< True if solid Particles have been marked to remove
+        bool m_density_reinitialization; //!< True if density is reinitialized
+        bool m_pressure_initialized; //!< True once pressure has been initialized from EOS (DENSITYCONTINUITY only)
 
 
         // Log parameters

@@ -1,4 +1,3 @@
-// Copyright (c) 2009-2025 The Regents of the University of Michigan.
 // Part of HOOMD-blue, released under the BSD 3-Clause License.
 
 #include "GSDDumpWriterMPI.h"
@@ -27,13 +26,8 @@ std::list<std::string> GSDDumpWriterMPI::particle_chunks {"particles/position",
                                                        "particles/typeid",
                                                        "particles/mass",
                                                        "particles/slength"
-                                                       // "particles/charge",
-                                                       // "particles/diameter",
                                                        "particles/body",
-                                                       // "particles/moment_inertia",
-                                                       // "particles/orientation",
                                                        "particles/velocity",
-                                                       // "particles/dpe",
                                                        "particles/density",
                                                        "particles/pressure",
                                                        "particles/energy",
@@ -41,7 +35,6 @@ std::list<std::string> GSDDumpWriterMPI::particle_chunks {"particles/position",
                                                        "particles/auxiliary2",
                                                        "particles/auxiliary3",
                                                        "particles/auxiliary4",
-                                                       // "particles/angmom",
                                                        "particles/image"};
 
 /*! Constructs the GSDDumpWriterMPI. After construction, settings are set. No file operations are
@@ -57,13 +50,6 @@ std::list<std::string> GSDDumpWriterMPI::particle_chunks {"particles/position",
     If the group does not include all particles, then topology information cannot be written to the
    file.
 */
-// GSDDumpWriterMPI::GSDDumpWriterMPI(std::shared_ptr<SystemDefinition> sysdef,
-//                              std::shared_ptr<Trigger> trigger,
-//                              const std::string& fname,
-//                              std::shared_ptr<ParticleGroup> group,
-//                              std::string mode,
-//                              bool truncate)
-//     : GSDDumpWriter(sysdef, trigger, fname, group, mode, truncate), m_fname(fname), m_mode(mode), m_truncate(truncate), m_group(group)
 GSDDumpWriterMPI::GSDDumpWriterMPI(std::shared_ptr<SystemDefinition> sysdef,
                              std::shared_ptr<Trigger> trigger,
                              const std::string& fname,
@@ -82,7 +68,6 @@ GSDDumpWriterMPI::GSDDumpWriterMPI(std::shared_ptr<SystemDefinition> sysdef,
 
     m_dynamic.reset();
     m_dynamic[pgsd_flag::particles_position] = true;
-    // m_dynamic[pgsd_flag::particles_type] = true;
     m_exec_conf->msg->notice(5) << "GSDDumpWriterMPI: start init File IO" << endl;
     initFileIO();
     }
@@ -281,32 +266,6 @@ void GSDDumpWriterMPI::initFileIO()
             m_nondefault[chunk] = false;
             }
         }
-    // else if (m_mode == "ab")
-    //     {
-    //     // populate the non-default map
-    //     populateNonDefault();
-
-    //     // open the file in append mode
-    //     m_exec_conf->msg->notice(3) << "PGSD: open gsd file " << m_fname << endl;
-    //     int retval = pgsd_open(&m_handle, m_fname.c_str(), PGSD_OPEN_APPEND);
-    //     PGSDUtils::checkError(retval, m_fname);
-
-    //     // validate schema
-    //     if (string(m_handle.header.schema) != string("hoomd"))
-    //         {
-    //         std::ostringstream s;
-    //         s << "PGSD: "
-    //           << "Invalid schema in " << m_fname;
-    //         throw runtime_error("Error opening GSD file");
-    //         }
-    //     if (m_handle.header.schema_version >= pgsd_make_version(2, 0))
-    //         {
-    //         std::ostringstream s;
-    //         s << "PGSD: "
-    //           << "Invalid schema version in " << m_fname;
-    //         throw runtime_error("Error opening GSD file");
-    //         }
-    //     }
     else
         {
         throw std::invalid_argument("Invalid PGSD file mode: " + m_mode);
@@ -320,12 +279,9 @@ GSDDumpWriterMPI::~GSDDumpWriterMPI()
     {
     m_exec_conf->msg->notice(5) << "Destroying GSDDumpWriterMPI" << endl;
 
-    // if (m_exec_conf->isRoot())
-    //     {
     MPI_Barrier(MPI_COMM_WORLD);
     m_exec_conf->msg->notice(5) << "PGSD: close gsd file " << m_fname << endl;
     pgsd_close(&m_handle);
-        // }
     }
 
 //! Get the logged data for the current frame if any.
@@ -373,24 +329,6 @@ void GSDDumpWriterMPI::write(GSDDumpWriterMPI::PGSDFrame& frame, pybind11::dict 
     MPI_Barrier(MPI_COMM_WORLD);
     writeMomenta(frame);
     MPI_Barrier(MPI_COMM_WORLD);
-    // writeLogQuantities(log_data);
-
-    // topology is only meaningful if this is the all group
-    // TODO
-    // if (m_group->getNumMembersGlobal() == m_pdata->getNGlobal()
-    //     && (m_write_topology || m_nframes == 0))
-    //     {
-    //     // if (m_exec_conf->isRoot())
-    //     //     {
-    //     writeTopology(frame.bond_data,
-    //                   // frame.angle_data,
-    //                   // frame.dihedral_data,
-    //                   // frame.improper_data,
-    //                   frame.constraint_data
-    //                   //frame.pair_data
-    //                   );
-    //         // }
-    //     }
 
     m_exec_conf->msg->notice(10) << "PGSD: ending frame " << m_nframes << endl;
     MPI_Barrier(MPI_COMM_WORLD);
@@ -522,7 +460,6 @@ void GSDDumpWriterMPI::writeAttributes(GSDDumpWriterMPI::PGSDFrame& frame)
     {
     uint32_t N = m_group->getNumMembers();
     uint32_t N_global = m_group->getNumMembersGlobal();
-    // bool all_default = true;
     int rank = m_exec_conf->getRank();
     int size = m_exec_conf->getNRanks();
     int part_offset;
@@ -541,7 +478,6 @@ void GSDDumpWriterMPI::writeAttributes(GSDDumpWriterMPI::PGSDFrame& frame)
         {
         writeTypeMapping("particles/types", frame.particle_data.type_mapping, frame);
         }
-
 
     if (frame.particle_data.type.size() != 0)
         {
@@ -609,7 +545,6 @@ void GSDDumpWriterMPI::writeAttributes(GSDDumpWriterMPI::PGSDFrame& frame)
             m_nondefault["particles/slength"] = true;
         }
 
-
     if (frame.particle_data.body.size() != 0)
         {
         assert(frame.particle_data.body.size() == N);
@@ -647,7 +582,6 @@ void GSDDumpWriterMPI::writeProperties(const GSDDumpWriterMPI::PGSDFrame& frame)
     std::vector<unsigned int> part_distribution(size);
     all_gather_v(N, part_distribution, MPI_COMM_WORLD);
     part_offset = std::accumulate(part_distribution.begin(), part_distribution.begin()+rank, 0);
-
 
     if (frame.particle_data.pos.size() != 0)
         {
@@ -1097,43 +1031,6 @@ void GSDDumpWriterMPI::populateLocalFrame(GSDDumpWriterMPI::PGSDFrame& frame, ui
             unsigned int type = __scalar_as_int(h_postype.data[index].w);
             int3 image = make_int3(0, 0, 0);
 
-            // if (m_dynamic[pgsd_flag::particles_image] || m_nframes == 0)
-            //     {
-            //     image = h_image.data[index];
-            //     }
-
-            // frame.global_box.wrap(position, image);
-
-            // if (m_dynamic[pgsd_flag::particles_position] || m_nframes == 0)
-            //     {
-            //     if (position != vec3<Scalar>(0, 0, 0))
-            //         {
-            //         all_default[pgsd_flag::particles_position] = false;
-            //         }
-
-            //     frame.particle_data.pos.push_back(vec3<float>(position));
-            //     }
-
-            // if (m_dynamic[pgsd_flag::particles_image] || m_nframes == 0)
-            //     {
-            //     if (image != make_int3(0, 0, 0))
-            //         {
-            //         all_default[pgsd_flag::particles_image] = false;
-            //         }
-
-            //     frame.particle_data.image.push_back(image);
-            //     }
-
-            // if (m_dynamic[pgsd_flag::particles_type] || m_nframes == 0)
-            //     {
-            //     if (type != 0)
-            //         {
-            //         all_default[pgsd_flag::particles_type] = false;
-            //         }
-
-            //     frame.particle_data.type.push_back(type);
-            //     }
-
 
             image = h_image.data[index];
 
@@ -1167,7 +1064,6 @@ void GSDDumpWriterMPI::populateLocalFrame(GSDDumpWriterMPI::PGSDFrame& frame, ui
                 }
             }
         }
-
 
     if (N > 0
         && (m_dynamic[pgsd_flag::particles_velocity] || m_dynamic[pgsd_flag::particles_mass]
@@ -1316,7 +1212,6 @@ void GSDDumpWriterMPI::populateLocalFrame(GSDDumpWriterMPI::PGSDFrame& frame, ui
             }
         }
 
-
     if (N > 0 && (m_dynamic[pgsd_flag::particles_aux2] || m_nframes == 0))
         {
         ArrayHandle<Scalar3> h_aux2(m_pdata->getAuxiliaries2(),
@@ -1380,7 +1275,6 @@ void GSDDumpWriterMPI::populateLocalFrame(GSDDumpWriterMPI::PGSDFrame& frame, ui
             }
         }
 
-
     if (N > 0 && (m_dynamic[pgsd_flag::particles_body] || m_nframes == 0))
         {
         ArrayHandle<unsigned int> h_body(m_pdata->getBodies(),
@@ -1401,8 +1295,6 @@ void GSDDumpWriterMPI::populateLocalFrame(GSDDumpWriterMPI::PGSDFrame& frame, ui
             frame.particle_data.body.push_back(body);
             }
         }
-
-
 
     unsigned long v = all_default.to_ulong();
 
@@ -1428,7 +1320,6 @@ void GSDDumpWriterMPI::populateLocalFrame(GSDDumpWriterMPI::PGSDFrame& frame, ui
     // and the zeroth frame is non-default. To not keep, resize the arrays back to 0.
     // !(!all_default || (nframes > 0 && m_nondefault["value"])) <=>
     // (all_default && !(nframes > 0 && m_nondefault["value"])
-
 
     if (!(all_default[pgsd_flag::particles_position]
         && !(m_nframes > 0 && m_nondefault["particles/position"]))
@@ -1530,21 +1421,10 @@ void GSDDumpWriterMPI::populateLocalFrame(GSDDumpWriterMPI::PGSDFrame& frame, ui
     MPI_Allreduce(MPI_IN_PLACE, &avoid_unsorted_chaos_indicator, 1, MPI_INT, MPI_MAX, m_exec_conf->getMPICommunicator());
 
 
-    // std::cout << "m_nframes " << m_nframes << std::endl;
-    // std::cout << "avoid_unsorted_chaos_indicator " << avoid_unsorted_chaos_indicator << std::endl;
-    // std::cout << "GSDDumpWriterMPI pos m_present_at_zero " << m_present_at_zero[pgsd_flag::particles_position] <<  " m_nondefault " <<  m_nondefault["particles/position"] << " m_alldefault " << all_default[pgsd_flag::particles_position] << std::endl;
-    // std::cout << "GSDDumpWriterMPI type m_present_at_zero " << m_present_at_zero[pgsd_flag::particles_type] <<  " m_nondefault " <<  m_nondefault["particles/typeid"] << " m_alldefault " << all_default[pgsd_flag::particles_type] << std::endl;
-    // std::cout << "GSDDumpWriterMPI aux1 m_present_at_zero " << m_present_at_zero[pgsd_flag::particles_aux1] <<  " m_nondefault " <<  m_nondefault["particles/aux1"] << " m_alldefault " << all_default[pgsd_flag::particles_aux1] << std::endl;
-    // std::cout << "GSDDumpWriterMPI vel m_present_at_zero " << m_present_at_zero[pgsd_flag::particles_velocity] <<  " m_nondefault " <<  m_nondefault["particles/velocity"] << " m_alldefault " << all_default[pgsd_flag::particles_velocity] << std::endl;
-    // std::cout << "GSDDumpWriterMPI pressure m_present_at_zero " << m_present_at_zero[pgsd_flag::particles_pressure] <<  " m_nondefault " <<  m_nondefault["particles/pressure"] << " m_alldefault " << all_default[pgsd_flag::particles_pressure] << std::endl;
-    // std::cout << "GSDDumpWriterMPI aux4 m_present_at_zero " << m_present_at_zero[pgsd_flag::particles_aux4] <<  " m_nondefault " <<  m_nondefault["particles/aux4"] << " m_alldefault " << all_default[pgsd_flag::particles_aux4] << std::endl;
-
-
     if ((m_present_at_zero[pgsd_flag::particles_position] || avoid_unsorted_chaos_indicator == 0)
         && !(m_nframes > 0 && m_nondefault["particles/position"])
         && all_default[pgsd_flag::particles_position])
         {
-        // std::cout << "Set pos to zero" << std::endl;
         frame.particle_data.pos.resize(0);
         frame.particle_data_present[pgsd_flag::particles_position] = false;
         }
@@ -1553,7 +1433,6 @@ void GSDDumpWriterMPI::populateLocalFrame(GSDDumpWriterMPI::PGSDFrame& frame, ui
         && !(m_nframes > 0 && m_nondefault["particles/typeid"])
         && all_default[pgsd_flag::particles_type])
         {
-        // std::cout << "Set type to zero" << std::endl;
         frame.particle_data.type.resize(0);
         frame.particle_data_present[pgsd_flag::particles_type] = false;
         }
@@ -1578,7 +1457,6 @@ void GSDDumpWriterMPI::populateLocalFrame(GSDDumpWriterMPI::PGSDFrame& frame, ui
         && !(m_nframes > 0 && m_nondefault["particles/density"])
         && all_default[pgsd_flag::particles_density])
         {
-        // std::cout << "Set density to zero" << std::endl;
         frame.particle_data.density.resize(0);
         frame.particle_data_present[pgsd_flag::particles_density] = false;
         }
@@ -1587,7 +1465,6 @@ void GSDDumpWriterMPI::populateLocalFrame(GSDDumpWriterMPI::PGSDFrame& frame, ui
         && !(m_nframes > 0 && m_nondefault["particles/pressure"])
         && all_default[pgsd_flag::particles_pressure])
         {
-        // std::cout << "Set pressure to zero" << std::endl;
         frame.particle_data.pressure.resize(0);
         frame.particle_data_present[pgsd_flag::particles_pressure] = false;
         }
@@ -1613,7 +1490,6 @@ void GSDDumpWriterMPI::populateLocalFrame(GSDDumpWriterMPI::PGSDFrame& frame, ui
         && !(m_nframes > 0 && m_nondefault["particles/velocity"])
         && all_default[pgsd_flag::particles_velocity])
         {
-        // std::cout << "Set velocity to zero" << std::endl;
         frame.particle_data.vel.resize(0);
         frame.particle_data_present[pgsd_flag::particles_velocity] = false;
         }
@@ -1622,7 +1498,6 @@ void GSDDumpWriterMPI::populateLocalFrame(GSDDumpWriterMPI::PGSDFrame& frame, ui
         && !(m_nframes > 0 && m_nondefault["particles/aux1"])
         && all_default[pgsd_flag::particles_aux1])
         {
-        // std::cout << "Set aux1 to zero" << std::endl;
         frame.particle_data.aux1.resize(0);
         frame.particle_data_present[pgsd_flag::particles_aux1] = false;
         }
@@ -1647,7 +1522,6 @@ void GSDDumpWriterMPI::populateLocalFrame(GSDDumpWriterMPI::PGSDFrame& frame, ui
         && !(m_nframes > 0 && m_nondefault["particles/aux4"])
         && all_default[pgsd_flag::particles_aux4])
         {
-        // std::cout << "Set aux4 to zero" << std::endl;
         frame.particle_data.aux4.resize(0);
         frame.particle_data_present[pgsd_flag::particles_aux4] = false;
         }
@@ -1665,7 +1539,6 @@ namespace detail
     {
 void export_GSDDumpWriterMPI(pybind11::module& m)
     {
-    // pybind11::bind_map<std::map<std::string, pybind11::function>>(m, "MapStringFunctionMPI");
 
     pybind11::class_<GSDDumpWriterMPI, Analyzer, std::shared_ptr<GSDDumpWriterMPI>>(m, "GSDDumpWriterMPI")
         .def(pybind11::init<std::shared_ptr<SystemDefinition>,
@@ -1678,7 +1551,6 @@ void export_GSDDumpWriterMPI(pybind11::module& m)
         .def_property_readonly("filename", &GSDDumpWriterMPI::getFilename)
         .def_property_readonly("mode", &GSDDumpWriterMPI::getMode)
         .def_property("dynamic", &GSDDumpWriterMPI::getDynamic, &GSDDumpWriterMPI::setDynamic)
-        // .def_property_readonly("truncate", &GSDDumpWriterMPI::getTruncate)
         .def_property_readonly("filter",
                                [](const std::shared_ptr<GSDDumpWriterMPI> gsd)
                                { return gsd->getGroup()->getFilter(); })

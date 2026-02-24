@@ -946,17 +946,7 @@ template<class Real> DEVICE inline quat<Real>::quat(const rotmat3<Real>& r)
 */
 template<class Real> DEVICE inline vec3<Real> rotate(const quat<Real>& a, const vec3<Real>& b)
     {
-    // quat<Real> result = a*b*conj(a);
-    // return result.v;
-
-    // note: this version below probably results in fewer math operations. Need to double check that
-    // it works when testing. I guesstimate only 20 clock ticks to rotate a vector with this code.
-    // it comes from https://people.csail.mit.edu/bkph/articles/Quaternions.pdf
     return (a.s * a.s - dot(a.v, a.v)) * b + 2 * a.s * cross(a.v, b) + 2 * dot(a.v, b) * a.v;
-
-    // from https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation
-    // a suggested method for 15 mults and 15 adds, also in the above pdf:
-    // return b + cross( (Real(2) * a.v), (cross(a.v,b) + (a.s * b)) );
     }
 
 //! rotate a vec2 by a quaternion
@@ -971,16 +961,7 @@ template<class Real> DEVICE inline vec3<Real> rotate(const quat<Real>& a, const 
 template<class Real> DEVICE inline vec2<Real> rotate(const quat<Real>& a, const vec2<Real>& b)
     {
     vec3<Real> b3(b.x, b.y, Real(0.0));
-    // b3 = (a*b3*conj(a)).v;
-
-    // note: this version below probably results in fewer math operations. Need to double check that
-    // it works when testing. I guesstimate only 20 clock ticks to rotate a vector with this code.
-    // it comes from https://people.csail.mit.edu/bkph/articles/Quaternions.pdf
     b3 = (a.s * a.s - dot(a.v, a.v)) * b3 + 2 * a.s * cross(a.v, b3) + 2 * dot(a.v, b3) * a.v;
-
-    // from https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation
-    // a suggested method for 15 mults and 15 adds, also in the above pdf:
-    // b3 = b3 + cross( (Real(2) * a.v), (cross(a.v,b3) + (a.s * b3)) );
     return vec2<Real>(b3.x, b3.y);
     }
 

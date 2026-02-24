@@ -259,38 +259,6 @@ void SPHBaseClass<KT_, SET_>::applyBodyForce(uint64_t timestep, std::shared_ptr<
 
     }
 
-// #ifdef ENABLE_HIP
-// template<SmoothingKernelType KT_,StateEquationType SET_>
-// void SPHBaseClass<KT_, SET_>::applyBodyForceGPU(uint64_t timestep, std::shared_ptr<ParticleGroup> pgroup)
-//     {
-//     if ( this->m_body_acceleration )
-//         {
-
-//         Scalar damp = Scalar(1);
-//         if ( this->m_damptime > 0 && timestep < this->m_damptime )
-//             damp = Scalar(0.5)*(sin(M_PI*(-Scalar(0.5)+Scalar(timestep)/Scalar(this->m_damptime)))+Scalar(1));
-//         Scalar3 bforce = this->m_bodyforce * damp;
-
-//         this->m_exec_conf->msg->notice(7) << "Computing SPHBaseClassGPU::applyBodyForce with damp factor " << damp << std::endl;
-
-//         // Grab handles for particle data
-//         ArrayHandle<Scalar4> d_force(this->m_force,access_location::device, access_mode::readwrite);
-//         ArrayHandle<Scalar4> d_velocity(this->m_pdata->getVelocities(), access_location::device, access_mode::read);
-
-//         // for each particle in given group
-//         ArrayHandle< unsigned int > d_index_array(pgroup->getIndexArray(), access_location::device, access_mode::read);
-//         unsigned int group_size = pgroup->getNumMembers();
-
-//         gpu_sphbase_apply_body_force(d_force.data,
-//                                     d_velocity.data,
-//                                     bforce,
-//                                     d_index_array.data,
-//                                     group_size
-//         );
-//         }
-//     }
-// #endif
-
 /*! \post Set acceleration components
  */
 template<SmoothingKernelType KT_, StateEquationType SET_>
@@ -325,7 +293,6 @@ void export_SPHBaseClass(pybind11::module& m, std::string name)
         .def("constructTypeVectors", &SPHBaseClass<KT_, SET_>::constructTypeVectors)
         .def("getAcceleration", &SPHBaseClass<KT_, SET_>::getAcceleration)
         .def("applyBodyForce", &SPHBaseClass<KT_, SET_>::applyBodyForce)
-        // .def("applyBodyForceGPU", &SPHBaseClass<KT_, SET_>::applyBodyForceGPU)
         .def("setAcceleration", &SPHBaseClass<KT_, SET_>::setAcceleration);
 }
 

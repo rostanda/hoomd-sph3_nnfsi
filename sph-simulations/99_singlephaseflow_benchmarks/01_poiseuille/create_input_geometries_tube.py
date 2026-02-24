@@ -1,136 +1,105 @@
 #!/usr/bin/env python3
-
 """
 Copyright (c) 2025-2026 David Krach, Daniel Rostan.
 All rights reserved.
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
 
 1. Redistributions of source code must retain the above copyright notice,
    this list of conditions and the following disclaimer.
-
 2. Redistributions in binary form must reproduce the above copyright notice,
    this list of conditions and the following disclaimer in the documentation
    and/or other materials provided with the distribution.
-
 3. Neither the name of the copyright holder nor the names of its contributors
    may be used to endorse or promote products derived from this software without
    specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
 
 maintainer: dkrach, david.krach@mib.uni-stuttgart.de
 
+Create initial GSD file for the Hagen–Poiseuille tube benchmark.
+
+Geometry: cylinder of radius R = 0.5 * lref centred on the x-axis.
+  - Fluid (type 'F', typeid 0): r < R
+  - Solid (type 'S', typeid 1): r >= R
+
+The domain is periodic in x.  The solid shell thickness is chosen so that it
+spans at least one kernel-radius worth of particles.
+
+Usage:
+    python3 create_input_geometries_tube.py <num_length>
 """
-# ----- HEADER -----------------------------------------------
-import hoomd
-from hoomd import *
-from hoomd import sph
-from hoomd.sph import _sph
+
+import sys, os, math
 import numpy as np
-import math
-# import itertools
-from datetime import datetime
-import export_gsd2vtu, delete_solids_initial_timestep 
-import sph_info, sph_helper, read_input_fromtxt
-import sys, os
-
 import gsd.hoomd
-# ------------------------------------------------------------
 
+# ─── kernel constants via hoomd.sph (no device needed) ───────────────────────
+import hoomd
+from hoomd import sph
 
+# ─── Parameters ──────────────────────────────────────────────────────────────
+num_length = int(sys.argv[1])
+lref       = 0.001          # reference length (tube diameter)  [m]
+radius     = 0.5 * lref     # tube radius                       [m]
+rho0       = 1000.0         # rest density                      [kg/m³]
+dx         = lref / num_length
+mass       = rho0 * dx**3
 
-device = hoomd.device.CPU(notice_level=2)
-# device = hoomd.device.CPU(notice_level=10)
-sim = hoomd.Simulation(device=device)
+kernel     = 'WendlandC4'
+slength    = hoomd.sph.kernel.OptimalH[kernel] * dx
+rcut       = hoomd.sph.kernel.Kappa[kernel] * slength
 
-# Fluid and particle properties
-num_length          = int(sys.argv[1])                          # [ - ]
-lref                = 0.001                                     # [ m ]
-radius              = 0.5 * lref                                # [ m ]
-voxelsize           = lref/float(num_length)                    # [ m ]
-dx                  = voxelsize                                 # [ m ]
-specific_volume     = dx * dx * dx                              # [ m^3 ]
-rho0                = 1000.0                                    # [ kg/m^3 ]
-mass                = rho0 * specific_volume                    # [ kg ]
-fx                  = 0.1                                       # [ m/s^2 ]
-viscosity           = 0.01                                      # [ Pa s ]
-drho                = 0.05                                      # [ % ]
-backpress           = 0.01                                      # [ - ]
+part_rcut  = math.ceil(rcut / dx)
+part_depth = math.ceil(2.5 * hoomd.sph.kernel.Kappa[kernel] * rcut / dx)
 
-# get kernel properties
-kernel  = 'WendlandC4'
-slength = hoomd.sph.kernel.OptimalH[kernel]*dx                  # [ m ]
-rcut    = hoomd.sph.kernel.Kappa[kernel]*slength                # [ m ]
+# Domain: periodic in x, solid shell added in y and z
+nx = int(num_length)
+ny = int(num_length + 3 * part_rcut)
+nz = int(num_length + 3 * part_rcut)
 
-# particles per Kernel Radius
-part_rcut  = math.ceil(rcut/dx) 
+lx = nx * dx
+ly = ny * dx
+lz = nz * dx
 
-# get simulation box sizes etc.
-nx, ny, nz = int(num_length), int(num_length + (3*part_rcut)), int(num_length + (3*part_rcut))
-lx, ly, lz = float(nx) * voxelsize, float(ny) * voxelsize, float(nz) * voxelsize
-# box dimensions
-box_lx, box_ly, box_lz = lx, ly, lz
+# ─── Particle positions (half-cell offset ensures dx spacing) ────────────────
+xs = np.linspace(-lx / 2 + dx / 2, lx / 2 - dx / 2, nx, endpoint=True)
+ys = np.linspace(-ly / 2 + dx / 2, ly / 2 - dx / 2, ny, endpoint=True)
+zs = np.linspace(-lz / 2 + dx / 2, lz / 2 - dx / 2, nz, endpoint=True)
 
-# Number of Particles
-n_particles = nx * ny * nz 
+xg, yg, zg = np.meshgrid(xs, ys, zs, indexing='ij')
+positions  = np.column_stack([xg.ravel(), yg.ravel(), zg.ravel()])
+n_particles = positions.shape[0]
 
-# define meshgrid and add properties
-x, y, z = np.meshgrid(*(np.linspace(-box_lx / 2 + (dx/2), box_lx / 2 - (dx/2), nx, endpoint=True),),
-                      *(np.linspace(-box_ly / 2 + (dx/2), box_ly / 2 - (dx/2), ny, endpoint=True),),
-                      *(np.linspace(-box_lz / 2 + (dx/2), box_lz / 2 - (dx/2), nz, endpoint=True),))
+velocities = np.zeros((n_particles, 3), dtype=np.float32)
+masses     = np.full(n_particles, mass,    dtype=np.float32)
+slengths   = np.full(n_particles, slength, dtype=np.float32)
+densities  = np.full(n_particles, rho0,    dtype=np.float32)
 
-positions = np.array((x.ravel(), y.ravel(), z.ravel())).T
+# ─── Particle type assignment (vectorised) ───────────────────────────────────
+r_yz = np.sqrt(positions[:, 1]**2 + positions[:, 2]**2)
+typeid = np.where(r_yz >= radius, 1, 0).astype(np.int32)
 
-velocities = np.zeros((positions.shape[0], positions.shape[1]), dtype = np.float32)
-masses     = np.ones((positions.shape[0]), dtype = np.float32) * mass
-slengths   = np.ones((positions.shape[0]), dtype = np.float32) * slength
-densities  = np.ones((positions.shape[0]), dtype = np.float32) * rho0
-
-# create Snapshot 
-# snapshot = hoomd.Snapshot(device.communicator)
+# ─── Write GSD ───────────────────────────────────────────────────────────────
 snapshot = gsd.hoomd.Frame()
-snapshot.configuration.box     = [box_lx, box_ly, box_lz] + [0, 0, 0]
-snapshot.particles.N           = n_particles
-snapshot.particles.position    = positions
-snapshot.particles.typeid      = [0] * n_particles
-snapshot.particles.types       = ['F', 'S']
-snapshot.particles.velocity    = velocities
-snapshot.particles.mass        = masses
-snapshot.particles.slength     = slengths
-snapshot.particles.density     = densities
+snapshot.configuration.box  = [lx, ly, lz, 0, 0, 0]
+snapshot.particles.N        = n_particles
+snapshot.particles.types    = ['F', 'S']
+snapshot.particles.typeid   = typeid
+snapshot.particles.position = positions.astype(np.float32)
+snapshot.particles.velocity = velocities
+snapshot.particles.mass     = masses
+snapshot.particles.slength  = slengths
+snapshot.particles.density  = densities
 
-
-x    = snapshot.particles.position[:]
-tid  = snapshot.particles.typeid[:]
-# vels = snapshot.particles.velocity[:]
-for i in range(len(x)):
-    xi,yi,zi  = x[i][0], x[i][1], x[i][2]
-    distance = np.sqrt((yi)**2 + (zi)**2)
-
-    if distance > radius:
-        tid[i] = 1
-
-snapshot.particles.typeid[:]     = tid
-
-sim.create_state_from_snapshot(snapshot)
-
-init_filename = f'poiseuille_flow_{nx}_{ny}_{nz}_vs_{voxelsize}_init.gsd'
-# hoomd.write.GSD.write(state = sim.state, mode = 'w', filename = init_filename)
-
-with gsd.hoomd.open(name = init_filename, mode = 'w') as f:
+init_filename = f'poiseuille_flow_{nx}_{ny}_{nz}_vs_{dx}_init.gsd'
+with gsd.hoomd.open(name=init_filename, mode='w') as f:
     f.append(snapshot)
 
-# if device.communicator.rank == 0:
-#     export_gsd2vtu.export_spf(init_filename)
-
+n_fluid = int(np.sum(typeid == 0))
+n_solid = int(np.sum(typeid == 1))
+print(f'Written {init_filename}: {n_fluid} fluid, {n_solid} solid ({n_particles} total)')

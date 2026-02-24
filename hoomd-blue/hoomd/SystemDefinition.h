@@ -77,9 +77,6 @@ class PYBIND11_EXPORT SystemDefinition
                      const std::shared_ptr<BoxDim> box,
                      unsigned int n_types = 1,
                      unsigned int n_bond_types = 0,
-                     // unsigned int n_angle_types = 0,
-                     // unsigned int n_dihedral_types = 0,
-                     // unsigned int n_improper_types = 0,
                      std::shared_ptr<ExecutionConfiguration> exec_conf
                      = std::shared_ptr<ExecutionConfiguration>(new ExecutionConfiguration()),
                      std::shared_ptr<DomainDecomposition> decomposition
@@ -92,9 +89,6 @@ class PYBIND11_EXPORT SystemDefinition
                      const BoxDim& box,
                      unsigned int n_types = 1,
                      unsigned int n_bond_types = 0,
-                     // unsigned int n_angle_types = 0,
-                     // unsigned int n_dihedral_types = 0,
-                     // unsigned int n_improper_types = 0,
                      std::shared_ptr<ExecutionConfiguration> exec_conf
                      = std::shared_ptr<ExecutionConfiguration>(new ExecutionConfiguration()),
                      std::shared_ptr<DomainDecomposition> decomposition
@@ -174,33 +168,12 @@ class PYBIND11_EXPORT SystemDefinition
         {
         return m_bond_data;
         }
-    // //! Access the angle data defined for the simulation
-    // std::shared_ptr<AngleData> getAngleData()
-    //     {
-    //     return m_angle_data;
-    //     }
-    // //! Access the dihedral data defined for the simulation
-    // std::shared_ptr<DihedralData> getDihedralData()
-    //     {
-    //     return m_dihedral_data;
-    //     }
-    // //! Access the improper data defined for the simulation
-    // std::shared_ptr<ImproperData> getImproperData()
-    //     {
-    //     return m_improper_data;
-    //     }
 
     //! Access the constraint data defined for the simulation
     std::shared_ptr<ConstraintData> getConstraintData()
         {
         return m_constraint_data;
         }
-
-    // //! Get the pair data
-    // std::shared_ptr<PairData> getPairData() const
-    //     {
-    //     return m_pair_data;
-    //     }
 
     //! Return a snapshot of the current system data
     template<class Real> std::shared_ptr<SnapshotSystemData<Real>> takeSnapshot();
@@ -214,11 +187,7 @@ class PYBIND11_EXPORT SystemDefinition
     uint16_t m_seed = 0;                               //!< Random number seed
     std::shared_ptr<ParticleData> m_particle_data;     //!< Particle data for the system
     std::shared_ptr<BondData> m_bond_data;             //!< Bond data for the system
-    // std::shared_ptr<AngleData> m_angle_data;           //!< Angle data for the system
-    // std::shared_ptr<DihedralData> m_dihedral_data;     //!< Dihedral data for the system
-    // std::shared_ptr<ImproperData> m_improper_data;     //!< Improper data for the system
-    std::shared_ptr<ConstraintData> m_constraint_data; //!< Improper data for the system
-    // std::shared_ptr<PairData> m_pair_data;             //!< Special pairs data for the system
+    std::shared_ptr<ConstraintData> m_constraint_data; //!< Constraint data for the system
 
 #ifdef ENABLE_MPI
     /// The system communicator

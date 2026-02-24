@@ -5,7 +5,6 @@
     \brief Defines implementation of MeshGroupData
  */
 
-// #include "MeshGroupData.h"
 #include "BondedGroupData.h"
 #include "Index1D.h"
 #include "ParticleData.h"
@@ -14,7 +13,6 @@
 
 #ifdef ENABLE_HIP
 #include "CachedAllocator.h"
-// #include "MeshGroupData.cuh"
 #endif
 
 using namespace std;

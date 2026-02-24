@@ -1,204 +1,189 @@
 #!/usr/bin/env python3
-
 """
 Copyright (c) 2025-2026 David Krach, Daniel Rostan.
 All rights reserved.
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
 
 1. Redistributions of source code must retain the above copyright notice,
    this list of conditions and the following disclaimer.
-
 2. Redistributions in binary form must reproduce the above copyright notice,
    this list of conditions and the following disclaimer in the documentation
    and/or other materials provided with the distribution.
-
 3. Neither the name of the copyright holder nor the names of its contributors
    may be used to endorse or promote products derived from this software without
    specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
 
 maintainer: dkrach, david.krach@mib.uni-stuttgart.de
 
+Plane Poiseuille flow (parallel plates) — Transport-Velocity (TV) run script.
+
+Uses SinglePhaseFlowTV + KickDriftKickTV with a Linear EOS.
+The analytical profile is the same as run_parallel_plates.py:
+    v(y) = fx / (2ν) × (H²/4 − y²)
+
+Usage:
+    python3 run_parallel_plates_TV.py <num_length> <init_gsd_file> [steps]
 """
-# ----- HEADER -----------------------------------------------
-import hoomd
-from hoomd import *
-from hoomd import sph
-from hoomd.sph import _sph
-import numpy as np
-import math
-# import itertools
-from datetime import datetime
-import export_gsd2vtu, delete_solids_initial_timestep 
-import sph_info, sph_helper, read_input_fromtxt
+
 import sys, os
+_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../'))
+sys.path.insert(0, os.path.join(_ROOT, 'helper_modules'))
+sys.path.insert(0, os.path.join(_ROOT, 'helper_modules', 'gsd2vtu'))
 
+import hoomd
+from hoomd import sph
+import numpy as np
+from datetime import datetime
 import gsd.hoomd
-# ------------------------------------------------------------
+import sph_helper
 
+try:
+    import export_gsd2vtu
+    HAS_VTU = True
+except ImportError:
+    HAS_VTU = False
+
+# ─── Device & simulation ─────────────────────────────────────────────────────
 device = hoomd.device.CPU(notice_level=2)
-# device = hoomd.device.CPU(notice_level=10)
-sim = hoomd.Simulation(device=device)
+sim    = hoomd.Simulation(device=device)
 
-filename = str(sys.argv[2])
-
-if device.communicator.rank == 0:
-    print(f'{os.path.basename(__file__)}: input file: {filename} ')
+num_length = int(sys.argv[1])
+filename   = str(sys.argv[2])
+steps      = int(sys.argv[3]) if len(sys.argv) > 3 else 10001
 
 dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-logname  = filename.replace('_init.gsd', '')
-logname  = f'{logname}_runTV.log'
-dumpname = filename.replace('_init.gsd', '')
-dumpname = f'{dumpname}_runTV.gsd'
+logname   = filename.replace('_init.gsd', '_runTV.log')
+dumpname  = filename.replace('_init.gsd', '_runTV.gsd')
 
-sim.create_state_from_gsd(filename = filename)
+sim.create_state_from_gsd(filename=filename)
 
+# ─── Physical parameters ─────────────────────────────────────────────────────
+lref       = 0.001
+H          = lref
+dx         = lref / num_length
+rho0       = 1000.0
+viscosity  = 1e-3
+fx         = 0.1
+drho       = 0.01
+backpress  = 0.0            # background pressure via EOS (not used for TV plates)
+tvpress    = 1.0            # TV background pressure parameter
+nu         = viscosity / rho0
+v_max_an   = fx * H**2 / (8.0 * nu)
+refvel     = v_max_an
 
-# Fluid and particle properties
-SHOW_PROC_PART_INFO = False
-SHOW_DECOMP_INFO    = False
-num_length          = int(sys.argv[1])                          # [ - ]
-lref                = 0.001                                     # [ m ]
-radius              = 0.5 * lref                                # [ m ]
-voxelsize           = lref/float(num_length)                    # [ m ]
-dx                  = voxelsize                                 # [ m ]
-specific_volume     = dx * dx * dx                              # [ m^3 ]
-rho0                = 1000.0                                    # [ kg/m^3 ]
-mass                = rho0 * specific_volume                    # [ kg ]
-fx                  = 0.1                                       # [ m/s^2 ]
-viscosity           = 1e-03                                     # [ Pa s ]
-drho                = 0.01                                      # [ % ]
-backpress           = 0.0                                       # [ - ]
-tvpress             = 1.0                                       # [ - ]
-refvel              = fx * lref**2 * 0.25 / (viscosity/rho0)    # [ m/s ]
-
-
-# get kernel properties
-kernel  = 'WendlandC4'
-slength = hoomd.sph.kernel.OptimalH[kernel]*dx                  # [ m ]
-rcut    = hoomd.sph.kernel.Kappa[kernel]*slength                # [ m ]
-
-# define model parameters
-densitymethod = 'SUMMATION'
-steps = int(sys.argv[3])
-
+# ─── Kernel ──────────────────────────────────────────────────────────────────
+kernel     = 'WendlandC4'
+slength    = hoomd.sph.kernel.OptimalH[kernel] * dx
+rcut       = hoomd.sph.kernel.Kappa[kernel] * slength
 kernel_obj = hoomd.sph.kernel.Kernels[kernel]()
 kappa      = kernel_obj.Kappa()
 
-if SHOW_DECOMP_INFO:
-    sph_info.print_decomp_info(sim, device)
+nlist = hoomd.nsearch.nlist.Cell(buffer=rcut * 0.05,
+                                  rebuild_check_delay=1, kappa=kappa)
 
-# Neighbor list
-nlist = hoomd.nsearch.nlist.Cell(buffer = rcut*0.05, rebuild_check_delay = 1, kappa = kappa)
-
-# Equation of State
+# ─── EOS (Linear for TV) ─────────────────────────────────────────────────────
 eos = hoomd.sph.eos.Linear()
-eos.set_params( rho0, backpress, tvpress )
+eos.set_params(rho0, backpress, tvpress)
 
-# Define groups/filters
-filterfluid  = hoomd.filter.Type(['F']) # is zero
-filtersolid  = hoomd.filter.Type(['S']) # is one
-filterall    = hoomd.filter.All()
+# ─── Filters ─────────────────────────────────────────────────────────────────
+filterfluid = hoomd.filter.Type(['F'])
+filtersolid = hoomd.filter.Type(['S'])
 
-with sim.state.cpu_local_snapshot as snap:
-    print(f'{np.count_nonzero(snap.particles.typeid == 0)} fluid particles on rank {device.communicator.rank}')
-    print(f'{np.count_nonzero(snap.particles.typeid == 1)} solid particles on rank {device.communicator.rank}')
+# ─── SPH model ───────────────────────────────────────────────────────────────
+model = hoomd.sph.sphmodel.SinglePhaseFlowTV(
+    kernel=kernel_obj, eos=eos, nlist=nlist,
+    fluidgroup_filter=filterfluid, solidgroup_filter=filtersolid,
+    densitymethod='SUMMATION')
 
-# Set up SPH solver
-model = hoomd.sph.sphmodel.SinglePhaseFlowTV(kernel = kernel_obj,
-                                           eos    = eos,
-                                           nlist  = nlist,
-                                           fluidgroup_filter = filterfluid,
-                                           solidgroup_filter = filtersolid, 
-                                           densitymethod = densitymethod)
-if device.communicator.rank == 0:
-    print("SetModelParameter on all ranks")
-
-model.mu = viscosity
-model.densitymethod = densitymethod
-model.gx = fx
-model.damp = 1000
-model.artificialviscosity = True 
-model.alpha = 0.2
-model.beta = 0.0
+model.mu               = viscosity
+model.gx               = fx
+model.damp             = 1000
+model.artificialviscosity = True
+model.alpha            = 0.2
+model.beta             = 0.0
 model.densitydiffusion = False
-model.shepardrenormanlization = False
 
+# ─── Speed of sound & timestep ───────────────────────────────────────────────
 maximum_smoothing_length = sph_helper.set_max_sl(sim, device, model)
 
-c, c_condition = model.compute_speedofsound(LREF = lref, UREF = refvel, 
-                                            DX = dx, DRHO = drho, H = maximum_smoothing_length, 
-                                            MU = viscosity, RHO0 = rho0)
+c, cond = model.compute_speedofsound(
+    LREF=lref, UREF=refvel, DX=dx, DRHO=drho,
+    H=maximum_smoothing_length, MU=viscosity, RHO0=rho0)
 
 if device.communicator.rank == 0:
-    print(f'Speed of sound [m/s]: {c}, Used: {c_condition}')
+    print(f'Speed of sound: {c:.4f} m/s  ({cond})')
 
-# compute dt
-dt, dt_condition = model.compute_dt(LREF = lref, UREF = refvel, 
-                                          DX = dx, DRHO = drho, H = maximum_smoothing_length, 
-                                          MU = viscosity, RHO0 = rho0)
+sph_helper.update_min_c0(device, model, c,
+                          mode='uref', lref=lref, uref=refvel, cfactor=10.0)
+
+dt, dt_cond = model.compute_dt(
+    LREF=lref, UREF=refvel, DX=dx, DRHO=drho,
+    H=maximum_smoothing_length, MU=viscosity, RHO0=rho0)
 
 if device.communicator.rank == 0:
-    print(f'Timestep size [s]: {dt}, Used: {dt_condition}')
+    print(f'Timestep: {dt:.3e} s  ({dt_cond})')
 
+# ─── Integrator (KickDriftKickTV) ────────────────────────────────────────────
 integrator = hoomd.sph.Integrator(dt=dt)
-
-kdktv = hoomd.sph.methods.KickDriftKickTV(filter=filterfluid, densitymethod = densitymethod)
-
+kdktv = hoomd.sph.methods.KickDriftKickTV(filter=filterfluid,
+                                           densitymethod='SUMMATION')
 integrator.methods.append(kdktv)
 integrator.forces.append(model)
-
-compute_filter_all = hoomd.filter.All()
-compute_filter_fluid = hoomd.filter.Type(['F'])
-spf_properties = hoomd.sph.compute.SinglePhaseFlowBasicProperties(compute_filter_fluid)
-sim.operations.computes.append(spf_properties)
-
-if device.communicator.rank == 0:
-    print(f'Integrator Forces: {integrator.forces[:]}')
-    print(f'Integrator Methods: {integrator.methods[:]}')
-    print(f'Simulation Computes: {sim.operations.computes[:]}')
-
-gsd_trigger = hoomd.trigger.Periodic(1000)
-gsd_writer = hoomd.write.GSD(filename=dumpname,
-                             trigger=gsd_trigger,
-                             mode='wb',
-                             dynamic = ['property', 'momentum']
-                             )
-sim.operations.writers.append(gsd_writer)
-
-log_trigger = hoomd.trigger.Periodic(100)
-logger = hoomd.logging.Logger(categories=['scalar', 'string'])
-logger.add(sim, quantities=['timestep', 'tps', 'walltime'])
-logger.add(spf_properties, quantities=['abs_velocity', 'num_particles', 'fluid_vel_x_sum', 'mean_density', 'e_kin_fluid'])
-
-table = hoomd.write.Table(trigger=log_trigger, 
-                          logger=logger, max_header_len = 10)
-sim.operations.writers.append(table)
-
-file = open(logname, mode='w+', newline='\n')
-table_file = hoomd.write.Table(output=file,
-                               trigger=log_trigger,
-                               logger=logger, max_header_len = 10)
-sim.operations.writers.append(table_file)
-
 sim.operations.integrator = integrator
 
-if device.communicator.rank == 0:
-    print(f'Starting Run at {dt_string}')
+# ─── Output ──────────────────────────────────────────────────────────────────
+gsd_writer = hoomd.write.GSD(filename=dumpname,
+                              trigger=hoomd.trigger.Periodic(1000),
+                              mode='wb',
+                              dynamic=['property', 'momentum'])
+sim.operations.writers.append(gsd_writer)
 
+logger = hoomd.logging.Logger(categories=['scalar', 'string'])
+logger.add(sim, quantities=['timestep', 'tps', 'walltime'])
+table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(500), logger=logger,
+                          max_header_len=10)
+sim.operations.writers.append(table)
+
+log_file = open(logname, mode='w+', newline='\n')
+table_file = hoomd.write.Table(output=log_file,
+                                trigger=hoomd.trigger.Periodic(500),
+                                logger=logger, max_header_len=10)
+sim.operations.writers.append(table_file)
+
+# ─── Run ─────────────────────────────────────────────────────────────────────
+if device.communicator.rank == 0:
+    print(f'Starting TV plane Poiseuille run at {dt_string}')
 sim.run(steps, write_at_start=True)
 
-#if device.communicator.rank == 0:
-#    export_gsd2vtu.export_spf(dumpname)
+# ─── Post-processing: L₂ error vs plane Poiseuille profile ──────────────────
+if device.communicator.rank == 0:
+    with gsd.hoomd.open(dumpname, 'r') as traj:
+        snap = traj[-1]
+        pos = snap.particles.position
+        tid = snap.particles.typeid
+        vel = snap.particles.velocity
+
+    fluid = (tid == 0)
+    y_f   = pos[fluid, 1]
+    vx_f  = vel[fluid, 0]
+
+    in_gap = np.abs(y_f) < H / 2
+    y_ev   = y_f[in_gap]
+    vx_ev  = vx_f[in_gap]
+    va_ev  = fx / (2.0 * nu) * (H**2 / 4.0 - y_ev**2)
+
+    L2_err = np.sqrt(np.mean((vx_ev - va_ev)**2)) / v_max_an * 100.0
+
+    print(f'\n── TV plane Poiseuille profile check (last frame, step {snap.configuration.step}) ──')
+    print(f'  Analytical v_max = {v_max_an:.5f} m/s')
+    print(f'  SPH        v_max = {float(np.max(vx_ev)):.5f} m/s')
+    print(f'  L₂ error / v_max = {L2_err:.2f} %')
+
+if HAS_VTU and device.communicator.rank == 0:
+    export_gsd2vtu.export_spf(dumpname)

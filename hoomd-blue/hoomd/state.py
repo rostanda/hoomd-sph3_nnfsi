@@ -364,14 +364,6 @@ class State:
                 raise RuntimeError("Particle types must remain the same")
             if snapshot.bonds.types != self.bond_types:
                 raise RuntimeError("Bond types must remain the same")
-            # if snapshot.angles.types != self.angle_types:
-            #     raise RuntimeError("Angle types must remain the same")
-            # if snapshot.dihedrals.types != self.dihedral_types:
-            #     raise RuntimeError("Dihedral types must remain the same")
-            # if snapshot.impropers.types != self.improper_types:
-            #     raise RuntimeError("Improper types must remain the same")
-            # if snapshot.pairs.types != self.special_pair_types:
-            #     raise RuntimeError("Pair types must remain the same")
 
         self._cpp_sys_def.initializeFromSnapshot(snapshot._cpp_obj)
         self.update_group_dof()
@@ -400,47 +392,15 @@ class State:
         """
         return self._cpp_sys_def.getBondData().getTypes()
 
-    # @property
-    # def angle_types(self):
-    #     """list[str]: List of all angle types in the simulation state."""
-    #     return self._cpp_sys_def.getAngleData().getTypes()
-
-    # @property
-    # def dihedral_types(self):
-    #     """list[str]: List of all dihedral types in the simulation state."""
-    #     return self._cpp_sys_def.getDihedralData().getTypes()
-
-    # @property
-    # def improper_types(self):
-    #     """list[str]: List of all improper types in the simulation state."""
-    #     return self._cpp_sys_def.getImproperData().getTypes()
-
-    # @property
-    # def special_pair_types(self):
-    #     """list[str]: List of all special pair types in the simulation state.
-
-    #     .. rubric:: Example:
-
-    #     .. code-block:: python
-
-    #         special_pair_types = simulation.state.special_pair_types
-    #     """
-    #     return self._cpp_sys_def.getPairData().getTypes()
-
     @property
     def types(self):
         """dict[str, list[str]]: dictionary of all types in the state.
 
-        Combines the data from `particle_types`, `bond_types`, `angle_types`,
-        `dihedral_types`, `improper_types`, and `special_pair_types` into a
+        Combines the data from `particle_types` and `bond_types` into a
         dictionary with keys matching the property names.
         """
         return dict(particle_types=self.particle_types,
-                    bond_types=self.bond_types,
-                    # angle_types=self.angle_types,
-                    # dihedral_types=self.dihedral_types,
-                    # improper_types=self.improper_types,
-                    special_pair_types=self.special_pair_types)
+                    bond_types=self.bond_types)
 
     @property
     def N_particles(self):  # noqa: N802 - allow N in name
@@ -465,26 +425,6 @@ class State:
             N_bonds = simulation.state.N_bonds
         """
         return self._cpp_sys_def.getBondData().getNGlobal()
-
-    # @property
-    # def N_angles(self):  # noqa: N802 - allow N in name
-    #     """int: The number of angles in the simulation state."""
-    #     return self._cpp_sys_def.getAngleData().getNGlobal()
-
-    # @property
-    # def N_impropers(self):  # noqa: N802 - allow N in name
-    #     """int: The number of impropers in the simulation state."""
-    #     return self._cpp_sys_def.getImproperData().getNGlobal()
-
-    @property
-    def N_special_pairs(self):  # noqa: N802 - allow N in name
-        """int: The number of special pairs in the simulation state."""
-        return self._cpp_sys_def.getPairData().getNGlobal()
-
-    # @property
-    # def N_dihedrals(self):  # noqa: N802 - allow N in name
-    #     """int: The number of dihedrals in the simulation state."""
-    #     return self._cpp_sys_def.getDihedralData().getNGlobal()
 
     @property
     def N_constraints(self):  # noqa: N802 - allow N in name

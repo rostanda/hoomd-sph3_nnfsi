@@ -53,7 +53,8 @@ namespace sph
 
 template<StateEquationType SET_>
 StateEquation<SET_>::StateEquation()
-    : m_bp(Scalar(0.0)), m_tvp(Scalar(0.0)), m_rho0(Scalar(0.0)), m_c(Scalar(0.0))
+    : m_bpfactor(Scalar(0.0)), m_tvpfactor(Scalar(0.0)),
+      m_bp(Scalar(0.0)), m_tvp(Scalar(0.0)), m_rho0(Scalar(0.0)), m_c(Scalar(0.0))
     {
         // Default values
         m_params_set = false;
@@ -99,6 +100,13 @@ Scalar StateEquation<tait>::Pressure(const Scalar rho)
     }
 
 template<>
+Scalar StateEquation<tait>::dPressuredDensity(const Scalar rho)
+    {
+        // dp/drho = c^2 * (rho/rho0)^6
+        return m_c * m_c * pow(rho / m_rho0, Scalar(6));
+    }
+
+template<>
 Scalar StateEquation<tait>::Density(const Scalar p)
     {
         // rho = rho0 * [ (p-backp) * (7/rho0*c^2) +1 ]^(1/7)
@@ -114,13 +122,63 @@ Scalar StateEquation<linear>::Pressure(const Scalar rho)
     }
 
 template<>
+Scalar StateEquation<linear>::dPressuredDensity(const Scalar rho)
+    {
+        // dp/drho = c^2  (constant for linear EOS)
+        return m_c * m_c;
+    }
+
+template<>
 Scalar StateEquation<linear>::Density(const Scalar p)
     {
         // rho = (p-backp)/c^2 + rho0
         return (p-m_bp)/(m_c*m_c) + m_rho0;
     }
 
-namespace detail 
+
+// -----------------------------------------------------------------
+// VRD (Variable Reference Density) specialisations
+//
+// These evaluate the EOS with a per-particle rest density rho0_local
+// rather than the global m_rho0.  Used by SinglePhaseFlowGDGD to
+// handle buoyancy-driven flows where
+//     rho0_i = rho0_ref * (1 - beta * (T_i - T_ref))
+// Both Tait and Linear variants are provided.
+// -----------------------------------------------------------------
+
+template<>
+Scalar StateEquation<tait>::PressureVRD(const Scalar rho, const Scalar rho0_local)
+    {
+        // Tait EOS with per-particle rest density:
+        //   P = (rho0_local * c^2 / 7) * ((rho / rho0_local)^7 - 1) + bp
+        return ((rho0_local * m_c * m_c) / Scalar(7))
+               * (pow(rho / rho0_local, Scalar(7)) - Scalar(1)) + m_bp;
+    }
+
+template<>
+Scalar StateEquation<tait>::dPressureVRDdDensity(const Scalar rho, const Scalar rho0_local)
+    {
+        // dp/drho = c^2 * (rho / rho0_local)^6
+        return m_c * m_c * pow(rho / rho0_local, Scalar(6));
+    }
+
+template<>
+Scalar StateEquation<linear>::PressureVRD(const Scalar rho, const Scalar rho0_local)
+    {
+        // Linear EOS with per-particle rest density:
+        //   P = c^2 * (rho - rho0_local) + bp
+        return m_c * m_c * (rho - rho0_local) + m_bp;
+    }
+
+template<>
+Scalar StateEquation<linear>::dPressureVRDdDensity(const Scalar rho, const Scalar rho0_local)
+    {
+        // dp/drho = c^2  (constant for linear EOS, independent of rho0_local)
+        return m_c * m_c;
+    }
+
+
+namespace detail
 {
 
 
@@ -130,8 +188,15 @@ void export_StateEquation(pybind11::module& m, std::string name)
     pybind11::class_<StateEquation<SET_>, std::shared_ptr<StateEquation<SET_>>>(m, name.c_str())
         .def(pybind11::init<>())
         .def("Pressure", &StateEquation<SET_>::Pressure)
+        .def("dPressuredDensity", &StateEquation<SET_>::dPressuredDensity)
         .def("Density", &StateEquation<SET_>::Density)
-        .def("setParams", &StateEquation<SET_>::setParams);
+        .def("setParams", &StateEquation<SET_>::setParams)
+        .def("setBackPressure", &StateEquation<SET_>::setBackPressure)
+        .def("setTransportVelocityPressure", &StateEquation<SET_>::setTransportVelocityPressure)
+        .def("getRestDensity", &StateEquation<SET_>::getRestDensity)
+        .def("getSpeedOfSound", &StateEquation<SET_>::getSpeedOfSound)
+        .def("getBackgroundPressure", &StateEquation<SET_>::getBackgroundPressure)
+        .def("getTransportVelocityPressure", &StateEquation<SET_>::getTransportVelocityPressure);
 }
 } // end namespace detail
 
@@ -140,6 +205,9 @@ void export_StateEquation(pybind11::module& m, std::string name)
 
 template void StateEquation<tait>::setBackPressure(Scalar bp);
 template void StateEquation<linear>::setBackPressure(Scalar bp);
+
+template void StateEquation<tait>::setTransportVelocityPressure(Scalar tvp);
+template void StateEquation<linear>::setTransportVelocityPressure(Scalar tvp);
 
 namespace detail
 {

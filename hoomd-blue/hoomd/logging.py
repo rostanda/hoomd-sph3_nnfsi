@@ -585,10 +585,6 @@ class _LoggerEntry:
             and self.attr == other.attr
             and self.category == other.category
         )
-        return all(
-            getattr(self, attr) == getattr(other, attr)
-            for attr in ["obj", "attr", "category"]
-        )
 
     def __getstate__(self):
         state = copy.copy(self.__dict__)

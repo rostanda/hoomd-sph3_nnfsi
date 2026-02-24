@@ -5,7 +5,6 @@
 #include "hoomd/GPUFlags.h"
 #include "hoomd/GPUVector.h"
 #include "hoomd/Index1D.h"
-// #include "hoomd/MeshDefinition.h"
 #include "hoomd/PythonLocalDataAccess.h"
 
 #include <hoomd/extern/nano-signal-slot/nano_signal_slot.hpp>
@@ -165,14 +164,6 @@ class PYBIND11_EXPORT NeighborList : public Compute
         m_rcut_signal.emit();
         forceUpdate();
         }
-
-    /// Add Mesh for meshbond_data
-    // virtual void AddMesh(std::shared_ptr<MeshDefinition> meshdef)
-    //     {
-    //     m_meshbond_data = meshdef->getMeshBondData();
-    //     m_meshbond_data->getGroupNumChangeSignal()
-    //         .connect<NeighborList, &NeighborList::slotGlobalTopologyNumberChange>(this);
-    //     }
 
     /** Remove a r_cut matrix
 
@@ -522,8 +513,6 @@ class PYBIND11_EXPORT NeighborList : public Compute
     Index2D m_ex_list_indexer_tag;           //!< Indexer for accessing the by-tag exclusion list
     bool m_exclusions_set;                   //!< True if any exclusions have been set
 
-    // std::shared_ptr<MeshBondData> m_meshbond_data;
-
     /// True if the number of particles has changed.
     bool m_n_particles_changed = false;
 
@@ -638,20 +627,8 @@ class PYBIND11_EXPORT NeighborList : public Compute
     //! Add an exclusion for every bond in the ParticleData
     void addExclusionsFromBonds();
 
-    // //! Add an exclusion for every bond in the ParticleData
-    // void addExclusionsFromMeshBonds();
-
-    // //! Add exclusions from angles
-    // void addExclusionsFromAngles();
-
-    // //! Add exclusions from dihedrals
-    // void addExclusionsFromDihedrals();
-
     //! Add an exclusion for every bond in the ConstraintData
     void addExclusionsFromConstraints();
-
-    //! Add an exclusion for every pair in the ParticleData
-    // void addExclusionsFromPairs();
 
     //! Test if an exclusion has been made
     bool isExcluded(unsigned int tag1, unsigned int tag2);
