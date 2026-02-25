@@ -102,4 +102,11 @@ INIT=$(ls -t *_init.gsd | head -1)
 mpirun -np 8 python3 run_sessile_droplet_shear.py ${NL} "${INIT}"
 popd > /dev/null
 
+# ─── 07 Capillary Rise ────────────────────────────────────────────────────────
+# 3-D round tube in square box: 7 contact angles, wetting → non-wetting  →  np=4
+banner "07  Capillary Rise  (np=4, 7 configs)"
+pushd "${SCRIPT_DIR}/07_capillary_rise" > /dev/null
+bash run_all_configs.sh ${NL}
+popd > /dev/null
+
 banner "All two-phase flow benchmarks complete."
