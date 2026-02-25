@@ -28,32 +28,32 @@ BENCHMARK DESCRIPTION
 A layer of heavy cold fluid (T = 0) rests on top of a layer of light hot fluid
 (T = 1), separated by a sinusoidally perturbed interface:
 
-    y_int(x) = δ · cos(2π·x/lref),   δ = 0.1·lref
+    $y_\mathrm{int}(x) = \delta \cos(2\pi x/l_\mathrm{ref}), \quad \delta = 0.1\,l_\mathrm{ref}$
 
-Gravity (gy = -9.81 m/s²) destabilises the interface, driving the classic
+Gravity ($g_y = -9.81\,\mathrm{m/s^2}$) destabilises the interface, driving the classic
 Rayleigh–Taylor instability.  Buoyancy is provided via the Boussinesq term in
 SinglePhaseFlowGDGD:
 
-    F_buoy = m · g · (−β_s · (T − T_ref))
+    $F_\mathrm{buoy} = m \, g \, (-\beta_s (T - T_\mathrm{ref}))$
 
-    β_s = 0.5,  T_ref = 0.5,  ΔT = 1  →  At_eff = β_s · ΔT / 2 = 0.25
+    $\beta_s = 0.5$, $T_\mathrm{ref} = 0.5$, $\Delta T = 1$ $\Rightarrow$ $\mathrm{At}_\mathrm{eff} = \beta_s \Delta T / 2 = 0.25$
 
-With kappa_s = 0 the scalar T is frozen to each Lagrangian particle (no
+With $\kappa_s = 0$ the scalar $T$ is frozen to each Lagrangian particle (no
 diffusion), giving a sharp-interface RT.  In the linear regime the interface
 amplitude grows as:
 
-    δ(t) = δ_0 · cosh(γ · t),   γ = sqrt(At_eff · |gy| · 2π/lref)
+    $\delta(t) = \delta_0 \cosh(\gamma t), \quad \gamma = \sqrt{\mathrm{At}_\mathrm{eff} |g_y| \cdot 2\pi/l_\mathrm{ref}}$
 
 Physical parameters:
-    lref      = 0.001 m        perturbation wavelength = cavity width
-    rho0      = 1000 kg/m³     rest density
-    viscosity = 0.002 Pa·s     dynamic viscosity
-    gy        = -9.81 m/s²     gravity
-    beta_s    = 0.5            Boussinesq coefficient
-    kappa_s   = 0.0            no scalar diffusion (sharp interface)
-    At_eff    = 0.25           effective Atwood number
-    γ         ≈ 124 s⁻¹       linear growth rate  (for lref = 0.001 m)
-    τ_lin     = 1/γ ≈ 8 ms
+    $l_\mathrm{ref}           = 0.001\,\mathrm{m}$       perturbation wavelength = cavity width
+    $\rho_0                   = 1000\,\mathrm{kg/m^3}$   rest density
+    $\mu                      = 0.002\,\mathrm{Pa{\cdot}s}$ dynamic viscosity
+    $g_y                      = -9.81\,\mathrm{m/s^2}$   gravity
+    $\beta_s                  = 0.5$                      Boussinesq coefficient
+    $\kappa_s                 = 0.0$                      no scalar diffusion (sharp interface)
+    $\mathrm{At}_\mathrm{eff} = 0.25$                     effective Atwood number
+    $\gamma                   \approx 124\,\mathrm{s}^{-1}$ linear growth rate (for $l_\mathrm{ref} = 0.001\,\mathrm{m}$)
+    $\tau_\mathrm{lin}        = 1/\gamma \approx 8\,\mathrm{ms}$
 
 Usage:
     python3 run_boussinesq_rt.py <num_length> <init_gsd_file> [steps]
@@ -93,7 +93,7 @@ dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 logname   = filename.replace('_init.gsd', '_run.log')
 dumpname  = filename.replace('_init.gsd', '_run.gsd')
 
-sim.create_state_from_gsd(filename=filename)
+sim.create_state_from_gsd(filename=filename, domain_decomposition=(None, None, 1))
 
 # ─── Physical parameters ─────────────────────────────────────────────────────
 lref      = 0.001        # perturbation wavelength = cavity width     [m]
@@ -112,10 +112,10 @@ delta     = 0.1 * lref   # initial interface perturbation amplitude   [m]
 drho      = 0.01         # allowed density variation                  [–]
 backpress = 0.01         # background pressure coefficient            [–]
 
-At_eff    = beta_s * DeltaT / 2          # effective Atwood number  = 0.25
-k_wave    = 2.0 * np.pi / lref           # perturbation wavenumber  [1/m]
-gamma_lin = np.sqrt(At_eff * abs(gy) * k_wave)   # linear growth rate [1/s]
-refvel    = np.sqrt(At_eff * abs(gy) * lref)      # buoyancy velocity scale [m/s]
+At_eff    = beta_s * DeltaT / 2          # $\mathrm{At}_\mathrm{eff} = \beta_s \Delta T / 2 = 0.25$
+k_wave    = 2.0 * np.pi / lref           # $k = 2\pi/l_\mathrm{ref}$ [m$^{-1}$]
+gamma_lin = np.sqrt(At_eff * abs(gy) * k_wave)   # $\gamma = \sqrt{\mathrm{At}_\mathrm{eff} |g_y| k}$ [s$^{-1}$]
+refvel    = np.sqrt(At_eff * abs(gy) * lref)      # $U_\mathrm{ref} = \sqrt{\mathrm{At}_\mathrm{eff} |g_y| l_\mathrm{ref}}$ [m/s]
 
 # ─── Kernel ──────────────────────────────────────────────────────────────────
 kernel     = 'WendlandC4'
@@ -136,9 +136,9 @@ filterfluid = hoomd.filter.Type(['F'])
 filtersolid = hoomd.filter.Type(['S'])
 
 # ─── SinglePhaseFlowGDGD model ───────────────────────────────────────────────
-# Boussinesq mode: buoyancy = m·g·(−β_s·(T−T_ref)).
-# kappa_s = 0 → T is frozen (Lagrangian advection only, sharp interface).
-# beta_s = 0.5, T ∈ {0, 1} → At_eff = 0.25.
+# Boussinesq mode: $F_\mathrm{buoy} = m\,g\,(-\beta_s(T - T_\mathrm{ref}))$.
+# $\kappa_s = 0$ $\Rightarrow$ $T$ is frozen (Lagrangian advection only, sharp interface).
+# $\beta_s = 0.5$, $T \in \{0,1\}$ $\Rightarrow$ $\mathrm{At}_\mathrm{eff} = 0.25$.
 model = hoomd.sph.sphmodel.SinglePhaseFlowGDGD(
     kernel=kernel_obj, eos=eos, nlist=nlist,
     fluidgroup_filter=filterfluid, solidgroup_filter=filtersolid,
@@ -195,20 +195,20 @@ integrator.forces.append(model)
 sim.operations.integrator = integrator
 
 # ─── Initialise scalar field T (aux4.x) via perturbed interface ──────────────
-# Interface: y_int(x) = δ · cos(2π·x/lref)
-# Particles above interface (y > y_int) → cold (T = 0, heavy, will sink)
-# Particles below interface (y ≤ y_int) → hot  (T = 1, light, will rise)
-# Solid particles             → T_ref (neutral, no diffusion anyway)
+# Interface: $y_\mathrm{int}(x) = \delta \cos(2\pi x/l_\mathrm{ref})$
+# $y > y_\mathrm{int}$ $\to$ cold ($T = 0$, heavy, sinks)
+# $y \leq y_\mathrm{int}$ $\to$ hot ($T = 1$, light, rises)
+# Solid particles $\to$ $T_\mathrm{ref}$ (neutral, no diffusion)
 with sim.state.cpu_local_snapshot as snap:
     pos  = snap.particles.position[:]   # (N_local, 3)
     tid  = snap.particles.typeid[:]     # (N_local,)
     aux4 = snap.particles.auxiliary4    # (N_local, 3); T stored in column 0 (x)
 
-    x_p   = pos[:, 0]
-    y_p   = pos[:, 1]
+    x_p   = np.array(pos[:, 0])
+    y_p   = np.array(pos[:, 1])
     y_int = delta * np.cos(2.0 * np.pi * x_p / lref)
 
-    is_fluid = (tid == 0)
+    is_fluid = np.array(tid) == 0
     is_upper = is_fluid & (y_p >  y_int)   # heavy cold (sinks)
     is_lower = is_fluid & (y_p <= y_int)   # light hot  (rises)
 
@@ -219,20 +219,23 @@ with sim.state.cpu_local_snapshot as snap:
 
 # ─── Output ──────────────────────────────────────────────────────────────────
 gsd_writer = hoomd.write.GSD(filename=dumpname,
-                              trigger=hoomd.trigger.Periodic(2000),
+                              trigger=hoomd.trigger.Periodic(100),
                               mode='wb',
                               dynamic=['property', 'momentum'])
 sim.operations.writers.append(gsd_writer)
 
 logger = hoomd.logging.Logger(categories=['scalar', 'string'])
 logger.add(sim, quantities=['timestep', 'tps', 'walltime'])
-table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(2000), logger=logger,
+compute_fluid = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filter=filterfluid)
+sim.operations.computes.append(compute_fluid)
+logger.add(compute_fluid, quantities=['e_kin_fluid', 'mean_density'])
+table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(100), logger=logger,
                           max_header_len=10)
 sim.operations.writers.append(table)
 
 log_file   = open(logname, mode='w+', newline='\n')
 table_file = hoomd.write.Table(output=log_file,
-                                trigger=hoomd.trigger.Periodic(2000),
+                                trigger=hoomd.trigger.Periodic(100),
                                 logger=logger, max_header_len=10)
 sim.operations.writers.append(table_file)
 
@@ -245,6 +248,7 @@ if device.communicator.rank == 0:
     print(f'  Running {steps} steps  ({steps / steps_lin:.1f} × τ_lin)')
 
 sim.run(steps, write_at_start=True)
+gsd_writer.flush()
 
 # ─── Post-processing: bubble/spike tip vs linear theory ──────────────────────
 # Since kappa_s = 0, T is frozen to each particle for all time.
@@ -262,7 +266,7 @@ if device.communicator.rank == 0:
             t_step = snap.configuration.step
             pos_s  = snap.particles.position
             tid_s  = snap.particles.typeid
-            aux4_s = snap.particles.aux4   # shape (N, 3); T = column 0
+            aux4_s = snap.particles.auxiliary4   # shape (N, 3); T = column 0
 
             fluid    = (tid_s == 0)
             y_fl     = pos_s[fluid, 1]

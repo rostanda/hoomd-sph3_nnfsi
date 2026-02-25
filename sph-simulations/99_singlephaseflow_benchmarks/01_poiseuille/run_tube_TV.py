@@ -24,7 +24,7 @@ maintainer: dkrach, david.krach@mib.uni-stuttgart.de
 Hagen–Poiseuille tube flow — Transport-Velocity (TV) run script.
 
 Uses SinglePhaseFlowTV + KickDriftKickTV.  The analytical profile is the same:
-    v(r) = fx / (4ν) × (R² − r²)
+    $v(r) = \frac{f_x}{4\nu}(R^2 - r^2)$
 
 Usage:
     python3 run_tube_TV.py <num_length> <init_gsd_file> [steps]
@@ -137,20 +137,23 @@ sim.operations.integrator = integrator
 
 # ─── Output ──────────────────────────────────────────────────────────────────
 gsd_writer = hoomd.write.GSD(filename=dumpname,
-                              trigger=hoomd.trigger.Periodic(1000),
+                              trigger=hoomd.trigger.Periodic(100),
                               mode='wb',
                               dynamic=['property', 'momentum'])
 sim.operations.writers.append(gsd_writer)
 
 logger = hoomd.logging.Logger(categories=['scalar', 'string'])
 logger.add(sim, quantities=['timestep', 'tps', 'walltime'])
-table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(500), logger=logger,
+compute_fluid = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filter=filterfluid)
+sim.operations.computes.append(compute_fluid)
+logger.add(compute_fluid, quantities=['e_kin_fluid', 'mean_density'])
+table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(100), logger=logger,
                           max_header_len=10)
 sim.operations.writers.append(table)
 
 log_file = open(logname, mode='w+', newline='\n')
 table_file = hoomd.write.Table(output=log_file,
-                                trigger=hoomd.trigger.Periodic(500),
+                                trigger=hoomd.trigger.Periodic(100),
                                 logger=logger, max_header_len=10)
 sim.operations.writers.append(table_file)
 
@@ -158,6 +161,7 @@ sim.operations.writers.append(table_file)
 if device.communicator.rank == 0:
     print(f'Starting TV Hagen–Poiseuille tube run at {dt_string}')
 sim.run(steps, write_at_start=True)
+gsd_writer.flush()
 
 # ─── Post-processing: L₂ error vs Hagen–Poiseuille profile ──────────────────
 if device.communicator.rank == 0:

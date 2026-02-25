@@ -25,14 +25,14 @@ Rising bubble — WCSPH run script.
 
 BENCHMARK DESCRIPTION
 ---------------------
-A light spherical gas bubble (ρ₂ = 100 kg/m³) rises through a heavier liquid
-(ρ₁ = 1000 kg/m³) under gravity.  Surface tension (σ = 0.05 N/m) keeps the
+A light spherical gas bubble ($\rho_2 = 100$ kg/m³) rises through a heavier liquid
+($\rho_1 = 1000$ kg/m³) under gravity.  Surface tension ($\sigma = 0.05$ N/m) keeps the
 bubble coherent.  Solid walls bound y; x and z are periodic.
 
 Key parameters:
-  Eötvös   Eo = (ρ₁−ρ₂) g D² / σ ≈ 28.2
-  Density ratio  ρ₁/ρ₂ = 10
-  Viscosity ratio  μ₁/μ₂ = 10
+  Eötvös   $Eo = (\rho_1 - \rho_2) \, g \, D^2 / \sigma \approx 28.2$
+  Density ratio  $\rho_1 / \rho_2 = 10$
+  Viscosity ratio  $\mu_1 / \mu_2 = 10$
 
 The terminal rise velocity and bubble shape are the primary validation
 quantities.  Compare against experimental data (e.g. Grace 1973 diagram) or
@@ -85,9 +85,10 @@ sigma      = 0.05         # surface tension                   [N/m]
 gy         = -9.81        # gravitational acceleration        [m/s²]
 backpress  = 0.01         # background pressure coeff         [–]
 drho       = 0.01         # allowed density variation         [–]
-steps      = 5001         # simulation steps
+steps      = int(sys.argv[3]) if len(sys.argv) > 3 else 20001  # simulation steps
 
-# Estimate reference velocity from buoyancy (Hadamard–Rybczynski upper bound)
+# Estimate reference velocity from buoyancy (Hadamard-Rybczynski upper bound):
+# $U_\mathrm{ref} \sim \sqrt{(\rho_1 - \rho_2) \, g \, R / \rho_1}$  (rough estimate)
 g_mag  = abs(gy)
 drho_b = rho01 - rho02
 U_ref  = np.sqrt(drho_b * g_mag * R_bub / rho01)  # rough estimate
@@ -178,20 +179,26 @@ sim.operations.integrator = integrator
 
 # ─── Output ──────────────────────────────────────────────────────────────────
 gsd_writer = hoomd.write.GSD(filename=dumpname,
-                              trigger=hoomd.trigger.Periodic(50),
+                              trigger=hoomd.trigger.Periodic(200),
                               mode='wb',
                               dynamic=['property', 'momentum'])
 sim.operations.writers.append(gsd_writer)
 
 logger = hoomd.logging.Logger(categories=['scalar', 'string'])
 logger.add(sim, quantities=['timestep', 'tps', 'walltime'])
-table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(500), logger=logger,
+compute_W = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filter=filterfluidW)
+compute_N = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filter=filterfluidN)
+sim.operations.computes.append(compute_W)
+sim.operations.computes.append(compute_N)
+logger.add(compute_W, quantities=['e_kin_fluid', 'mean_density'])
+logger.add(compute_N, quantities=['e_kin_fluid', 'mean_density'])
+table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(200), logger=logger,
                           max_header_len=10)
 sim.operations.writers.append(table)
 
 log_file = open(logname, mode='w+', newline='\n')
 table_file = hoomd.write.Table(output=log_file,
-                                trigger=hoomd.trigger.Periodic(500),
+                                trigger=hoomd.trigger.Periodic(200),
                                 logger=logger, max_header_len=10)
 sim.operations.writers.append(table_file)
 
@@ -199,6 +206,7 @@ sim.operations.writers.append(table_file)
 if device.communicator.rank == 0:
     print(f'Starting WCSPH rising-bubble run at {dt_string}')
 sim.run(steps, write_at_start=True)
+gsd_writer.flush()
 
 # ─── Post-processing: bubble centroid trajectory ──────────────────────────────
 if device.communicator.rank == 0:

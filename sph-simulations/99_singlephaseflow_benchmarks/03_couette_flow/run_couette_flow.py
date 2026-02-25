@@ -25,13 +25,13 @@ Couette flow — WCSPH run script.
 
 BENCHMARK DESCRIPTION
 ---------------------
-Shear-driven flow between two infinite parallel plates separated by H = lref.
-The bottom wall is stationary; the top wall moves at U_lid in the x-direction.
+Shear-driven flow between two infinite parallel plates separated by $H = l_\mathrm{ref}$.
+The bottom wall is stationary; the top wall moves at $U_\mathrm{lid}$ in the $x$-direction.
 No body force is applied.  At steady state the velocity profile is linear:
 
-    v(y) = U_lid × (y + H/2) / H        y ∈ [−H/2, H/2]
+    $v(y) = U_\mathrm{lid} \dfrac{y + H/2}{H}, \quad y \in [-H/2,\, H/2]$
 
-Reynolds number:  Re = ρ₀ U_lid H / μ  (≈ 1 for default parameters → Stokes)
+Reynolds number: $\mathrm{Re} = \dfrac{\rho_0 U_\mathrm{lid} H}{\mu}$ ($\approx 1$ for default parameters $\to$ Stokes)
 
 Usage:
     python3 run_couette_flow.py <num_length> <init_gsd_file> [steps]
@@ -67,7 +67,7 @@ dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 logname   = filename.replace('_init.gsd', '_runWC.log')
 dumpname  = filename.replace('_init.gsd', '_runWC.gsd')
 
-sim.create_state_from_gsd(filename=filename)
+sim.create_state_from_gsd(filename=filename, domain_decomposition=(None, None, 1))
 
 # ─── Physical parameters ─────────────────────────────────────────────────────
 lref       = 0.001          # reference length (channel gap)    [m]
@@ -78,7 +78,7 @@ viscosity  = 0.01           # dynamic viscosity                 [Pa·s]
 lidvel     = 0.01           # top-wall velocity                 [m/s]
 drho       = 0.01           # allowed density variation         [–]
 backpress  = 0.01           # background pressure coeff         [–]
-# No body force — Couette is shear-driven by wall motion only
+# No body force — Couette is shear-driven by wall motion only ($f_x = 0$)
 refvel     = lidvel         # reference velocity = lid velocity [m/s]
 Re = rho0 * lidvel * H / viscosity
 
@@ -142,20 +142,23 @@ sim.operations.integrator = integrator
 
 # ─── Output ──────────────────────────────────────────────────────────────────
 gsd_writer = hoomd.write.GSD(filename=dumpname,
-                              trigger=hoomd.trigger.Periodic(1000),
+                              trigger=hoomd.trigger.Periodic(100),
                               mode='wb',
                               dynamic=['property', 'momentum'])
 sim.operations.writers.append(gsd_writer)
 
 logger = hoomd.logging.Logger(categories=['scalar', 'string'])
 logger.add(sim, quantities=['timestep', 'tps', 'walltime'])
-table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(500), logger=logger,
+compute_fluid = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filter=filterfluid)
+sim.operations.computes.append(compute_fluid)
+logger.add(compute_fluid, quantities=['e_kin_fluid', 'mean_density'])
+table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(100), logger=logger,
                           max_header_len=10)
 sim.operations.writers.append(table)
 
 log_file = open(logname, mode='w+', newline='\n')
 table_file = hoomd.write.Table(output=log_file,
-                                trigger=hoomd.trigger.Periodic(500),
+                                trigger=hoomd.trigger.Periodic(100),
                                 logger=logger, max_header_len=10)
 sim.operations.writers.append(table_file)
 
@@ -163,6 +166,7 @@ sim.operations.writers.append(table_file)
 if device.communicator.rank == 0:
     print(f'Starting Couette flow run at {dt_string}')
 sim.run(steps, write_at_start=True)
+gsd_writer.flush()
 
 # ─── Post-processing: L₂ error vs linear Couette profile ─────────────────────
 if device.communicator.rank == 0:

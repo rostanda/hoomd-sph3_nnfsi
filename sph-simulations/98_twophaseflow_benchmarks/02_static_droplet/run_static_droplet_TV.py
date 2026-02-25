@@ -26,14 +26,14 @@ Static droplet — Transport-Velocity (TV) run script.
 BENCHMARK DESCRIPTION
 ---------------------
 Identical setup to run_static_droplet.py (spherical droplet, full periodic
-box, ΔP_theory = 80 Pa) but uses the Adami 2013 transport-velocity method:
+box, $\Delta P_\mathrm{theory} = 80$ Pa) but uses the Adami 2013 transport-velocity method:
 
   - TwoPhaseFlowTV force compute  (artificial-stress + background-pressure)
   - KickDriftKickTV integrator    (positions advected with smooth TV)
 
 The TV formulation significantly reduces spurious velocities (parasitic
 currents) compared to plain TwoPhaseFlow, typically by one order of
-magnitude.  The ratio v_max / U_cap is the key quality metric.
+magnitude.  The ratio $v_\mathrm{max} / U_\mathrm{cap}$ is the key quality metric.
 
 Usage:
     python3 run_static_droplet_TV.py <num_length> <init_gsd_file>
@@ -151,7 +151,7 @@ if device.communicator.rank == 0:
     print(f'Phase A speed of sound: {c1:.4f} m/s  ({cond1})')
     print(f'Phase B speed of sound: {c2:.4f} m/s  ({cond2})')
 
-# Set transport velocity pressure P_bg = backpress × ρ₀c²
+# Set transport velocity pressure $P_\mathrm{bg} = \alpha_\mathrm{bg} \rho_0 c^2$
 # Must restore c after set_params() resets it to the placeholder 0.1 m/s.
 P_bg_tv1 = backpress * rho01 * c1**2
 P_bg_tv2 = backpress * rho02 * c2**2
@@ -193,6 +193,12 @@ sim.operations.writers.append(gsd_writer)
 
 logger = hoomd.logging.Logger(categories=['scalar', 'string'])
 logger.add(sim, quantities=['timestep', 'tps', 'walltime'])
+compute_A = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filter=filterfluidA)
+compute_B = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filter=filterfluidB)
+sim.operations.computes.append(compute_A)
+sim.operations.computes.append(compute_B)
+logger.add(compute_A, quantities=['e_kin_fluid', 'mean_density'])
+logger.add(compute_B, quantities=['e_kin_fluid', 'mean_density'])
 table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(100), logger=logger,
                           max_header_len=10)
 sim.operations.writers.append(table)
@@ -207,6 +213,7 @@ sim.operations.writers.append(table_file)
 if device.communicator.rank == 0:
     print(f'Starting TV static-droplet run at {dt_string}')
 sim.run(steps, write_at_start=True)
+gsd_writer.flush()
 
 # ─── Post-processing: Laplace pressure check ─────────────────────────────────
 if device.communicator.rank == 0:

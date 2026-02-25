@@ -37,7 +37,7 @@ used to verify:
   - absence of spurious penetration or pressure artefacts
 
 Post-processing reports the mean and maximum fluid velocity as well as a
-particle-diameter-based Reynolds number.
+particle-diameter-based Reynolds number $Re_D = \rho U_\mathrm{mean} \cdot 2R / \mu$.
 
 Usage:
     python3 run_adami_cylinder1.py <num_length> <init_gsd_file> [steps]
@@ -73,7 +73,7 @@ dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 logname   = filename.replace('_init.gsd', '_runTV.log')
 dumpname  = filename.replace('_init.gsd', '_runTV.gsd')
 
-sim.create_state_from_gsd(filename=filename)
+sim.create_state_from_gsd(filename=filename, domain_decomposition=(None, None, 1))
 
 # ─── Physical parameters ─────────────────────────────────────────────────────
 lref       = 0.1            # domain reference length            [m]
@@ -85,8 +85,8 @@ fx         = 1.5e-7         # body force in x-direction          [m/s²]
 drho       = 0.01
 backpress  = 0.01
 nu         = viscosity / rho0
-# Approximate mean velocity for Stokes flow in a tube of radius R:
-#   v ~ fx * R^2 / (4 nu)  (Hagen-Poiseuille estimate for order-of-magnitude)
+# Approximate mean velocity for Stokes flow in a tube of radius $R$:
+#   $v \sim f_x R^2 / (4\nu)$  (Hagen-Poiseuille estimate for order-of-magnitude)
 refvel     = fx * radius**2 / (4.0 * nu)   # ~ 5e-05 m/s
 
 # ─── Kernel ──────────────────────────────────────────────────────────────────
@@ -162,6 +162,9 @@ sim.operations.writers.append(gsd_writer)
 
 logger = hoomd.logging.Logger(categories=['scalar', 'string'])
 logger.add(sim, quantities=['timestep', 'tps', 'walltime'])
+compute_fluid = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filter=filterfluid)
+sim.operations.computes.append(compute_fluid)
+logger.add(compute_fluid, quantities=['e_kin_fluid', 'mean_density'])
 table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(500), logger=logger,
                           max_header_len=10)
 sim.operations.writers.append(table)
@@ -176,6 +179,7 @@ sim.operations.writers.append(table_file)
 if device.communicator.rank == 0:
     print(f'Starting Adami cylinder 1 TV run at {dt_string}')
 sim.run(steps, write_at_start=True)
+gsd_writer.flush()
 
 # ─── Post-processing ─────────────────────────────────────────────────────────
 if device.communicator.rank == 0:

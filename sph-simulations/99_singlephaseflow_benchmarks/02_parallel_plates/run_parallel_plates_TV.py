@@ -25,7 +25,7 @@ Plane Poiseuille flow (parallel plates) — Transport-Velocity (TV) run script.
 
 Uses SinglePhaseFlowTV + KickDriftKickTV with a Linear EOS.
 The analytical profile is the same as run_parallel_plates.py:
-    v(y) = fx / (2ν) × (H²/4 − y²)
+    $v(y) = \frac{f_x}{2\nu}\left(\frac{H^2}{4} - y^2\right)$
 
 Usage:
     python3 run_parallel_plates_TV.py <num_length> <init_gsd_file> [steps]
@@ -61,7 +61,7 @@ dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 logname   = filename.replace('_init.gsd', '_runTV.log')
 dumpname  = filename.replace('_init.gsd', '_runTV.gsd')
 
-sim.create_state_from_gsd(filename=filename)
+sim.create_state_from_gsd(filename=filename, domain_decomposition=(None, None, 1))
 
 # ─── Physical parameters ─────────────────────────────────────────────────────
 lref       = 0.001
@@ -139,20 +139,23 @@ sim.operations.integrator = integrator
 
 # ─── Output ──────────────────────────────────────────────────────────────────
 gsd_writer = hoomd.write.GSD(filename=dumpname,
-                              trigger=hoomd.trigger.Periodic(1000),
+                              trigger=hoomd.trigger.Periodic(100),
                               mode='wb',
                               dynamic=['property', 'momentum'])
 sim.operations.writers.append(gsd_writer)
 
 logger = hoomd.logging.Logger(categories=['scalar', 'string'])
 logger.add(sim, quantities=['timestep', 'tps', 'walltime'])
-table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(500), logger=logger,
+compute_fluid = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filter=filterfluid)
+sim.operations.computes.append(compute_fluid)
+logger.add(compute_fluid, quantities=['e_kin_fluid', 'mean_density'])
+table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(100), logger=logger,
                           max_header_len=10)
 sim.operations.writers.append(table)
 
 log_file = open(logname, mode='w+', newline='\n')
 table_file = hoomd.write.Table(output=log_file,
-                                trigger=hoomd.trigger.Periodic(500),
+                                trigger=hoomd.trigger.Periodic(100),
                                 logger=logger, max_header_len=10)
 sim.operations.writers.append(table_file)
 
@@ -160,6 +163,7 @@ sim.operations.writers.append(table_file)
 if device.communicator.rank == 0:
     print(f'Starting TV plane Poiseuille run at {dt_string}')
 sim.run(steps, write_at_start=True)
+gsd_writer.flush()
 
 # ─── Post-processing: L₂ error vs plane Poiseuille profile ──────────────────
 if device.communicator.rank == 0:

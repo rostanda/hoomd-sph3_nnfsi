@@ -25,20 +25,20 @@ Sessile droplet contact-angle benchmark — SinglePhaseFlowFS.
 
 BENCHMARK DESCRIPTION
 ---------------------
-A 2-D liquid droplet is initialised as a semicircle (θ_init = 90°) on a
-flat solid wall.  Surface tension σ and contact-angle enforcement
+A 2-D liquid droplet is initialised as a semicircle ($\theta_\mathrm{init} = 90°$) on a
+flat solid wall.  Surface tension $\sigma$ and contact-angle enforcement
 (Huber et al. 2016) drive the droplet toward the prescribed equilibrium
-contact angle θ_eq.
+contact angle $\theta_\mathrm{eq}$.
 
 The equilibrium droplet shape is a circular cap.  Given the initial
-semicircle area A = π·R_drop²/2 and the prescribed angle θ_eq, the
-equilibrium cap radius R_cap satisfies:
-    π·R_drop²/2  =  R_cap² (θ_eq − sin θ_eq cos θ_eq)
+semicircle area $A = \pi R_\mathrm{drop}^2 / 2$ and the prescribed angle $\theta_\mathrm{eq}$, the
+equilibrium cap radius $R_\mathrm{cap}$ satisfies:
+    $\pi R_\mathrm{drop}^2 / 2 = R_\mathrm{cap}^2 (\theta_\mathrm{eq} - \sin\theta_\mathrm{eq} \cos\theta_\mathrm{eq})$
 
-The equilibrium height h and base half-width r are:
-    h     = R_cap (1 − cos θ_eq)
-    r     = R_cap sin θ_eq
-    θ_eq  = 2 atan(h / r)  — measured from the final particle distribution
+The equilibrium height $h$ and base half-width $r$ are:
+    $h = R_\mathrm{cap} (1 - \cos\theta_\mathrm{eq})$
+    $r = R_\mathrm{cap} \sin\theta_\mathrm{eq}$
+    $\theta_\mathrm{eq} = 2 \arctan(h / r)$  — measured from the final particle distribution
 
 Post-processing measures h and r from the last GSD frame and computes
 the SPH contact angle, comparing it to the prescribed value.
@@ -82,7 +82,7 @@ dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 logname   = filename.replace('_init.gsd', f'_runFS_theta{int(theta_eq_deg)}.log')
 dumpname  = filename.replace('_init.gsd', f'_runFS_theta{int(theta_eq_deg)}.gsd')
 
-sim.create_state_from_gsd(filename=filename)
+sim.create_state_from_gsd(filename=filename, domain_decomposition=(None, None, 1))
 
 # ─── Physical parameters ─────────────────────────────────────────────────────
 lref          = 0.001              # reference length                [m]
@@ -96,12 +96,12 @@ backpress     = 0.01
 nu            = viscosity / rho0
 theta_eq      = np.radians(theta_eq_deg)
 
-# Capillary velocity scale U_cap = sigma / (rho0 * R_drop)
+# Capillary velocity scale $U_\mathrm{cap} = \sigma / (\rho_0 R_\mathrm{drop})$
 U_cap  = sigma / (rho0 * R_drop)
 refvel = U_cap
 
 # ─── Free-surface parameters ──────────────────────────────────────────────────
-fs_threshold  = 0.75
+fs_threshold  = 0.99
 contact_angle = theta_eq
 
 # ─── Kernel ──────────────────────────────────────────────────────────────────
@@ -142,8 +142,8 @@ model.densitydiffusion    = False
 # ─── Speed of sound & timestep ───────────────────────────────────────────────
 maximum_smoothing_length = sph_helper.set_max_sl(sim, device, model)
 
-# For capillary flows: c >> sqrt(sigma/rho0/R_drop) ~ sqrt(U_cap^2 * R_drop / dx)?
-# Use c = 10 * sqrt(sigma / (rho0 * R_drop)) * some_factor as lower bound
+# For capillary flows: $c \gg \sqrt{\sigma / (\rho_0 R_\mathrm{drop})}$
+# Use $c \geq 10 \sqrt{\sigma / (\rho_0 R_\mathrm{drop})}$ as lower bound
 c_cap   = np.sqrt(sigma / (rho0 * R_drop))  # capillary wave speed scale
 c_min   = max(10.0 * c_cap, 10.0 * refvel)
 c       = c_min
@@ -182,6 +182,9 @@ sim.operations.writers.append(gsd_writer)
 
 logger = hoomd.logging.Logger(categories=['scalar', 'string'])
 logger.add(sim, quantities=['timestep', 'tps', 'walltime'])
+compute_fluid = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filter=filterfluid)
+sim.operations.computes.append(compute_fluid)
+logger.add(compute_fluid, quantities=['e_kin_fluid', 'mean_density'])
 table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(500), logger=logger,
                           max_header_len=10)
 sim.operations.writers.append(table)
@@ -196,6 +199,7 @@ sim.operations.writers.append(table_file)
 if device.communicator.rank == 0:
     print(f'Starting sessile-droplet run (θ_eq = {theta_eq_deg:.0f}°) at {dt_string}')
 sim.run(steps, write_at_start=True)
+gsd_writer.flush()
 
 # ─── Post-processing: measure contact angle from final droplet shape ──────────
 if device.communicator.rank == 0:
@@ -223,7 +227,7 @@ if device.communicator.rank == 0:
     else:
         r = float('nan')
 
-    # Contact angle from spherical-cap geometry: theta = 2 * atan(h / r)
+    # Contact angle from spherical-cap geometry: $\theta = 2 \arctan(h / r)$
     if r > 0:
         theta_sph     = 2.0 * np.arctan(h / r)
         theta_sph_deg = np.degrees(theta_sph)
@@ -232,8 +236,8 @@ if device.communicator.rank == 0:
         theta_sph_deg = float('nan')
         theta_err_deg = float('nan')
 
-    # Analytical equilibrium cap radius from volume conservation
-    # A_semicircle = pi*R^2/2;  A_cap = R_cap^2*(theta - sin(theta)*cos(theta))
+    # Analytical equilibrium cap radius from volume conservation:
+    # $A_\mathrm{semicircle} = \pi R^2 / 2$;  $A_\mathrm{cap} = R_\mathrm{cap}^2 (\theta - \sin\theta \cos\theta)$
     A_semi    = np.pi * R_drop**2 / 2.0
     denom     = theta_eq - np.sin(theta_eq) * np.cos(theta_eq)
     R_cap_an  = np.sqrt(A_semi / denom) if denom > 0 else float('nan')

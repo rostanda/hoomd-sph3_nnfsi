@@ -70,7 +70,7 @@ slength    = hoomd.sph.kernel.OptimalH[kernel] * dx
 rcut       = hoomd.sph.kernel.Kappa[kernel] * slength
 
 n_solid    = math.ceil(rcut / dx)              # wall thickness [particle layers]
-part_depth = max(1, math.ceil(2.5 * rcut / dx))  # z-direction thickness
+part_depth = math.ceil(2.5 * hoomd.sph.kernel.Kappa[kernel] * rcut / dx)  # $\ell_z > 2\kappa h$ (pseudo-3D: more than one kernel diameter in z)
 
 # Domain: lref wide (periodic in x), 4*lref tall + walls (solid in y), thin (periodic in z)
 nx = num_length

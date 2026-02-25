@@ -30,21 +30,21 @@ Shear-driven flow between two isothermal parallel plates separated by H = lref.
   Top plate:    moving at U_lid in x,  temperature T_hot = 1.
 
 At steady state BOTH the velocity and temperature profiles are linear:
-    v(y) = U_lid × (y + H/2) / H           (Couette velocity)
-    T(y) = T_cold + (T_hot − T_cold) × (y + H/2) / H  (Fourier conduction)
+    $v(y) = U_\mathrm{lid} \dfrac{y + H/2}{H}$  (Couette velocity)
+    $T(y) = T_\mathrm{cold} + (T_\mathrm{hot} - T_\mathrm{cold}) \dfrac{y + H/2}{H}$  (Fourier conduction)
 
 This benchmark tests the scalar diffusion operator of SinglePhaseFlowGDGD
-in isolation (beta_s = 0, so no buoyancy effect).
+in isolation ($\beta_s = 0$, no buoyancy effect).
 
 Physical parameters:
-    H       = 1 mm       channel gap
-    U_lid   = 0.01 m/s   top-wall velocity
-    rho0    = 1000 kg/m³ rest density
-    mu      = 0.01 Pa·s  dynamic viscosity
-    kappa_s = 1e-5 m²/s  thermal diffusivity
-    Pr      = mu / (rho0 × kappa_s) = 1.0  (Prandtl number)
+    $H       = 1\,\mathrm{mm}$        channel gap
+    $U_\mathrm{lid} = 0.01\,\mathrm{m/s}$  top-wall velocity
+    $\rho_0  = 1000\,\mathrm{kg/m^3}$ rest density
+    $\mu     = 0.01\,\mathrm{Pa{\cdot}s}$  dynamic viscosity
+    $\kappa_s = 10^{-5}\,\mathrm{m^2/s}$  thermal diffusivity
+    $\mathrm{Pr} = \mu / (\rho_0 \kappa_s) = 1.0$  (Prandtl number)
 
-Diffusive time scale:  τ_diff = H² / kappa_s = 0.1 s
+Diffusive time scale: $\tau_\mathrm{diff} = H^2/\kappa_s = 0.1\,\mathrm{s}$
 
 Usage:
     python3 run_thermal_couette.py <num_length> <init_gsd_file> [steps]
@@ -84,7 +84,7 @@ dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 logname   = filename.replace('_init.gsd', '_run.log')
 dumpname  = filename.replace('_init.gsd', '_run.gsd')
 
-sim.create_state_from_gsd(filename=filename)
+sim.create_state_from_gsd(filename=filename, domain_decomposition=(None, None, 1))
 
 # ─── Physical parameters ─────────────────────────────────────────────────────
 lref      = 0.001        # channel gap                         [m]
@@ -125,10 +125,9 @@ filterfluid = hoomd.filter.Type(['F'])
 filtersolid = hoomd.filter.Type(['S'])
 
 # ─── SinglePhaseFlowGDGD model (pure scalar diffusion, no buoyancy) ──────────
-# beta_s = 0 disables all buoyancy effects; only the scalar diffusion term
-# dT/dt += (kappa_s / V_i) * (V_i² + V_j²) * (T_i - T_j) * dW/dr / r
-# is active.  The velocity field converges to the standard Couette profile
-# while the temperature evolves to the linear Fourier solution.
+# $\beta_s = 0$: no buoyancy; only the scalar diffusion term is active:
+# $\dot{T}_i \mathrel{+}= \dfrac{\kappa_s}{V_i}(V_i^2 + V_j^2)(T_i - T_j)\dfrac{\partial W}{\partial r}/r$
+# Velocity $\to$ Couette profile; temperature $\to$ linear Fourier solution.
 model = hoomd.sph.sphmodel.SinglePhaseFlowGDGD(
     kernel=kernel_obj, eos=eos, nlist=nlist,
     fluidgroup_filter=filterfluid, solidgroup_filter=filtersolid,
@@ -165,7 +164,7 @@ dt, dt_cond = model.compute_dt(
     LREF=lref, UREF=refvel, DX=dx, DRHO=drho,
     H=maximum_smoothing_length, MU=viscosity, RHO0=rho0)
 
-tau_diff   = H**2 / kappa_s       # diffusion time scale [s]
+tau_diff   = H**2 / kappa_s       # $\tau_\mathrm{diff} = H^2/\kappa_s$ [s]
 steps_diff = int(tau_diff / dt)   # steps per τ_diff
 
 if device.communicator.rank == 0:
@@ -201,20 +200,23 @@ with sim.state.cpu_local_snapshot as snap:
 
 # ─── Output ──────────────────────────────────────────────────────────────────
 gsd_writer = hoomd.write.GSD(filename=dumpname,
-                              trigger=hoomd.trigger.Periodic(2000),
+                              trigger=hoomd.trigger.Periodic(200),
                               mode='wb',
                               dynamic=['property', 'momentum'])
 sim.operations.writers.append(gsd_writer)
 
 logger = hoomd.logging.Logger(categories=['scalar', 'string'])
 logger.add(sim, quantities=['timestep', 'tps', 'walltime'])
-table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(2000), logger=logger,
+compute_fluid = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filter=filterfluid)
+sim.operations.computes.append(compute_fluid)
+logger.add(compute_fluid, quantities=['e_kin_fluid', 'mean_density'])
+table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(200), logger=logger,
                           max_header_len=10)
 sim.operations.writers.append(table)
 
 log_file = open(logname, mode='w+', newline='\n')
 table_file = hoomd.write.Table(output=log_file,
-                                trigger=hoomd.trigger.Periodic(2000),
+                                trigger=hoomd.trigger.Periodic(200),
                                 logger=logger, max_header_len=10)
 sim.operations.writers.append(table_file)
 
@@ -226,6 +228,7 @@ if device.communicator.rank == 0:
     print(f'  Running {steps} steps ({steps / steps_diff:.1f} × τ_diff)')
 
 sim.run(steps, write_at_start=True)
+gsd_writer.flush()
 
 # ─── Post-processing: L₂ errors vs analytical steady-state profiles ──────────
 if device.communicator.rank == 0:
@@ -234,7 +237,7 @@ if device.communicator.rank == 0:
         pos  = snap.particles.position
         tid  = snap.particles.typeid
         vel  = snap.particles.velocity
-        aux4 = snap.particles.aux4   # shape (N, 3); T = aux4[:, 0]
+        aux4 = snap.particles.auxiliary4   # shape (N, 3); T = aux4[:, 0]
 
     fluid  = (tid == 0)
     y_f    = pos[fluid, 1]

@@ -25,20 +25,20 @@ maintainer: dkrach, david.krach@mib.uni-stuttgart.de
 
 BENCHMARK DESCRIPTION
 ---------------------
-A rectangular water column (width a = lref, height H₀ = 2a) collapses
-under gravity (gy = -9.81 m/s²) into an empty channel of total length
-L = 4a.  Solid walls bound the floor and channel ends; the top and the
+A rectangular water column (width $a = l_\mathrm{ref}$, height $H_0 = 2a$) collapses
+under gravity ($g_y = -9.81$ m/s²) into an empty channel of total length
+$L = 4a$.  Solid walls bound the floor and channel ends; the top and the
 right side of the initial column are free surfaces.
 
 Analytical reference — shallow-water front position (Martin & Moyce 1952):
-    X*(T*) = x_front / a  ≈  1 + 2√2 · T*
+    $X^*(T^*) = x_\mathrm{front} / a \approx 1 + 2\sqrt{2} \cdot T^*$
 where the dimensionless time is
-    T* = t · √(g / a)
-and √2 factor comes from wave speed c₀ = √(g H₀) = √(g · 2a) = √2 · √(ga).
+    $T^* = t \cdot \sqrt{g / a}$
+and the $\sqrt{2}$ factor comes from wave speed $c_0 = \sqrt{g H_0} = \sqrt{g \cdot 2a} = \sqrt{2} \cdot \sqrt{ga}$.
 
 Post-processing reads every saved GSD frame, computes the maximum x
-position of fluid particles (= front position x_front), and prints
-X* vs T* alongside the shallow-water prediction.
+position of fluid particles (= front position $x_\mathrm{front}$), and prints
+$X^*$ vs $T^*$ alongside the shallow-water prediction.
 
 Usage:
     python3 run_dam_break.py <num_length> <init_gsd_file> [steps]
@@ -75,7 +75,7 @@ dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 logname   = filename.replace('_init.gsd', '_runFS.log')
 dumpname  = filename.replace('_init.gsd', '_runFS.gsd')
 
-sim.create_state_from_gsd(filename=filename)
+sim.create_state_from_gsd(filename=filename, domain_decomposition=(None, None, 1))
 
 # ─── Physical parameters ─────────────────────────────────────────────────────
 lref      = 0.01            # dam-column width a                    [m]
@@ -92,7 +92,7 @@ refvel    = c0_wave
 
 # ─── Free-surface parameters ──────────────────────────────────────────────────
 sigma         = 0.0         # no surface tension for dam-break
-fs_threshold  = 0.75
+fs_threshold  = 0.99
 contact_angle = np.pi / 2
 
 # ─── Kernel ──────────────────────────────────────────────────────────────────
@@ -170,6 +170,9 @@ sim.operations.writers.append(gsd_writer)
 
 logger = hoomd.logging.Logger(categories=['scalar', 'string'])
 logger.add(sim, quantities=['timestep', 'tps', 'walltime'])
+compute_fluid = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filter=filterfluid)
+sim.operations.computes.append(compute_fluid)
+logger.add(compute_fluid, quantities=['e_kin_fluid', 'mean_density'])
 table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(500), logger=logger,
                           max_header_len=10)
 sim.operations.writers.append(table)
@@ -184,6 +187,7 @@ sim.operations.writers.append(table_file)
 if device.communicator.rank == 0:
     print(f'Starting 2-D dam-break run at {dt_string}')
 sim.run(steps, write_at_start=True)
+gsd_writer.flush()
 
 # ─── Post-processing: front position X*(T*) vs shallow-water theory ──────────
 if device.communicator.rank == 0:
@@ -208,7 +212,7 @@ if device.communicator.rank == 0:
     x_front_arr = np.array(x_front_arr)
     t_arr       = np.array(t_arr)
 
-    # Normalise: X* = x_front / a,  T* = t * sqrt(g / a)
+    # Normalise: $X^* = x_\mathrm{front} / a$,  $T^* = t \cdot \sqrt{g / a}$
     X_star_sph = (x_front_arr - x_front0 + a) / a   # shift so X*(0) = 1
     T_star     = t_arr * np.sqrt(g / a)
     X_star_an  = 1.0 + 2.0 * np.sqrt(2.0) * T_star  # shallow-water theory

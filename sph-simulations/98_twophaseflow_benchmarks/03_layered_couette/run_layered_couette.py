@@ -25,19 +25,19 @@ Two-layer Couette flow — WCSPH run script.
 
 BENCHMARK DESCRIPTION
 ---------------------
-Two immiscible fluid layers (μ₁ = 0.004 Pa·s, μ₂ = 0.001 Pa·s) are sheared
-between a stationary bottom wall and a top wall moving at U_wall.  No gravity,
-no surface tension (σ = 0).
+Two immiscible fluid layers ($\mu_1 = 0.004$ Pa·s, $\mu_2 = 0.001$ Pa·s) are sheared
+between a stationary bottom wall and a top wall moving at $U_\mathrm{wall}$.  No gravity,
+no surface tension ($\sigma = 0$).
 
 At steady state the velocity profile is piecewise linear.  With the interface
-at y = 0 and channel height H = lref:
+at $y = 0$ and channel height $H = l_\mathrm{ref}$:
 
-  v_i = U_wall × μ₂ / (μ₁ + μ₂)           (interface velocity)
+  $v_i = U_\mathrm{wall} \cdot \mu_2 / (\mu_1 + \mu_2)$           (interface velocity)
 
-  Lower layer  v₁(y) = v_i × (y + H/2) / (H/2)   for y ∈ [−H/2, 0]
-  Upper layer  v₂(y) = v_i + (U_wall − v_i) × y / (H/2)  for y ∈ [0, H/2]
+  Lower layer  $v_1(y) = v_i \cdot (y + H/2) / (H/2)$   for $y \in [-H/2,\, 0]$
+  Upper layer  $v_2(y) = v_i + (U_\mathrm{wall} - v_i) \cdot y / (H/2)$  for $y \in [0,\, H/2]$
 
-The post-processing section computes the L₂ error between the simulated and
+The post-processing section computes the $L_2$ error between the simulated and
 analytical velocity profiles after the run has equilibrated.
 
 Usage:
@@ -87,7 +87,7 @@ sigma      = 0.0          # surface tension (none)           [N/m]
 backpress  = 0.01         # background pressure coeff        [–]
 refvel     = U_wall       # reference velocity               [m/s]
 drho       = 0.01         # allowed density variation        [–]
-steps      = 5001         # simulation steps
+steps      = int(sys.argv[3]) if len(sys.argv) > 3 else 5001   # simulation steps
 
 # Analytical interface velocity for post-processing
 v_i_theory = U_wall * viscosity2 / (viscosity1 + viscosity2)
@@ -182,13 +182,19 @@ sim.operations.writers.append(gsd_writer)
 
 logger = hoomd.logging.Logger(categories=['scalar', 'string'])
 logger.add(sim, quantities=['timestep', 'tps', 'walltime'])
-table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(500), logger=logger,
+compute_W = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filter=filterfluidW)
+compute_N = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filter=filterfluidN)
+sim.operations.computes.append(compute_W)
+sim.operations.computes.append(compute_N)
+logger.add(compute_W, quantities=['e_kin_fluid', 'mean_density'])
+logger.add(compute_N, quantities=['e_kin_fluid', 'mean_density'])
+table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(50), logger=logger,
                           max_header_len=10)
 sim.operations.writers.append(table)
 
 log_file = open(logname, mode='w+', newline='\n')
 table_file = hoomd.write.Table(output=log_file,
-                                trigger=hoomd.trigger.Periodic(500),
+                                trigger=hoomd.trigger.Periodic(50),
                                 logger=logger, max_header_len=10)
 sim.operations.writers.append(table_file)
 
@@ -196,6 +202,7 @@ sim.operations.writers.append(table_file)
 if device.communicator.rank == 0:
     print(f'Starting WCSPH two-layer Couette run at {dt_string}')
 sim.run(steps, write_at_start=True)
+gsd_writer.flush()
 
 # ─── Post-processing: compare with analytical profile ────────────────────────
 if device.communicator.rank == 0:

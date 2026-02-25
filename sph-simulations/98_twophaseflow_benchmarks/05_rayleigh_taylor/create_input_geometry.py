@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 """
 Copyright (c) 2025-2026 David Krach, Daniel Rostan.

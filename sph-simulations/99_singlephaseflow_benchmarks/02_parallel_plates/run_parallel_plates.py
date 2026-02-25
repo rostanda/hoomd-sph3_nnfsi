@@ -25,13 +25,13 @@ Plane Poiseuille flow (parallel plates) — WCSPH run script.
 
 BENCHMARK DESCRIPTION
 ---------------------
-Body-force-driven flow between two infinite parallel plates separated by H = lref.
-The plates are at y = ±H/2.  The analytical steady-state profile is:
+Body-force-driven flow between two infinite parallel plates separated by $H = l_\mathrm{ref}$.
+The plates are at $y = \pm H/2$.  The analytical steady-state profile is:
 
-    v(y) = fx / (2ν) × (H²/4 − y²)
+    $v(y) = \dfrac{f_x}{2\nu}\left(\dfrac{H^2}{4} - y^2\right)$
 
 Maximum velocity at the channel centre:
-    v_max = fx H² / (8ν)
+    $v_\mathrm{max} = \dfrac{f_x H^2}{8\nu}$
 
 Usage:
     python3 run_parallel_plates.py <num_length> <init_gsd_file> [steps]
@@ -67,7 +67,7 @@ dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 logname   = filename.replace('_init.gsd', '_runWC.log')
 dumpname  = filename.replace('_init.gsd', '_runWC.gsd')
 
-sim.create_state_from_gsd(filename=filename)
+sim.create_state_from_gsd(filename=filename, domain_decomposition=(None, None, 1))
 
 # ─── Physical parameters ─────────────────────────────────────────────────────
 lref       = 0.001          # reference length (channel gap)    [m]
@@ -79,7 +79,7 @@ fx         = 0.1            # body force in x-direction         [m/s²]
 drho       = 0.01           # allowed density variation         [–]
 backpress  = 0.01           # background pressure coeff         [–]
 nu         = viscosity / rho0
-v_max_an   = fx * H**2 / (8.0 * nu)    # Plane Poiseuille maximum velocity
+v_max_an   = fx * H**2 / (8.0 * nu)    # $v_\mathrm{max} = f_x H^2 / (8\nu)$
 refvel     = v_max_an
 
 # ─── Kernel ──────────────────────────────────────────────────────────────────
@@ -143,20 +143,23 @@ sim.operations.integrator = integrator
 
 # ─── Output ──────────────────────────────────────────────────────────────────
 gsd_writer = hoomd.write.GSD(filename=dumpname,
-                              trigger=hoomd.trigger.Periodic(1000),
+                              trigger=hoomd.trigger.Periodic(100),
                               mode='wb',
                               dynamic=['property', 'momentum'])
 sim.operations.writers.append(gsd_writer)
 
 logger = hoomd.logging.Logger(categories=['scalar', 'string'])
 logger.add(sim, quantities=['timestep', 'tps', 'walltime'])
-table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(500), logger=logger,
+compute_fluid = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filter=filterfluid)
+sim.operations.computes.append(compute_fluid)
+logger.add(compute_fluid, quantities=['e_kin_fluid', 'mean_density'])
+table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(100), logger=logger,
                           max_header_len=10)
 sim.operations.writers.append(table)
 
 log_file = open(logname, mode='w+', newline='\n')
 table_file = hoomd.write.Table(output=log_file,
-                                trigger=hoomd.trigger.Periodic(500),
+                                trigger=hoomd.trigger.Periodic(100),
                                 logger=logger, max_header_len=10)
 sim.operations.writers.append(table_file)
 
@@ -164,6 +167,7 @@ sim.operations.writers.append(table_file)
 if device.communicator.rank == 0:
     print(f'Starting plane Poiseuille run at {dt_string}')
 sim.run(steps, write_at_start=True)
+gsd_writer.flush()
 
 # ─── Post-processing: L₂ error vs plane Poiseuille profile ──────────────────
 if device.communicator.rank == 0:

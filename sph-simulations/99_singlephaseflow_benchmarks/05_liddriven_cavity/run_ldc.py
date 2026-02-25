@@ -29,7 +29,7 @@ A square cavity (lref × lref × small depth) with solid walls on all four sides
 The top wall moves at U_lid = 1.0 m/s in the x-direction.  The other three
 walls are stationary.
 
-This benchmark covers a range of Reynolds numbers (Re = ρ U_lid lref / μ).
+This benchmark covers a range of Reynolds numbers ($\mathrm{Re} = \rho_0 U_\mathrm{lid} l_\mathrm{ref} / \mu$).
 At steady state the velocity field shows a primary recirculation vortex.
 Reference data: Ghia et al. (1982) for Re = 100, 400, 1000, 3200, 5000.
 
@@ -74,7 +74,7 @@ dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 logname   = options.initgsd.replace('_init.gsd', '_runWC.log')
 dumpname  = options.initgsd.replace('_init.gsd', '_runWC.gsd')
 
-sim.create_state_from_gsd(filename=options.initgsd)
+sim.create_state_from_gsd(filename=options.initgsd, domain_decomposition=(None, None, 1))
 
 # ─── Physical parameters ─────────────────────────────────────────────────────
 num_length = options.resolution
@@ -82,8 +82,8 @@ lref       = 1.0            # cavity side length                [m]
 dx         = lref / num_length
 rho0       = 1.0            # rest density                      [kg/m³]
 lidvel     = 1.0            # lid velocity                      [m/s]
-viscosity  = rho0 * lidvel * lref / options.reynolds  # [Pa·s]
-drho       = 0.05           # allowed density variation         [–]
+viscosity  = rho0 * lidvel * lref / options.reynolds  # $\mu = \rho_0 U_\mathrm{lid} l_\mathrm{ref} / \mathrm{Re}$ [Pa·s]
+drho       = 0.01           # allowed density variation         [–]
 backpress  = 0.01           # background pressure coeff         [–]
 refvel     = lidvel         # reference velocity                [m/s]
 Re         = options.reynolds
@@ -151,20 +151,23 @@ sim.operations.integrator = integrator
 
 # ─── Output ──────────────────────────────────────────────────────────────────
 gsd_writer = hoomd.write.GSD(filename=dumpname,
-                              trigger=hoomd.trigger.Periodic(5000),
+                              trigger=hoomd.trigger.Periodic(2000),
                               mode='wb',
                               dynamic=['property', 'momentum'])
 sim.operations.writers.append(gsd_writer)
 
 logger = hoomd.logging.Logger(categories=['scalar', 'string'])
 logger.add(sim, quantities=['timestep', 'tps', 'walltime'])
-table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(100), logger=logger,
+compute_fluid = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filter=filterfluid)
+sim.operations.computes.append(compute_fluid)
+logger.add(compute_fluid, quantities=['e_kin_fluid', 'mean_density'])
+table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(1000), logger=logger,
                           max_header_len=10)
 sim.operations.writers.append(table)
 
 log_file = open(logname, mode='w+', newline='\n')
 table_file = hoomd.write.Table(output=log_file,
-                                trigger=hoomd.trigger.Periodic(100),
+                                trigger=hoomd.trigger.Periodic(1000),
                                 logger=logger, max_header_len=10)
 sim.operations.writers.append(table_file)
 
@@ -172,6 +175,7 @@ sim.operations.writers.append(table_file)
 if device.communicator.rank == 0:
     print(f'Starting WCSPH lid-driven cavity run (Re={Re:.0f}) at {dt_string}')
 sim.run(steps, write_at_start=True)
+gsd_writer.flush()
 
 # ─── Post-processing: centreline velocity ───────────────────────────────────
 if device.communicator.rank == 0:

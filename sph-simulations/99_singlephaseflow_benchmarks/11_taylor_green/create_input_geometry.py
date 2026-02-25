@@ -54,7 +54,7 @@ kernel     = 'WendlandC4'
 slength    = hoomd.sph.kernel.OptimalH[kernel] * dx
 rcut       = hoomd.sph.kernel.Kappa[kernel] * slength
 
-part_depth = max(3, math.ceil(2.0 * rcut / dx))
+part_depth = math.ceil(2.5 * hoomd.sph.kernel.Kappa[kernel] * rcut / dx)  # $\ell_z > 2\kappa h$ (pseudo-3D: more than one kernel diameter in z)
 
 # Square domain, thin in z (quasi-2D)
 nx = int(num_length)

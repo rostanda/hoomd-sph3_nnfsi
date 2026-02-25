@@ -25,16 +25,16 @@ Square-duct channel flow — WCSPH run script.
 
 BENCHMARK DESCRIPTION
 ---------------------
-Body-force-driven flow in a square duct (lref × lref cross-section, periodic
-along x).  Solid walls bound the domain at y = ±lref/2 and z = ±lref/2.
+Body-force-driven flow in a square duct ($l_\mathrm{ref} \times l_\mathrm{ref}$ cross-section, periodic
+along x).  Solid walls bound the domain at $y = \pm l_\mathrm{ref}/2$ and $z = \pm l_\mathrm{ref}/2$.
 
 The fully-developed centreline velocity for a square duct (analytical Fourier
 series, Berker 1963):
-    v_cl ≈ 0.2947 × fx × a² / μ    where a = lref / 2 (half-side)
+    $v_\mathrm{cl} \approx 0.2947 \cdot f_x \cdot a^2 / \mu$    where $a = l_\mathrm{ref} / 2$ (half-side)
 
 For post-processing the mid-plane (z=0) profile is compared to the 2D
 plane-Poiseuille approximation:
-    v_2D(y) = fx/(2ν) × (a² − y²)    v_max_2D = fx a²/(2ν)
+    $v_\mathrm{2D}(y) = \frac{f_x}{2\nu} (a^2 - y^2)$    $v_\mathrm{max,2D} = \frac{f_x a^2}{2\nu}$
 
 Usage:
     python3 run_channel_flow.py <num_length> <init_gsd_file> [steps]
@@ -70,7 +70,7 @@ dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 logname   = filename.replace('_init.gsd', '_runWC.log')
 dumpname  = filename.replace('_init.gsd', '_runWC.gsd')
 
-sim.create_state_from_gsd(filename=filename)
+sim.create_state_from_gsd(filename=filename, domain_decomposition=(None, None, 1))
 
 # ─── Physical parameters ─────────────────────────────────────────────────────
 lref       = 0.001          # duct side length                  [m]
@@ -82,9 +82,10 @@ fx         = 0.1            # body force in x-direction         [m/s²]
 drho       = 0.01
 backpress  = 0.01
 nu         = viscosity / rho0
-# Analytical centreline velocity for square duct (Fourier series approx)
+# Analytical centreline velocity for square duct (Fourier series approx):
+# $v_\mathrm{cl} \approx 0.2947 \cdot f_x \cdot a^2 / \mu$
 v_cl_an    = 0.2947 * fx * a**2 / viscosity
-# 2D plane-Poiseuille v_max for reference
+# 2D plane-Poiseuille $v_\mathrm{max,2D} = f_x a^2 / (2\nu)$ for reference
 v_max_2D   = fx * a**2 / (2.0 * nu)
 refvel     = v_cl_an
 
@@ -149,20 +150,23 @@ sim.operations.integrator = integrator
 
 # ─── Output ──────────────────────────────────────────────────────────────────
 gsd_writer = hoomd.write.GSD(filename=dumpname,
-                              trigger=hoomd.trigger.Periodic(1000),
+                              trigger=hoomd.trigger.Periodic(100),
                               mode='wb',
                               dynamic=['property', 'momentum'])
 sim.operations.writers.append(gsd_writer)
 
 logger = hoomd.logging.Logger(categories=['scalar', 'string'])
 logger.add(sim, quantities=['timestep', 'tps', 'walltime'])
-table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(500), logger=logger,
+compute_fluid = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filter=filterfluid)
+sim.operations.computes.append(compute_fluid)
+logger.add(compute_fluid, quantities=['e_kin_fluid', 'mean_density'])
+table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(100), logger=logger,
                           max_header_len=10)
 sim.operations.writers.append(table)
 
 log_file = open(logname, mode='w+', newline='\n')
 table_file = hoomd.write.Table(output=log_file,
-                                trigger=hoomd.trigger.Periodic(500),
+                                trigger=hoomd.trigger.Periodic(100),
                                 logger=logger, max_header_len=10)
 sim.operations.writers.append(table_file)
 
@@ -170,6 +174,7 @@ sim.operations.writers.append(table_file)
 if device.communicator.rank == 0:
     print(f'Starting square-duct channel flow run at {dt_string}')
 sim.run(steps, write_at_start=True)
+gsd_writer.flush()
 
 # ─── Post-processing: centreline velocity vs analytical ──────────────────────
 if device.communicator.rank == 0:

@@ -25,13 +25,13 @@ Hagen–Poiseuille tube flow — WCSPH run script.
 
 BENCHMARK DESCRIPTION
 ---------------------
-Body-force-driven flow in a circular tube (radius R = lref/2, axis along x).
+Body-force-driven flow in a circular tube (radius $R = l_\mathrm{ref}/2$, axis along $x$).
 The analytical steady-state velocity profile is:
 
-    v(r) = fx / (4ν) × (R² − r²)      r = sqrt(y² + z²)
+    $v(r) = \dfrac{f_x}{4\nu}(R^2 - r^2), \quad r = \sqrt{y^2 + z^2}$
 
 Maximum velocity at the tube centre:
-    v_max = fx R² / (4ν)
+    $v_\mathrm{max} = \dfrac{f_x R^2}{4\nu}$
 
 Usage:
     python3 run_tube.py <num_length> <init_gsd_file> [steps]
@@ -79,7 +79,7 @@ fx         = 0.1            # body force in x-direction         [m/s²]
 drho       = 0.01           # allowed density variation         [–]
 backpress  = 0.01           # background pressure coeff         [–]
 nu         = viscosity / rho0
-v_max_an   = fx * R**2 / (4.0 * nu)    # Hagen–Poiseuille maximum velocity
+v_max_an   = fx * R**2 / (4.0 * nu)    # $v_\mathrm{max} = f_x R^2 / (4\nu)$
 refvel     = v_max_an
 
 # ─── Kernel ──────────────────────────────────────────────────────────────────
@@ -143,20 +143,23 @@ sim.operations.integrator = integrator
 
 # ─── Output ──────────────────────────────────────────────────────────────────
 gsd_writer = hoomd.write.GSD(filename=dumpname,
-                              trigger=hoomd.trigger.Periodic(1000),
+                              trigger=hoomd.trigger.Periodic(100),
                               mode='wb',
                               dynamic=['property', 'momentum'])
 sim.operations.writers.append(gsd_writer)
 
 logger = hoomd.logging.Logger(categories=['scalar', 'string'])
 logger.add(sim, quantities=['timestep', 'tps', 'walltime'])
-table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(500), logger=logger,
+compute_fluid = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filter=filterfluid)
+sim.operations.computes.append(compute_fluid)
+logger.add(compute_fluid, quantities=['e_kin_fluid', 'mean_density'])
+table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(100), logger=logger,
                           max_header_len=10)
 sim.operations.writers.append(table)
 
 log_file = open(logname, mode='w+', newline='\n')
 table_file = hoomd.write.Table(output=log_file,
-                                trigger=hoomd.trigger.Periodic(500),
+                                trigger=hoomd.trigger.Periodic(100),
                                 logger=logger, max_header_len=10)
 sim.operations.writers.append(table_file)
 
@@ -164,6 +167,7 @@ sim.operations.writers.append(table_file)
 if device.communicator.rank == 0:
     print(f'Starting Hagen–Poiseuille tube run at {dt_string}')
 sim.run(steps, write_at_start=True)
+gsd_writer.flush()
 
 # ─── Post-processing: L₂ error vs Hagen–Poiseuille profile ──────────────────
 if device.communicator.rank == 0:

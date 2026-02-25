@@ -25,14 +25,14 @@ Stokes' second problem (oscillating plate) — WCSPH benchmark.
 
 BENCHMARK DESCRIPTION
 ---------------------
-A fluid layer of height H = lref above a plate oscillating at
-v_wall(t) = U0 * cos(omega * t).  The upper plate is stationary.
-H >> delta so that the upper plate has negligible influence.
+A fluid layer of height $H = l_\mathrm{ref}$ above a plate oscillating at
+$v_\mathrm{wall}(t) = U_0 \cos(\omega t)$.  The upper plate is stationary.
+$H \gg \delta$ so that the upper plate has negligible influence.
 
 Analytical steady-state solution (Stokes oscillating boundary layer):
-    v_x(y', t) = U0 * exp(-y'/delta) * cos(omega*t - y'/delta)
-    with  y' = y + H/2  (distance from oscillating plate)
-    and   delta = sqrt(2*nu/omega)  (Stokes layer thickness)
+    $v_x(y', t) = U_0 \exp(-y'/\delta) \cos(\omega t - y'/\delta)$
+    where $y' = y + H/2$ (distance from oscillating plate)
+    and $\delta = \sqrt{2\nu/\omega}$ (Stokes layer thickness)
 
 This benchmark tests:
   - Correct transient viscous diffusion from a moving boundary
@@ -76,7 +76,7 @@ dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 logname   = filename.replace('_init.gsd', '_runWC.log')
 dumpname  = filename.replace('_init.gsd', '_runWC.gsd')
 
-sim.create_state_from_gsd(filename=filename)
+sim.create_state_from_gsd(filename=filename, domain_decomposition=(None, None, 1))
 
 # ─── Physical parameters ─────────────────────────────────────────────────────
 lref       = 0.001          # fluid layer height H                  [m]
@@ -88,8 +88,8 @@ omega      = 2.0 * np.pi * 100.0  # angular frequency (100 Hz)     [rad/s]
 drho       = 0.01
 backpress  = 0.01
 nu         = viscosity / rho0
-delta      = np.sqrt(2.0 * nu / omega)  # Stokes layer thickness   [m]
-T_period   = 2.0 * np.pi / omega       # oscillation period        [s]
+delta      = np.sqrt(2.0 * nu / omega)  # $\delta = \sqrt{2\nu/\omega}$ [m]
+T_period   = 2.0 * np.pi / omega       # $T = 2\pi/\omega$ [s]
 
 if device.communicator.rank == 0:
     print(f'Stokes 2nd: nu={nu:.4e}, omega={omega:.2f} rad/s')
@@ -162,13 +162,16 @@ sim.operations.integrator = integrator
 
 # ─── Output ──────────────────────────────────────────────────────────────────
 gsd_writer = hoomd.write.GSD(filename=dumpname,
-                              trigger=hoomd.trigger.Periodic(steps_per_period),
+                              trigger=hoomd.trigger.Periodic(steps_per_period // 10),
                               mode='wb',
                               dynamic=['property', 'momentum'])
 sim.operations.writers.append(gsd_writer)
 
 logger = hoomd.logging.Logger(categories=['scalar', 'string'])
 logger.add(sim, quantities=['timestep', 'tps', 'walltime'])
+compute_fluid = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filter=filterfluid)
+sim.operations.computes.append(compute_fluid)
+logger.add(compute_fluid, quantities=['e_kin_fluid', 'mean_density'])
 table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(steps_per_period // 10),
                           logger=logger, max_header_len=10)
 sim.operations.writers.append(table)
@@ -203,6 +206,8 @@ for period_i in range(n_periods):
             snap.particles.velocity[bot_mask, 0] = np.float32(v_wall)
         sim.run(1)
 
+gsd_writer.flush()
+
 # ─── Post-processing: Stokes layer amplitude profile ─────────────────────────
 if device.communicator.rank == 0:
     with gsd.hoomd.open(dumpname, 'r') as traj:
@@ -218,7 +223,7 @@ if device.communicator.rank == 0:
     vx_f    = vel[fluid, 0]
     yp_f    = y_f + 0.5 * lref  # distance from oscillating plate
 
-    # Analytical amplitude (velocity envelope at phase=0):  A(y') = U0*exp(-y'/delta)
+    # Analytical amplitude (velocity envelope at $\omega t = 0$): $A(y') = U_0 \exp(-y'/\delta)$
     inside  = yp_f < lref * 0.9  # exclude near-top region (influenced by upper plate)
     yp_ev   = yp_f[inside]
     vx_ev   = vx_f[inside]

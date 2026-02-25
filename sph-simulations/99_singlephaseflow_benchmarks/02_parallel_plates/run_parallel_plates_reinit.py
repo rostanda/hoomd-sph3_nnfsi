@@ -63,7 +63,7 @@ logname  = f'{logname}_runWC.log'
 dumpname = filename.replace('_init.gsd', '')
 dumpname = f'{dumpname}_runWC.gsd'
 
-sim.create_state_from_gsd(filename = filename)
+sim.create_state_from_gsd(filename = filename, domain_decomposition=(None, None, 1))
 
 
 # Fluid and particle properties

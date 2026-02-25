@@ -25,19 +25,19 @@ Rayleigh–Taylor instability — WCSPH run script.
 
 BENCHMARK DESCRIPTION
 ---------------------
-A heavy fluid (ρ₁ = 1500 kg/m³) rests above a light fluid (ρ₂ = 500 kg/m³)
-in a domain periodic in x and z with solid walls in y.  Gravity acts downward.
-The interface is perturbed sinusoidally (δ = 0.01 lref) to seed the dominant
-mode.  Surface tension (σ = 0.01 N/m) stabilises small-scale noise.
+A heavy fluid ($\rho_1 = 1500\,\mathrm{kg/m^3}$) rests above a light fluid ($\rho_2 = 500\,\mathrm{kg/m^3}$)
+in a domain periodic in $x$ and $z$ with solid walls in $y$.  Gravity acts downward.
+The interface is perturbed sinusoidally ($\delta = 0.01\,l_\mathrm{ref}$) to seed the dominant
+mode.  Surface tension ($\sigma = 0.01\,\mathrm{N/m}$) stabilises small-scale noise.
 
-Atwood number: At = (ρ₁ − ρ₂) / (ρ₁ + ρ₂) = 0.5
+Atwood number: $\mathrm{At} = \dfrac{\rho_1 - \rho_2}{\rho_1 + \rho_2} = 0.5$
 
-Linear growth (inviscid):  γ ≈ 176 s⁻¹
-→ for δ = 10 µm, amplitude reaches lref/10 after t ≈ ln(10)/γ ≈ 13 ms.
+Linear growth (inviscid): $\gamma \approx 176\,\mathrm{s}^{-1}$
+$\to$ for $\delta = 10\,\mu\mathrm{m}$, amplitude reaches $l_\mathrm{ref}/10$ after $t \approx \ln(10)/\gamma \approx 13\,\mathrm{ms}$.
 
 The post-processing section tracks the bubble tip (upward penetration of the
 light fluid) and spike tip (downward penetration of the heavy fluid) and
-prints a dimensionless amplitude η = A(t) × k / δ.
+prints a dimensionless amplitude $\eta = A(t) \cdot k / \delta$.
 
 Usage:
     python3 run_rayleigh_taylor.py <num_length> <init_gsd_file>
@@ -72,7 +72,7 @@ dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 logname   = filename.replace('_init.gsd', '_run.log')
 dumpname  = filename.replace('_init.gsd', '_run.gsd')
 
-sim.create_state_from_gsd(filename=filename)
+sim.create_state_from_gsd(filename=filename, domain_decomposition=(None, None, 1))
 
 # ─── Physical parameters ─────────────────────────────────────────────────────
 lref       = 0.001        # reference length (domain width)   [m]
@@ -85,12 +85,12 @@ sigma      = 0.01         # surface tension                   [N/m]
 gy         = -9.81        # gravitational acceleration        [m/s²]
 backpress  = 0.01         # background pressure coeff         [–]
 drho       = 0.01         # allowed density variation         [–]
-steps      = 3001         # simulation steps
+steps      = int(sys.argv[3]) if len(sys.argv) > 3 else 50001  # simulation steps
 
 At     = (rho01 - rho02) / (rho01 + rho02)
 g_mag  = abs(gy)
 k_mode = 2 * np.pi / lref
-gamma  = np.sqrt(At * g_mag * k_mode)   # inviscid linear growth rate
+gamma  = np.sqrt(At * g_mag * k_mode)   # $\gamma = \sqrt{\mathrm{At} \cdot g \cdot k}$ (inviscid linear growth rate)
 
 # Reference velocity from linear growth over one lref
 U_ref = gamma * lref * 0.01            # 1% of lref at growth rate
@@ -179,20 +179,26 @@ sim.operations.integrator = integrator
 
 # ─── Output ──────────────────────────────────────────────────────────────────
 gsd_writer = hoomd.write.GSD(filename=dumpname,
-                              trigger=hoomd.trigger.Periodic(30),
+                              trigger=hoomd.trigger.Periodic(500),
                               mode='wb',
                               dynamic=['property', 'momentum'])
 sim.operations.writers.append(gsd_writer)
 
 logger = hoomd.logging.Logger(categories=['scalar', 'string'])
 logger.add(sim, quantities=['timestep', 'tps', 'walltime'])
-table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(300), logger=logger,
+compute_W = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filter=filterfluidW)
+compute_N = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filter=filterfluidN)
+sim.operations.computes.append(compute_W)
+sim.operations.computes.append(compute_N)
+logger.add(compute_W, quantities=['e_kin_fluid', 'mean_density'])
+logger.add(compute_N, quantities=['e_kin_fluid', 'mean_density'])
+table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(500), logger=logger,
                           max_header_len=10)
 sim.operations.writers.append(table)
 
 log_file = open(logname, mode='w+', newline='\n')
 table_file = hoomd.write.Table(output=log_file,
-                                trigger=hoomd.trigger.Periodic(300),
+                                trigger=hoomd.trigger.Periodic(500),
                                 logger=logger, max_header_len=10)
 sim.operations.writers.append(table_file)
 
@@ -200,6 +206,7 @@ sim.operations.writers.append(table_file)
 if device.communicator.rank == 0:
     print(f'Starting WCSPH Rayleigh–Taylor run at {dt_string}')
 sim.run(steps, write_at_start=True)
+gsd_writer.flush()
 
 # ─── Post-processing: bubble and spike tip tracking ──────────────────────────
 if device.communicator.rank == 0:
@@ -233,7 +240,7 @@ if device.communicator.rank == 0:
     A_spike  = abs(y_spike)    # amplitude of downward spike penetration
 
     t_sim = snap_last.configuration.step * dt
-    eta_lin = delta * np.exp(gamma * t_sim)  # lineartheory amplitude
+    eta_lin = delta * np.exp(gamma * t_sim)  # $\delta_0 \exp(\gamma t)$ (linear theory amplitude)
 
     print(f'\n── Rayleigh–Taylor summary (last frame, step {snap_last.configuration.step}) ──')
     print(f'  Simulation time  t  = {t_sim*1e3:.2f} ms')

@@ -30,27 +30,27 @@ Square cavity (L = 1 m) with:
   Right wall (x = +L/2): cold, T_cold = 0.0
   Top/bottom walls:       T_avg = 0.5  (approximate adiabatic condition)
 
-Gravity acts in the −y direction.  The Boussinesq approximation applies a
+Gravity acts in the $-y$ direction.  The Boussinesq approximation applies a
 per-particle buoyancy correction:
-    ΔF_b = m × g × (−β × (T_i − T_cold))
+    $\Delta F_b = m \, g \, \bigl(-\beta(T_i - T_\mathrm{cold})\bigr)$
 so hot fluid near the left wall experiences an upward buoyancy force and
 rises, cold fluid near the right wall sinks.  A stable circulation cell forms.
 
 Non-dimensional parameters (chosen for numerical convenience):
-    L      = 1.0 m        cavity side length
-    ρ₀     = 1.0 kg/m³   rest density
-    g      = 1.0 m/s²    gravitational acceleration
-    ΔT     = 1.0 K        temperature difference (T_hot − T_cold)
-    β      = 0.001 1/K   thermal expansion coefficient
-    ν = μ  = 0.001 m²/s  kinematic viscosity (ρ₀ = 1 → μ = ν)
-    κ_s    = 0.001 m²/s  thermal diffusivity
+    $L      = 1.0\,\mathrm{m}$           cavity side length
+    $\rho_0 = 1.0\,\mathrm{kg/m^3}$     rest density
+    $g      = 1.0\,\mathrm{m/s^2}$      gravitational acceleration
+    $\Delta T = 1.0\,\mathrm{K}$         temperature difference ($T_\mathrm{hot} - T_\mathrm{cold}$)
+    $\beta  = 0.001\,\mathrm{K^{-1}}$   thermal expansion coefficient
+    $\nu = \mu = 0.001\,\mathrm{m^2/s}$ kinematic viscosity ($\rho_0 = 1 \Rightarrow \mu = \nu$)
+    $\kappa_s = 0.001\,\mathrm{m^2/s}$  thermal diffusivity
 
 Derived dimensionless numbers:
-    Ra = g β ΔT L³ / (ν κ_s) = 1.0 × 0.001 × 1.0 × 1³ / (0.001 × 0.001) = 1000
-    Pr = ν / κ_s = 1.0
+    $\mathrm{Ra} = \dfrac{g\,\beta\,\Delta T\,L^3}{\nu\,\kappa_s} = \dfrac{1.0 \times 0.001 \times 1.0 \times 1^3}{0.001 \times 0.001} = 1000$
+    $\mathrm{Pr} = \nu / \kappa_s = 1.0$
 
 Reference Nusselt number (de Vahl Davis 1983):
-    Nu(Ra=1000) ≈ 1.118
+    $\mathrm{Nu}(\mathrm{Ra}=1000) \approx 1.118$
 
 Note on adiabatic walls: True adiabatic (zero-flux) top/bottom conditions
 require updating solid particle temperatures each step.  Here the simpler
@@ -95,7 +95,7 @@ dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 logname   = filename.replace('_init.gsd', '_run.log')
 dumpname  = filename.replace('_init.gsd', '_run.gsd')
 
-sim.create_state_from_gsd(filename=filename)
+sim.create_state_from_gsd(filename=filename, domain_decomposition=(None, None, 1))
 
 # ─── Physical parameters ─────────────────────────────────────────────────────
 L          = 1.0         # cavity side length                     [m]
@@ -117,7 +117,7 @@ Pr  = nu / kappa_s
 drho      = 0.01         # allowed density variation              [–]
 backpress = 0.01         # background pressure coefficient        [–]
 
-# Reference velocity: buoyancy velocity scale sqrt(g β ΔT L)
+# Reference velocity: buoyancy scale $U_\mathrm{ref} = \sqrt{g\,\beta\,\Delta T\,L}$
 refvel = np.sqrt(g * beta_s * DeltaT * L)
 
 # ─── Kernel ──────────────────────────────────────────────────────────────────
@@ -140,8 +140,8 @@ filtersolid = hoomd.filter.Type(['S'])
 
 # ─── SinglePhaseFlowGDGD model (Boussinesq natural convection) ───────────────
 # Boussinesq mode: standard EOS pressure, explicit per-particle buoyancy:
-#   ΔF_b = m × g_y × (−β × (T_i − T_cold))
-# With g_y = −g and T_cold as reference, hot particles (T > 0) receive an
+#   $\Delta F_b = m \, g_y \, (-\beta (T_i - T_\mathrm{cold}))$
+# With $g_y = -g$ and $T_\mathrm{cold}$ as reference, hot particles ($T > 0$) receive an
 # upward force, driving the convection roll.
 model = hoomd.sph.sphmodel.SinglePhaseFlowGDGD(
     kernel=kernel_obj, eos=eos, nlist=nlist,
@@ -223,20 +223,23 @@ with sim.state.cpu_local_snapshot as snap:
 
 # ─── Output ──────────────────────────────────────────────────────────────────
 gsd_writer = hoomd.write.GSD(filename=dumpname,
-                              trigger=hoomd.trigger.Periodic(1000),
+                              trigger=hoomd.trigger.Periodic(100),
                               mode='wb',
                               dynamic=['property', 'momentum'])
 sim.operations.writers.append(gsd_writer)
 
 logger = hoomd.logging.Logger(categories=['scalar', 'string'])
 logger.add(sim, quantities=['timestep', 'tps', 'walltime'])
-table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(1000), logger=logger,
+compute_fluid = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filter=filterfluid)
+sim.operations.computes.append(compute_fluid)
+logger.add(compute_fluid, quantities=['e_kin_fluid', 'mean_density'])
+table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(100), logger=logger,
                           max_header_len=10)
 sim.operations.writers.append(table)
 
 log_file = open(logname, mode='w+', newline='\n')
 table_file = hoomd.write.Table(output=log_file,
-                                trigger=hoomd.trigger.Periodic(1000),
+                                trigger=hoomd.trigger.Periodic(100),
                                 logger=logger, max_header_len=10)
 sim.operations.writers.append(table_file)
 
@@ -247,6 +250,7 @@ if device.communicator.rank == 0:
     print(f'  Top/bottom walls:   T = {T_avg:.2f}  (approximate adiabatic)')
 
 sim.run(steps, write_at_start=True)
+gsd_writer.flush()
 
 # ─── Post-processing ─────────────────────────────────────────────────────────
 if device.communicator.rank == 0:
@@ -255,7 +259,7 @@ if device.communicator.rank == 0:
         pos  = snap.particles.position
         tid  = snap.particles.typeid
         vel  = snap.particles.velocity
-        aux4 = snap.particles.aux4   # shape (N, 3); T = aux4[:, 0]
+        aux4 = snap.particles.auxiliary4   # shape (N, 3); T = aux4[:, 0]
 
     fluid = (tid == 0)
     x_f   = pos[fluid, 0]
@@ -268,15 +272,15 @@ if device.communicator.rank == 0:
     v_mag = np.sqrt(vx_f**2 + vy_f**2)
     v_max = float(np.max(v_mag))
 
-    # Nusselt number estimate at the hot wall (x ≈ −L/2)
-    # Nu = L / ΔT × mean(dT/dx) at x = −L/2
-    # Approximate dT/dx using the first fluid layer adjacent to the left wall.
+    # Nusselt number estimate at the hot wall ($x \approx -L/2$):
+    # $\mathrm{Nu} = \dfrac{L}{\Delta T} \left\langle \dfrac{\partial T}{\partial x} \right\rangle_{x=-L/2}$
+    # Approximate $\partial T/\partial x$ using the first fluid layer adjacent to the left wall.
     x_thresh = -0.5 * L + 2.5 * dx
     near_hot  = (x_f < x_thresh) & (np.abs(y_f) < 0.5 * L)
     if np.sum(near_hot) > 0:
         x_near   = x_f[near_hot]
         T_near   = T_f[near_hot]
-        # Finite-difference gradient (hot wall is at x = −L/2, T = T_hot)
+        # Finite-difference gradient (hot wall: $x = -L/2$, $T = T_\mathrm{hot}$)
         dTdx_hot = np.mean((T_near - T_hot) / (x_near - (-0.5 * L)))
         Nu_hot   = -L / DeltaT * dTdx_hot
     else:

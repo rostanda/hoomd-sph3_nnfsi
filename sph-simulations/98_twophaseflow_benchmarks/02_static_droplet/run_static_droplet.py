@@ -29,11 +29,11 @@ A spherical droplet of phase 'B' sits at rest in an equal-density outer fluid
 ('A') inside a fully periodic box.  After equilibration the pressure jump across
 the interface should satisfy the Young–Laplace relation
 
-    ΔP_theory = 2σ / R = 2 × 0.01 / 2.5e-4 = 80 Pa
+    $\Delta P_\mathrm{theory} = 2\sigma / R = 2 \times 0.01 / 2.5\times10^{-4} = 80\,\mathrm{Pa}$
 
 This script uses the standard WCSPH VelocityVerletBasic integrator.  Spurious
 (parasitic) currents are an unavoidable artefact of the discrete colour-gradient
-surface-tension model; their magnitude relative to σ/μ characterises solver
+surface-tension model; their magnitude relative to $\sigma/\mu$ characterises solver
 quality.  Run run_static_droplet_TV.py for the transport-velocity variant, which
 typically achieves lower spurious velocities.
 
@@ -87,9 +87,9 @@ sigma        = 0.01         # surface tension               [N/m]
 backpress    = 0.01         # background pressure coeff     [–]
 refvel       = 0.0          # reference velocity            [m/s]
 drho         = 0.01         # allowed density variation     [–]
-steps        = 2001         # simulation steps
+steps        = int(sys.argv[3]) if len(sys.argv) > 3 else 2001   # simulation steps
 
-dP_theory = 2.0 * sigma / R_drop   # 80 Pa
+dP_theory = 2.0 * sigma / R_drop   # $\Delta P = 2\sigma/R$ [Pa]
 
 # ─── Kernel ──────────────────────────────────────────────────────────────────
 kernel     = 'WendlandC4'
@@ -182,6 +182,12 @@ sim.operations.writers.append(gsd_writer)
 
 logger = hoomd.logging.Logger(categories=['scalar', 'string'])
 logger.add(sim, quantities=['timestep', 'tps', 'walltime'])
+compute_A = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filter=filterfluidA)
+compute_B = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filter=filterfluidB)
+sim.operations.computes.append(compute_A)
+sim.operations.computes.append(compute_B)
+logger.add(compute_A, quantities=['e_kin_fluid', 'mean_density'])
+logger.add(compute_B, quantities=['e_kin_fluid', 'mean_density'])
 table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(100), logger=logger,
                           max_header_len=10)
 sim.operations.writers.append(table)
@@ -196,6 +202,7 @@ sim.operations.writers.append(table_file)
 if device.communicator.rank == 0:
     print(f'Starting WCSPH static-droplet run at {dt_string}')
 sim.run(steps, write_at_start=True)
+gsd_writer.flush()
 
 # ─── Post-processing: Laplace pressure check ─────────────────────────────────
 if device.communicator.rank == 0:
@@ -211,7 +218,7 @@ if device.communicator.rank == 0:
     dP_sim  = P_in - P_out
     rel_err = abs(dP_sim - dP_theory) / dP_theory * 100.0
 
-    U_cap = sigma / viscosity1          # capillary velocity scale [m/s]
+    U_cap = sigma / viscosity1          # $U_\mathrm{cap} = \sigma/\mu$ [m/s]
     vx    = snap.particles.velocity[:, 0]
     vy    = snap.particles.velocity[:, 1]
     vz    = snap.particles.velocity[:, 2]

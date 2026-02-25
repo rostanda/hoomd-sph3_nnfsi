@@ -82,7 +82,7 @@ backpress     = 0.01        # background pressure coeff [–]
 fx            = 0.0         # body force                [m/s²]
 refvel        = 0.0         # reference velocity        [m/s]
 drho          = 0.01        # allowed density variation [–]
-steps         = 1001        # simulation steps
+steps         = 5001        # simulation steps
 
 # ─── Kernel ──────────────────────────────────────────────────────────────────
 kernel     = 'WendlandC4'
@@ -146,7 +146,7 @@ if device.communicator.rank == 0:
     print(f'Phase 1 speed of sound: {c1:.4f} m/s  ({cond1})')
     print(f'Phase 2 speed of sound: {c2:.4f} m/s  ({cond2})')
 
-# Set transport velocity pressure P_bg_tv = backpress × ρ₀c²
+# Set transport velocity pressure $P_\mathrm{bg,tv} = \mathrm{backpress} \times \rho_0 c^2$
 # This keeps all particle pressures positive and drives the TV advection
 # (KickDriftKickTV reads bpc, which is proportional to P_bg_tv).
 P_bg_tv1 = backpress * rho01 * c1**2
@@ -178,13 +178,19 @@ sim.operations.integrator = integrator
 
 # ─── Output ──────────────────────────────────────────────────────────────────
 gsd_writer = hoomd.write.GSD(filename=dumpname,
-                              trigger=hoomd.trigger.Periodic(10),
+                              trigger=hoomd.trigger.Periodic(50),
                               mode='wb',
                               dynamic=['property', 'momentum'])
 sim.operations.writers.append(gsd_writer)
 
 logger = hoomd.logging.Logger(categories=['scalar', 'string'])
 logger.add(sim, quantities=['timestep', 'tps', 'walltime'])
+compute_W = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filter=filterfluidW)
+compute_N = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filter=filterfluidN)
+sim.operations.computes.append(compute_W)
+sim.operations.computes.append(compute_N)
+logger.add(compute_W, quantities=['e_kin_fluid', 'mean_density'])
+logger.add(compute_N, quantities=['e_kin_fluid', 'mean_density'])
 table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(100), logger=logger,
                           max_header_len=10)
 sim.operations.writers.append(table)

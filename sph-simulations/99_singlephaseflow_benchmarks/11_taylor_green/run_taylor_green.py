@@ -26,13 +26,13 @@ maintainer: dkrach, david.krach@mib.uni-stuttgart.de
 BENCHMARK DESCRIPTION
 ---------------------
 A fully periodic 2-D square domain with the Taylor–Green initial condition:
-    v_x = -U0 * cos(kx) * sin(ky)
-    v_y =  U0 * sin(kx) * cos(ky)
-where k = 2π/L and L = lref.
+    $v_x = -U_0 \cos(kx) \sin(ky)$
+    $v_y =  U_0 \sin(kx) \cos(ky)$
+where $k = 2\pi/L$ and $L = l_\mathrm{ref}$.
 
 The analytical solution is an exponentially decaying vortex:
-    v_x(x, y, t) = -U0 * cos(kx) * sin(ky) * exp(-2 ν k² t)
-    v_y(x, y, t) =  U0 * sin(kx) * cos(ky) * exp(-2 ν k² t)
+    $v_x(x, y, t) = -U_0 \cos(kx) \sin(ky) \exp(-2\nu k^2 t)$
+    $v_y(x, y, t) =  U_0 \sin(kx) \cos(ky) \exp(-2\nu k^2 t)$
 
 This benchmark tests:
   - Conservation of kinetic energy in a periodic domain
@@ -40,8 +40,8 @@ This benchmark tests:
   - Absence of numerical diffusion artefacts
 
 Post-processing computes:
-  - Total kinetic energy vs analytical E(t) = E0 * exp(-4 ν k² t)
-  - L2 velocity error relative to the analytical field at the final snapshot
+  - Total kinetic energy vs analytical $E(t) = E_0 \exp(-4\nu k^2 t)$
+  - $L_2$ velocity error relative to the analytical field at the final snapshot
 
 Usage:
     python3 run_taylor_green.py <num_length> <init_gsd_file> [steps] [U0]
@@ -78,7 +78,7 @@ dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 logname   = filename.replace('_init.gsd', '_runWC.log')
 dumpname  = filename.replace('_init.gsd', '_runWC.gsd')
 
-sim.create_state_from_gsd(filename=filename)
+sim.create_state_from_gsd(filename=filename, domain_decomposition=(None, None, 1))
 
 # ─── Physical parameters ─────────────────────────────────────────────────────
 lref       = 1.0            # domain side length                    [m]
@@ -90,7 +90,7 @@ backpress  = 0.01
 nu         = viscosity / rho0
 k          = 2.0 * np.pi / lref  # wavenumber
 refvel     = U0             # reference velocity                    [m/s]
-t_decay    = 1.0 / (2.0 * nu * k**2)  # e-folding time [s]
+t_decay    = 1.0 / (2.0 * nu * k**2)  # $\tau = 1/(2\nu k^2)$ [s]
 
 if device.communicator.rank == 0:
     print(f'Taylor-Green vortex: L={lref}, U0={U0}, nu={nu:.4e}')
@@ -153,20 +153,23 @@ sim.operations.integrator = integrator
 
 # ─── Output ──────────────────────────────────────────────────────────────────
 gsd_writer = hoomd.write.GSD(filename=dumpname,
-                              trigger=hoomd.trigger.Periodic(1000),
+                              trigger=hoomd.trigger.Periodic(100),
                               mode='wb',
                               dynamic=['property', 'momentum'])
 sim.operations.writers.append(gsd_writer)
 
 logger = hoomd.logging.Logger(categories=['scalar', 'string'])
 logger.add(sim, quantities=['timestep', 'tps', 'walltime'])
-table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(500), logger=logger,
+compute_fluid = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filter=filterfluid)
+sim.operations.computes.append(compute_fluid)
+logger.add(compute_fluid, quantities=['e_kin_fluid', 'mean_density'])
+table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(100), logger=logger,
                           max_header_len=10)
 sim.operations.writers.append(table)
 
 log_file = open(logname, mode='w+', newline='\n')
 table_file = hoomd.write.Table(output=log_file,
-                                trigger=hoomd.trigger.Periodic(500),
+                                trigger=hoomd.trigger.Periodic(100),
                                 logger=logger, max_header_len=10)
 sim.operations.writers.append(table_file)
 
@@ -174,6 +177,7 @@ sim.operations.writers.append(table_file)
 if device.communicator.rank == 0:
     print(f'Starting Taylor-Green vortex run at {dt_string}')
 sim.run(steps, write_at_start=True)
+gsd_writer.flush()
 
 # ─── Post-processing: kinetic energy and L2 velocity error ───────────────────
 if device.communicator.rank == 0:
@@ -198,7 +202,7 @@ if device.communicator.rank == 0:
     vy_an  =  U0 * decay * np.sin(k * x_f) * np.cos(k * y_f)
 
     E_sph = 0.5 * float(np.mean(vx_f**2 + vy_f**2))
-    E_an  = 0.5 * U0**2 * decay**2  # E0 * exp(-4 nu k^2 t)
+    E_an  = 0.5 * U0**2 * decay**2  # $E_0 \exp(-4\nu k^2 t)$
 
     L2_v = np.sqrt(np.mean((vx_f - vx_an)**2 + (vy_f - vy_an)**2)) / U0 * 100.0
 

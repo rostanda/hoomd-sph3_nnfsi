@@ -441,15 +441,14 @@ class SinglePhaseFlow(SPHModel):
         UREF = np.abs(UREF)
 
         C_a = []
-        # Speed of sound
-        # CFL condition
+        # $c_0^2 \geq U_\mathrm{ref}^2 / \delta\rho$  (CFL)
         C_a.append(UREF*UREF/DRHO)
-        # Gravity waves condition
+        # $c_0^2 \geq g\,l_\mathrm{ref} / \delta\rho$  (gravity-wave)
         C_a.append(self.get_GMAG()*LREF/DRHO)
-        # Fourier condition
+        # $c_0^2 \geq \mu U_\mathrm{ref} / (\rho_0 l_\mathrm{ref} \delta\rho)$  (Fourier)
         C_a.append((MU*UREF)/(RHO0*LREF*DRHO))
-        # Maximum speed of sound
-        
+        # $c_0 = \sqrt{\max(c_0^2)}$
+
         C_a = np.asarray(C_a)
         conditions = ["CFL-condition", "Gravity_waves-condition", "Fourier-condition"]
         condition = [conditions[i] for i in np.where(C_a == C_a.max())[0]]
@@ -481,14 +480,13 @@ class SinglePhaseFlow(SPHModel):
         C = self.get_speedofsound()
 
         DT_a = []
-        # CFL condition
-        # DT_1 = 0.25*H/C
+        # $\Delta t \leq \Delta x / c_0$  (CFL)
         DT_a.append(DX/C)
-        # Fourier condition
+        # $\Delta t \leq \rho_0 \Delta x^2 / (8\mu)$  (Fourier/viscous)
         DT_a.append((DX*DX*RHO0)/(8.0*MU))
-        
+
         if self.get_GMAG() > 0.0:
-            # Gravity waves condition
+            # $\Delta t \leq \sqrt{h / (16 g)}$  (gravity-wave)
             DT_a.append(np.sqrt(H/(16.0*self.get_GMAG())))
         DT_a = np.asarray(DT_a)
         conditions = ["CFL-condition", "Fourier-condition", "Gravity_waves-condition"]
@@ -505,17 +503,17 @@ class SinglePhaseFlowGDGD(SPHModel):
     concentration) that drives buoyancy via one of two models:
 
     * **VRD** (``boussinesq=False``, default):
-      Per-particle rest density ρ₀_i = ρ₀ · (1 − β · (T_i − T_ref)).
+      Per-particle rest density $\rho_{0,i} = \rho_0 (1 - \beta (T_i - T_\mathrm{ref}))$.
       Buoyancy emerges implicitly from the pressure gradient.
       For SUMMATION density method, VRD pressures are computed on-the-fly
-      in the pair loop.  For CONTINUITY, the VRD ∂P/∂ρ derivative is used
-      in the dp/dt chain rule.
+      in the pair loop.  For CONTINUITY, the VRD $\partial P/\partial\rho$ derivative is used
+      in the $\dot{p}$ chain rule.
 
     * **Boussinesq** (``boussinesq=True``):
-      Standard EOS with global ρ₀; explicit per-particle buoyancy correction
-      ΔF_b = m · g · (−β · (T_i − T_ref)) is added to the momentum equation.
+      Standard EOS with global $\rho_0$; explicit per-particle buoyancy correction
+      $\Delta F_b = m \, g \, (-\beta (T_i - T_\mathrm{ref}))$ is added to the momentum equation.
 
-    The scalar T is stored in ``aux4.x``.  Its rate of change dT/dt is
+    The scalar $T$ is stored in ``aux4.x``.  Its rate of change $\dot{T}$ is
     accumulated into ``ratedpe.z`` (by the scalar diffusion operator) and
     time-marched by the integrator in the same half-step scheme as density.
 

@@ -25,13 +25,13 @@ Lid-driven cavity — Transport-Velocity (TV) run script.
 
 BENCHMARK DESCRIPTION
 ---------------------
-A square cavity (lref × lref × small depth) with solid walls on all four sides.
-The top wall moves at U_lid = 1.0 m/s in the x-direction.  The other three
+A square cavity ($l_\mathrm{ref} \times l_\mathrm{ref} \times$ small depth) with solid walls on all four sides.
+The top wall moves at $U_\mathrm{lid} = 1.0$ m/s in the x-direction.  The other three
 walls are stationary.
 
-This benchmark covers a range of Reynolds numbers (Re = ρ U_lid lref / μ).
+This benchmark covers a range of Reynolds numbers ($Re = \rho U_\mathrm{lid} l_\mathrm{ref} / \mu$).
 At steady state the velocity field shows a primary recirculation vortex.
-Reference data: Ghia et al. (1982) for Re = 100, 400, 1000, 3200, 5000.
+Reference data: Ghia et al. (1982) for $Re = 100, 400, 1000, 3200, 5000$.
 
 Usage (OptionParser):
     python3 run_ldc_tv.py -n <resolution> -S <init_gsd_file> -i <steps_x1000> -R <reynolds>
@@ -71,7 +71,7 @@ dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 logname   = options.initgsd.replace('_init.gsd', '_runTV.log')
 dumpname  = options.initgsd.replace('_init.gsd', '_runTV.gsd')
 
-sim.create_state_from_gsd(filename=options.initgsd)
+sim.create_state_from_gsd(filename=options.initgsd, domain_decomposition=(None, None, 1))
 
 # ─── Physical parameters ─────────────────────────────────────────────────────
 num_length = options.resolution
@@ -151,20 +151,23 @@ sim.operations.integrator = integrator
 
 # ─── Output ──────────────────────────────────────────────────────────────────
 gsd_writer = hoomd.write.GSD(filename=dumpname,
-                              trigger=hoomd.trigger.Periodic(5000),
+                              trigger=hoomd.trigger.Periodic(2000),
                               mode='wb',
                               dynamic=['property', 'momentum'])
 sim.operations.writers.append(gsd_writer)
 
 logger = hoomd.logging.Logger(categories=['scalar', 'string'])
 logger.add(sim, quantities=['timestep', 'tps', 'walltime'])
-table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(100), logger=logger,
+compute_fluid = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filter=filterfluid)
+sim.operations.computes.append(compute_fluid)
+logger.add(compute_fluid, quantities=['e_kin_fluid', 'mean_density'])
+table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(1000), logger=logger,
                           max_header_len=10)
 sim.operations.writers.append(table)
 
 log_file = open(logname, mode='w+', newline='\n')
 table_file = hoomd.write.Table(output=log_file,
-                                trigger=hoomd.trigger.Periodic(100),
+                                trigger=hoomd.trigger.Periodic(1000),
                                 logger=logger, max_header_len=10)
 sim.operations.writers.append(table_file)
 
@@ -172,6 +175,7 @@ sim.operations.writers.append(table_file)
 if device.communicator.rank == 0:
     print(f'Starting TV lid-driven cavity run (Re={Re:.0f}) at {dt_string}')
 sim.run(steps, write_at_start=True)
+gsd_writer.flush()
 
 # ─── Post-processing: centreline velocity ───────────────────────────────────
 if device.communicator.rank == 0:
@@ -187,7 +191,7 @@ if device.communicator.rank == 0:
     vx_f  = vel[fluid, 0]
     vy_f  = vel[fluid, 1]
 
-    # Vertical centreline: x ≈ 0, extract vy(y)
+    # Vertical centreline: $x \approx 0$, extract $v_y(y)$
     ctr_x = np.abs(x_f) < 2.0 * dx
     if ctr_x.any():
         y_ctr   = y_f[ctr_x]
@@ -199,7 +203,7 @@ if device.communicator.rank == 0:
     else:
         v_max_ctr = float('nan')
 
-    # Horizontal centreline: y ≈ 0, extract vx(x)
+    # Horizontal centreline: $y \approx 0$, extract $v_x(x)$
     ctr_y = np.abs(y_f) < 2.0 * dx
     if ctr_y.any():
         x_ctr   = x_f[ctr_y]

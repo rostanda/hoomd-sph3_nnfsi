@@ -97,8 +97,7 @@ TwoPhaseFlow<KT_, SET1_, SET2_>::TwoPhaseFlow(std::shared_ptr<SystemDefinition> 
         assert(this->m_eos1);
         assert(this->m_eos2);
 
-        // If fluid phase speed of sounds are different, backpressures will be different
-        // Apply larger backbressure to entire system
+        // If $c_1 \ne c_2$, back-pressures differ; apply $\max(b_1, b_2)$ to both phases
         Scalar bp1 = this->m_eos1->getBackgroundPressure();
         Scalar bp2 = this->m_eos2->getBackgroundPressure();
         if ( bp1 > bp2 )
@@ -213,7 +212,7 @@ void TwoPhaseFlow<KT_, SET1_, SET2_>::setParams(Scalar mu1, Scalar mu2, Scalar s
          throw std::runtime_error("Error initializing TwoPhaseFlow.");
          }
 
-    // Compute solid-fluid interfacial tension using Young's equation
+    // Young's equation: $\sigma_{s1} - \sigma_{s2} = \sigma_{12} \cos\theta$
     if ( this->m_omega == Scalar(90) )
         {
         this->m_sigma01 = 0.0;
@@ -581,7 +580,7 @@ void TwoPhaseFlow<KT_, SET1_, SET2_>::compute_particle_concentration_gradient(ui
 
             // Calculate distance
             Scalar r = sqrt(rsq);
-            // Write \sum_j mj/rhoj * W_ij to h_pressure
+            // $\sum_j (m_j/\rho_j) W_{ij}$ stored in h_pressure
             h_pressure.data[i] += (mj/rhoj)*(this->m_const_slength ? this->m_skernel->wij(m_ch,r) : this->m_skernel->wij(Scalar(0.5)*(h_h.data[i]+h_h.data[k]),r));
 
         } // End neighbour loop
@@ -1746,6 +1745,7 @@ void TwoPhaseFlow<KT_, SET1_, SET2_>::forcecomputation(uint64_t timestep)
     else if ( m_density_method == DENSITYCONTINUITY )
         this->m_exec_conf->msg->notice(7) << "Computing TwoPhaseFlow::Forces using CONTINUITY approach " << m_density_method << endl;
 
+    { // Begin GPU Array Scope
     // Grab handles for particle data
     // Access mode overwrite implies that data does not need to be read in
     ArrayHandle<Scalar4> h_force(this->m_force,access_location::host, access_mode::readwrite);
@@ -2061,6 +2061,8 @@ void TwoPhaseFlow<KT_, SET1_, SET2_>::forcecomputation(uint64_t timestep)
         } // Closing Fluid Particle Loop
 
     m_timestep_list[5] = max_vel;
+    } // End GPU Array Scope
+
     // Add volumetric force (gravity)
     this->applyBodyForce(timestep, this->m_fluidgroup);
     // if ( m_compute_solid_forces )
@@ -2148,7 +2150,7 @@ void TwoPhaseFlow<KT_, SET1_, SET2_>::computeForces(uint64_t timestep)
 
 #ifdef ENABLE_MPI
     // Update ghost particle densities and pressures.
-    update_ghost_density_pressure_energy(timestep);
+    update_ghost_density_pressure(timestep);
 #endif
 
     // Compute particle pressures

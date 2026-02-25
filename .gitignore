@@ -38,3 +38,6 @@ hoomd-blue/hoomd/extern/pgsd.h
 *.exe
 *.out
 *.app
+
+# VENV folder 
+.venv

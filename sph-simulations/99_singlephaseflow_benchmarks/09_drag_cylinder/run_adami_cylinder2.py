@@ -31,7 +31,7 @@ interaction forces are accumulated on the cylinder particles, enabling
 drag-force logging via SolidProperties.
 
 Post-processing reports the steady-state drag force and a drag coefficient
-normalised as  C_D = F_x / (μ U_mean)  (Stokes normalisation for 2-D flow
+normalised as $C_D = F_x / (\mu \, U_\mathrm{mean})$ (Stokes normalisation for 2-D flow
 per unit depth).
 
 Usage:
@@ -68,7 +68,7 @@ dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 logname   = filename.replace('_init.gsd', '_drag.log')
 dumpname  = filename.replace('_init.gsd', '_drag.gsd')
 
-sim.create_state_from_gsd(filename=filename)
+sim.create_state_from_gsd(filename=filename, domain_decomposition=(None, None, 1))
 
 # ─── Physical parameters ─────────────────────────────────────────────────────
 lref       = 0.08           # duct reference length              [m]
@@ -156,7 +156,7 @@ sim.operations.computes.append(solid_properties)
 
 # ─── Output ──────────────────────────────────────────────────────────────────
 gsd_writer = hoomd.write.GSD(filename=dumpname,
-                              trigger=hoomd.trigger.Periodic(1000),
+                              trigger=hoomd.trigger.Periodic(2000),
                               mode='wb',
                               dynamic=['property', 'momentum'])
 sim.operations.writers.append(gsd_writer)
@@ -166,19 +166,19 @@ logger.add(sim, quantities=['timestep', 'tps', 'walltime'])
 logger.add(spf_properties,  quantities=['abs_velocity', 'num_particles',
                                          'fluid_vel_x_sum', 'mean_density', 'e_kin_fluid'])
 logger.add(solid_properties, quantities=['total_drag_x', 'total_drag_y', 'total_drag_z'])
-# Stokes drag coefficient: C_D = F_x / (mu * U_mean)
+# Stokes drag coefficient: $C_D = F_x / (\mu \cdot U_\mathrm{mean})$
 logger[('custom', 'C_D')] = (
     lambda: (solid_properties.total_drag_x / spf_properties.abs_velocity * viscosity)
             if spf_properties.abs_velocity > 0 else 0.0,
     'scalar')
 
-table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(100), logger=logger,
+table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(1000), logger=logger,
                           max_header_len=10)
 sim.operations.writers.append(table)
 
 log_file = open(logname, mode='w+', newline='\n')
 table_file = hoomd.write.Table(output=log_file,
-                                trigger=hoomd.trigger.Periodic(10),
+                                trigger=hoomd.trigger.Periodic(1000),
                                 logger=logger, max_header_len=10)
 sim.operations.writers.append(table_file)
 
@@ -186,6 +186,7 @@ sim.operations.writers.append(table_file)
 if device.communicator.rank == 0:
     print(f'Starting drag cylinder TV run at {dt_string}')
 sim.run(steps, write_at_start=True)
+gsd_writer.flush()
 
 # ─── Post-processing: steady-state drag ──────────────────────────────────────
 if device.communicator.rank == 0:

@@ -169,13 +169,19 @@ sim.operations.writers.append(gsd_writer)
 
 logger = hoomd.logging.Logger(categories=['scalar', 'string'])
 logger.add(sim, quantities=['timestep', 'tps', 'walltime'])
-table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(500), logger=logger,
+compute_W = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filter=filterfluidW)
+compute_N = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filter=filterfluidN)
+sim.operations.computes.append(compute_W)
+sim.operations.computes.append(compute_N)
+logger.add(compute_W, quantities=['e_kin_fluid', 'mean_density'])
+logger.add(compute_N, quantities=['e_kin_fluid', 'mean_density'])
+table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(50), logger=logger,
                           max_header_len=10)
 sim.operations.writers.append(table)
 
 log_file = open(logname, mode='w+', newline='\n')
 table_file = hoomd.write.Table(output=log_file,
-                                trigger=hoomd.trigger.Periodic(500),
+                                trigger=hoomd.trigger.Periodic(50),
                                 logger=logger, max_header_len=10)
 sim.operations.writers.append(table_file)
 
@@ -183,6 +189,7 @@ sim.operations.writers.append(table_file)
 if device.communicator.rank == 0:
     print(f'Starting TV two-layer Couette run at {dt_string}')
 sim.run(steps, write_at_start=True)
+gsd_writer.flush()
 
 # ─── Post-processing ─────────────────────────────────────────────────────────
 if device.communicator.rank == 0:

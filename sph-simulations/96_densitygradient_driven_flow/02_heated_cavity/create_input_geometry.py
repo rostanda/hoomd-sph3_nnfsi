@@ -64,7 +64,7 @@ slength    = hoomd.sph.kernel.OptimalH[kernel] * dx
 rcut       = hoomd.sph.kernel.Kappa[kernel] * slength
 
 part_rcut  = math.ceil(rcut / dx)
-part_depth = max(1, math.ceil(2.5 * hoomd.sph.kernel.Kappa[kernel] * rcut / dx))
+part_depth = math.ceil(2.5 * hoomd.sph.kernel.Kappa[kernel] * rcut / dx)  # $\ell_z > 2\kappa h$ (pseudo-3D: more than one kernel diameter in z)
 
 # Domain: periodic in z (thin slice), solid wall layers in x and y
 nx = int(num_length + 2 * part_rcut)   # fluid + left/right wall layers

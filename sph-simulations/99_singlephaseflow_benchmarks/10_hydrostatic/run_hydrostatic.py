@@ -29,17 +29,17 @@ A fluid column of height lref is in hydrostatic equilibrium under body
 force gy (gravity in negative y direction) between two solid plates.
 
 Analytical solution (hydrostatic pressure):
-    p(y) = p0 + rho0 * |gy| * (lref/2 - y)
+    $p(y) = p_0 + \rho_0 |g_y| (l_\mathrm{ref}/2 - y)$
 
 This tests:
   - Correct EOS pressure initialisation and steady-state density distribution
-  - Absence of spurious velocity (should remain < 1e-4 * sqrt(|gy|*lref))
+  - Absence of spurious velocity (should remain $< 10^{-4}\sqrt{|g_y|\,l_\mathrm{ref}}$)
   - Solid-wall boundary conditions at the bottom plate
 
-Post-processing computes the L2 error of the density profile vs the analytical
+Post-processing computes the $L_2$ error of the density profile vs the analytical
 hydrostatically compressed profile:
-    rho(y) = rho0 * (1 + rho0*|gy|*(lref/2-y) / (c0^2 * backpress))^(1/gamma)
-for Tait EOS, or approximately rho ≈ rho0 for weakly compressible SPH.
+    $\rho(y) = \rho_0 \left(1 + \dfrac{\rho_0 |g_y|(l_\mathrm{ref}/2-y)}{c_0^2 \cdot b}\right)^{1/\gamma}$
+for Tait EOS, or approximately $\rho \approx \rho_0$ for weakly compressible SPH.
 
 Usage:
     python3 run_hydrostatic.py <num_length> <init_gsd_file> [steps]
@@ -75,7 +75,7 @@ dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 logname   = filename.replace('_init.gsd', '_runWC.log')
 dumpname  = filename.replace('_init.gsd', '_runWC.gsd')
 
-sim.create_state_from_gsd(filename=filename)
+sim.create_state_from_gsd(filename=filename, domain_decomposition=(None, None, 1))
 
 # ─── Physical parameters ─────────────────────────────────────────────────────
 lref       = 0.001          # column height                         [m]
@@ -86,7 +86,7 @@ gy         = -9.81          # gravitational acceleration (negative y) [m/s²]
 drho       = 0.01
 backpress  = 0.01
 nu         = viscosity / rho0
-# Reference velocity: buoyancy-driven scale sqrt(|gy|*lref)
+# Reference velocity: $U_\mathrm{ref} = \sqrt{|g_y|\,l_\mathrm{ref}}$
 refvel     = np.sqrt(abs(gy) * lref)   # ~ 0.099 m/s
 
 # ─── Kernel ──────────────────────────────────────────────────────────────────
@@ -150,20 +150,23 @@ sim.operations.integrator = integrator
 
 # ─── Output ──────────────────────────────────────────────────────────────────
 gsd_writer = hoomd.write.GSD(filename=dumpname,
-                              trigger=hoomd.trigger.Periodic(1000),
+                              trigger=hoomd.trigger.Periodic(100),
                               mode='wb',
                               dynamic=['property', 'momentum'])
 sim.operations.writers.append(gsd_writer)
 
 logger = hoomd.logging.Logger(categories=['scalar', 'string'])
 logger.add(sim, quantities=['timestep', 'tps', 'walltime'])
-table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(500), logger=logger,
+compute_fluid = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filter=filterfluid)
+sim.operations.computes.append(compute_fluid)
+logger.add(compute_fluid, quantities=['e_kin_fluid', 'mean_density'])
+table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(100), logger=logger,
                           max_header_len=10)
 sim.operations.writers.append(table)
 
 log_file = open(logname, mode='w+', newline='\n')
 table_file = hoomd.write.Table(output=log_file,
-                                trigger=hoomd.trigger.Periodic(500),
+                                trigger=hoomd.trigger.Periodic(100),
                                 logger=logger, max_header_len=10)
 sim.operations.writers.append(table_file)
 
@@ -171,6 +174,7 @@ sim.operations.writers.append(table_file)
 if device.communicator.rank == 0:
     print(f'Starting hydrostatic column run at {dt_string}')
 sim.run(steps, write_at_start=True)
+gsd_writer.flush()
 
 # ─── Post-processing: pressure profile vs analytical ─────────────────────────
 if device.communicator.rank == 0:
@@ -188,10 +192,10 @@ if device.communicator.rank == 0:
     vy_f    = vel[fluid, 1]
 
     # Analytical hydrostatic density for weakly compressible SPH (Tait EOS):
-    #   p = c0^2 * backpress * rho0/gamma * ((rho/rho0)^gamma - 1)
-    # For the pressure check, use linear approximation:
-    #   rho(y) ≈ rho0 * (1 + rho0*|gy|*(H/2-y) / p_ref)
-    # where p_ref = c0^2 * rho0 (bulk modulus approximation)
+    #   $p = c_0^2 b \frac{\rho_0}{\gamma}\left[(\rho/\rho_0)^\gamma - 1\right]$
+    # Linear approximation for pressure check:
+    #   $\rho(y) \approx \rho_0 \left(1 + \dfrac{\rho_0 |g_y|(H/2-y)}{p_\mathrm{ref}}\right)$
+    # where $p_\mathrm{ref} = c_0^2 \rho_0$ (bulk modulus approximation)
     p_ref     = c**2 * rho0
     rho_an    = rho0 * (1.0 + rho0 * abs(gy) * (0.5 * lref - y_f) / p_ref)
     L2_rho    = np.sqrt(np.mean((rho_f - rho_an)**2)) / rho0 * 100.0

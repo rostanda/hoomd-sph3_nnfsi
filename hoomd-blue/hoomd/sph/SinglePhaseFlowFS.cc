@@ -231,6 +231,14 @@ void SinglePhaseFlowFS<KT_, SET_>::detect_freesurface(uint64_t timestep)
         ArrayHandle<size_t>       h_head_list(this->m_nlist->getHeadList(),    access_location::host, access_mode::read);
         ArrayHandle<unsigned int> h_type_property_map(this->m_type_property_map, access_location::host, access_mode::read);
 
+        // Use reference density $\rho_0$ (not the computed density) for the Shepard
+        // sum volumes.  Computing $V_i = m_i / \rho_i$ with the *summation* density
+        // creates a circular feedback: surface particles have low $\rho_i$, so their
+        // $V_i$ is large, which inflates $\lambda$ above the threshold and prevents
+        // free-surface detection.  Using $V = m/\rho_0$ gives the physically correct
+        // completeness measure: $\lambda = \rho_\mathrm{fluid\,only} / \rho_0$.
+        const Scalar rho0_ref = this->m_eos->getRestDensity();
+
         for (unsigned int group_idx = 0; group_idx < group_size; group_idx++)
             {
             unsigned int i = this->m_fluidgroup->getMemberIndex(group_idx);
@@ -241,11 +249,10 @@ void SinglePhaseFlowFS<KT_, SET_>::detect_freesurface(uint64_t timestep)
             pi.z = h_pos.data[i].z;
 
             Scalar mi   = h_velocity.data[i].w;
-            Scalar rhoi = h_density.data[i];
-            Scalar Vi   = mi / rhoi;
+            Scalar Vi   = mi / rho0_ref;
             Scalar hi   = this->m_const_slength ? this->m_ch : h_h.data[i];
 
-            // Self contribution to the Shepard sum: V_i * W(0, h_i)
+            // Self contribution to Shepard sum: $V_i W(0, h_i)$
             Scalar W0 = this->m_skernel->wij(hi, Scalar(0));
             Scalar lambda = Vi * W0;
 
@@ -281,8 +288,7 @@ void SinglePhaseFlowFS<KT_, SET_>::detect_freesurface(uint64_t timestep)
                 if (this->m_const_slength && rsq > this->m_rcutsq) continue;
 
                 Scalar mj   = h_velocity.data[k].w;
-                Scalar rhoj = h_density.data[k];
-                Scalar Vj   = mj / rhoj;
+                Scalar Vj   = mj / rho0_ref;
 
                 Scalar r     = sqrt(rsq);
                 Scalar meanh = this->m_const_slength ? this->m_ch
@@ -297,7 +303,7 @@ void SinglePhaseFlowFS<KT_, SET_>::detect_freesurface(uint64_t timestep)
                     // Fluid neighbour: contribute to Shepard sum and its gradient.
                     Scalar wij = this->m_skernel->wij(meanh, r);
                     lambda        += Vj * wij;
-                    // ∇_i W_{ij} = dwdr_r * dx  (points from j toward i)
+                    // $\nabla_i W_{ij} = (\partial W/\partial r)/r \cdot \mathbf{r}_{ij}$ (points from $j$ toward $i$)
                     grad_lambda.x += Vj * dwdr_r * dx.x;
                     grad_lambda.y += Vj * dwdr_r * dx.y;
                     grad_lambda.z += Vj * dwdr_r * dx.z;
@@ -325,7 +331,7 @@ void SinglePhaseFlowFS<KT_, SET_>::detect_freesurface(uint64_t timestep)
             if (lambda < m_fs_threshold && gnorm_sq > eps_sq)
                 {
                 Scalar gnorm = sqrt(gnorm_sq);
-                // Outward normal: −∇λ/|∇λ|  (∇λ points inward toward bulk)
+                // Outward normal: $-\nabla\lambda/|\nabla\lambda|$ ($\nabla\lambda$ points inward toward bulk)
                 Scalar3 n_fs;
                 n_fs.x = -grad_lambda.x / gnorm;
                 n_fs.y = -grad_lambda.y / gnorm;
@@ -358,7 +364,7 @@ void SinglePhaseFlowFS<KT_, SET_>::detect_freesurface(uint64_t timestep)
                             n_t.y /= nt_norm;
                             n_t.z /= nt_norm;
 
-                            // n_corrected = sin(θ)·t̂_w + cos(θ)·n̂_w
+                            // $\hat{n}_\mathrm{corrected} = \sin\theta\,\hat{t}_w + \cos\theta\,\hat{n}_w$
                             n_fs.x = sin_ca * n_t.x + cos_ca * n_w.x;
                             n_fs.y = sin_ca * n_t.y + cos_ca * n_w.y;
                             n_fs.z = sin_ca * n_t.z + cos_ca * n_w.z;
@@ -480,8 +486,8 @@ void SinglePhaseFlowFS<KT_, SET_>::compute_curvature(uint64_t timestep)
                 Scalar rhoj = h_density.data[k];
                 Scalar Vj   = mj / rhoj;
 
-                // Normal of neighbour k; zero for bulk neighbours, which is
-                // correct: their contribution becomes −V_j n̂_i·∇W_{ij}.
+                // Normal of neighbour $k$; zero for bulk neighbours, which is
+                // correct: their contribution becomes $-V_j \hat{n}_i \cdot \nabla W_{ij}$.
                 Scalar3 n_j = h_fs_n.data[k];
 
                 Scalar r     = sqrt(rsq);
@@ -491,8 +497,8 @@ void SinglePhaseFlowFS<KT_, SET_>::compute_curvature(uint64_t timestep)
                 Scalar dwdr   = this->m_skernel->dwijdr(meanh, r);
                 Scalar dwdr_r = dwdr / (r + epssqr);
 
-                // κ_i += (1/V_i) Σ_j V_j (n̂_j − n̂_i)·∇W_{ij}
-                // ∇_i W_{ij} = dwdr_r * dx  (pointing from j toward i)
+                // $\kappa_i \mathrel{+}= (1/V_i) \sum_j V_j (\hat{n}_j - \hat{n}_i) \cdot \nabla W_{ij}$
+                // $\nabla_i W_{ij} = (\partial W/\partial r)/r \cdot \mathbf{r}_{ij}$ (pointing from $j$ toward $i$)
                 Scalar3 dn;
                 dn.x = n_j.x - n_i.x;
                 dn.y = n_j.y - n_i.y;
@@ -723,10 +729,10 @@ void SinglePhaseFlowFS<KT_, SET_>::forcecomputation(uint64_t timestep)
                 Scalar dwdr   = this->m_skernel->dwijdr(meanh, r);
                 Scalar dwdr_r = dwdr / (r + epssqr);
 
-                // Pressure interaction (Adami 2013 TV formulation).
+                // Pressure interaction (Adami 2013 TV): $\bar{p}_{ij} = (\rho_j p_i + \rho_i p_j)/(\rho_i+\rho_j)$
                 temp0 = (rhoj*Pi + rhoi*Pj) / (rhoi + rhoj);
 
-                // Optional artificial viscosity (Monaghan 1983).
+                // Artificial viscosity (Monaghan 1983): $\Pi_{ij} = (-\alpha c \mu_{ij} + \beta \mu_{ij}^2)/\bar{\rho}_{ij}$
                 Scalar avc = Scalar(0);
                 if (this->m_artificial_viscosity && !issolid)
                     {

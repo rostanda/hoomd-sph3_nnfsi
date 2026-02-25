@@ -64,7 +64,7 @@ logname  = f'{logname}_run.log'
 dumpname = filename.replace('_init.gsd', '')
 dumpname = f'{dumpname}_run.gsd'
 
-sim.create_state_from_pgsd(filename = filename)
+sim.create_state_from_pgsd(filename = filename, domain_decomposition=(None, None, 1))
 MPI.COMM_WORLD.Barrier()
 
 

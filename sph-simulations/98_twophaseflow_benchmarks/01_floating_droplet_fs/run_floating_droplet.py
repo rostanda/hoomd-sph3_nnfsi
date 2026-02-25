@@ -34,6 +34,9 @@ maintainer: dkrach, david.krach@mib.uni-stuttgart.de
 """
 # ----- HEADER -----------------------------------------------
 import sys, os
+_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../'))
+sys.path.insert(0, os.path.join(_ROOT, 'helper_modules'))
+sys.path.insert(0, os.path.join(_ROOT, 'helper_modules', 'gsd2vtu'))
 import hoomd
 from hoomd import *
 from hoomd import sph
@@ -42,7 +45,7 @@ import numpy as np
 import math
 # import itertools
 from datetime import datetime
-import export_gsd2vtu, delete_solids_initial_timestep 
+import export_gsd2vtu, delete_solids_initial_timestep
 import sph_info, sph_helper, read_input_fromtxt
 from optparse import OptionParser
 
@@ -87,7 +90,7 @@ sigma               = 0.01                            # [ Pa/m**2 ]
 contact_angle       = 60                              # [ ° ]
 refvel              = fx
 drho                = 0.01                            # [ - ] %
-steps               = 101                             # [ - ]
+steps               = 5001                            # [ - ]
 
 # get kernel properties
 kernel  = 'WendlandC4'
@@ -147,7 +150,7 @@ model.beta = 0.0
 model.densitydiffusion = False
 model.shepardrenormanlization = False
 
-maximum_smoothing_length = sph_helper.set_max_sl(sim, device, snapshot, model)
+maximum_smoothing_length = sph_helper.set_max_sl(sim, device, model)
 
 c1, c1_condition, c2, c2_condition = model.compute_speedofsound(LREF = lref, UREF = refvel, 
                                             DX = dx, DRHO = drho, H = maximum_smoothing_length, 
@@ -192,7 +195,7 @@ if device.communicator.rank == 0:
     print(f'Integrator Methods: {integrator.methods[:]}')
     print(f'Simulation Computes: {sim.operations.computes[:]}')
 
-gsd_trigger = hoomd.trigger.Periodic(1)
+gsd_trigger = hoomd.trigger.Periodic(50)
 gsd_writer = hoomd.write.GSD(filename=dumpname,
                              trigger=gsd_trigger,
                              mode='wb',
@@ -200,7 +203,7 @@ gsd_writer = hoomd.write.GSD(filename=dumpname,
                              )
 sim.operations.writers.append(gsd_writer)
 
-log_trigger = hoomd.trigger.Periodic(1)
+log_trigger = hoomd.trigger.Periodic(50)
 logger = hoomd.logging.Logger(categories=['scalar', 'string'])
 logger.add(sim, quantities=['timestep', 'tps', 'walltime'])
 # logger.add(spf_properties, quantities=['abs_velocity', 'num_particles', 'fluid_vel_x_sum', 'mean_density'])

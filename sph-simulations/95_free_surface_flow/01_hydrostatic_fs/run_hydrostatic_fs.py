@@ -25,23 +25,23 @@ Hydrostatic pressure column with free surface — SinglePhaseFlowFS benchmark.
 
 BENCHMARK DESCRIPTION
 ---------------------
-A fluid column of height lref is in hydrostatic equilibrium under gravity
-(gy = -9.81 m/s²).  The bottom is a solid plate (Adami 2012 boundary);
+A fluid column of height $l_\mathrm{ref}$ is in hydrostatic equilibrium under gravity
+($g_y = -9.81$ m/s²).  The bottom is a solid plate (Adami 2012 boundary);
 the top is a *free surface* — no solid plate is present.
 
 This benchmark tests four things:
   1. Free-surface detection: particles in the top layer must receive
-     λ < fs_threshold after converging to the Shepard completeness criterion.
-  2. Pressure clamping: surface particles must have P ≥ 0 (enforced by FS
+     $\lambda < \lambda_\mathrm{threshold}$ after converging to the Shepard completeness criterion.
+  2. Pressure clamping: surface particles must have $P \geq 0$ (enforced by FS
      solver; negative tensile pressures at the surface should be absent).
   3. Hydrostatic pressure profile: the analytical solution
-         p(y) = ρ₀ |g| (y_top − y)
-     must be reproduced with small L₂ error.
+         $p(y) = \rho_0 |g| (y_\mathrm{top} - y)$
+     must be reproduced with small $L_2$ error.
   4. Spurious velocity: the RMS velocity should remain small at steady state.
 
 Analytical solution (Tait EOS, weakly compressible):
-    ρ(y) ≈ ρ₀ (1 + ρ₀ |g| (y_top − y) / p_ref)
-where p_ref = c₀² ρ₀ (bulk modulus approximation) and y_top is the
+    $\rho(y) \approx \rho_0 \left(1 + \rho_0 |g| (y_\mathrm{top} - y) / p_\mathrm{ref}\right)$
+where $p_\mathrm{ref} = c_0^2 \rho_0$ (bulk modulus approximation) and $y_\mathrm{top}$ is the
 free-surface level (top of the fluid column).
 
 Usage:
@@ -78,7 +78,7 @@ dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 logname   = filename.replace('_init.gsd', '_runFS.log')
 dumpname  = filename.replace('_init.gsd', '_runFS.gsd')
 
-sim.create_state_from_gsd(filename=filename)
+sim.create_state_from_gsd(filename=filename, domain_decomposition=(None, None, 1))
 
 # ─── Physical parameters ─────────────────────────────────────────────────────
 lref      = 0.001           # column height                         [m]
@@ -167,6 +167,9 @@ sim.operations.writers.append(gsd_writer)
 
 logger = hoomd.logging.Logger(categories=['scalar', 'string'])
 logger.add(sim, quantities=['timestep', 'tps', 'walltime'])
+compute_fluid = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filter=filterfluid)
+sim.operations.computes.append(compute_fluid)
+logger.add(compute_fluid, quantities=['e_kin_fluid', 'mean_density'])
 table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(500), logger=logger,
                           max_header_len=10)
 sim.operations.writers.append(table)
@@ -181,6 +184,7 @@ sim.operations.writers.append(table_file)
 if device.communicator.rank == 0:
     print(f'Starting hydrostatic FS column run at {dt_string}')
 sim.run(steps, write_at_start=True)
+gsd_writer.flush()
 
 # ─── Post-processing ─────────────────────────────────────────────────────────
 if device.communicator.rank == 0:
@@ -199,7 +203,7 @@ if device.communicator.rank == 0:
     pres_f = pres[fluid]
 
     # Analytical hydrostatic density (linear approx for weakly compressible):
-    #   rho(y) ≈ rho0 * (1 + rho0*|gy|*(y_top - y) / (c^2*rho0))
+    #   $\rho(y) \approx \rho_0 \left(1 + \rho_0 |g_y| (y_\mathrm{top} - y) / (c^2 \rho_0)\right)$
     y_top  = float(np.max(y_f))
     p_ref  = c**2 * rho0
     rho_an = rho0 * (1.0 + rho0 * abs(gy) * (y_top - y_f) / p_ref)
