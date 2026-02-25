@@ -90,7 +90,7 @@ if [[ ! -f bcc100_init.gsd ]]; then
 else
     echo "  bcc100_init.gsd already exists – skipping geometry creation."
 fi
-INIT="${SCRIPT_DIR}/bcc100_init.gsd"
+INIT="bcc100_init.gsd"
 popd > /dev/null
 
 run_case() {
@@ -98,7 +98,7 @@ run_case() {
     local LABEL="$2"
     echo
     echo "── fx = ${FX} m/s²   (${LABEL}) ──"
-    mpirun -np 8 python3 "${SCRIPT_DIR}/run_bcc_permeability.py" \
+    mpirun -np 8 ./run_bcc_permeability.py \
         "${INIT}" "${FX}" "${STEPS}" "${DAMP}"
 }
 
