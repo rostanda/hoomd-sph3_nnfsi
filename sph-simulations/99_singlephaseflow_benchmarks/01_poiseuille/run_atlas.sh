@@ -1,7 +1,6 @@
 mpirun -np 1 ./create_input_geometries_tube.py 20 
 mpirun -np 1 ./create_input_geometries_tube.py 30 
 mpirun -np 1 ./create_input_geometries_tube.py 50 
-mpirun -np 1 ./create_input_geometries_tube.py 100 
 
 
 mpirun -np 1 ./run_tube_TV.py 20 poiseuille_flow_20_32_32_vs_5e-05_init.gsd 100001
