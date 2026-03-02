@@ -110,11 +110,11 @@ rho02      = 1000.0       # rest density phase N (ambient)                [kg/m�
 viscosity1 = 0.001        # dynamic viscosity phase W                     [Pa·s]
 viscosity2 = 0.001        # dynamic viscosity phase N                     [Pa·s]
 sigma      = 0.01         # surface tension                               [N/m]
-theta_eq   = 90           # equilibrium contact angle with solid wall     [°]
+theta_eq   = 60           # equilibrium contact angle with solid wall     [°]
 gy         = -9.81        # gravitational acceleration (−y direction)     [m/s²]
 backpress  = 0.01         # background pressure coefficient               [–]
 drho       = 0.01         # allowed density variation                     [–]
-U_wall     = 0.01         # top wall velocity in shear phase              [m/s]
+U_wall     = 0.1          # top wall velocity in shear phase              [m/s]
 
 H_flu          = 2 * lref                                   # fluid channel height  [m]
 R_drop_target  = H_flu / 2                                  # = lref               [m]
