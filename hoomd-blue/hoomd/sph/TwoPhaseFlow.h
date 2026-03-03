@@ -119,6 +119,8 @@ class PYBIND11_EXPORT TwoPhaseFlow : public SPHBaseClass<KT_, SET1_>
          */
         virtual void setParams(Scalar mu1, Scalar mu2, Scalar sigma12, Scalar omega);
 
+        virtual void setHysteresis(Scalar omega_rec, Scalar omega_adv);
+
                 //! Getter and Setter methods for density method
         DensityMethod getDensityMethod()
             {
@@ -524,7 +526,10 @@ class PYBIND11_EXPORT TwoPhaseFlow : public SPHBaseClass<KT_, SET1_>
         Scalar m_sigma12; //!< Interfacial tension between fluid phases ( Must be set by user )
         Scalar m_sigma01; //!< Interfacial tension between solid phase and fluid phase1 ( Computed from input )
         Scalar m_sigma02; //!< Interfacial tension between solid phase and fluid phase2 ( Computed from input )
-        Scalar m_omega; //!< Contact angle ( Must be set by user )
+        Scalar m_omega;     //!< Contact angle ( Must be set by user )
+        Scalar m_omega_adv; //!< Advancing contact angle for hysteresis [deg]
+        Scalar m_omega_rec; //!< Receding  contact angle for hysteresis [deg]
+        bool   m_hysteresis; //!< True if contact-angle hysteresis is active
 
         Scalar m_avalpha; //!< Monaghan AV: linear (volumetric) diffusion coefficient α
         Scalar m_avbeta;  //!< Monaghan AV: quadratic (shock) diffusion coefficient β

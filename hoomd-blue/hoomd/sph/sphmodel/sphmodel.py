@@ -1703,8 +1703,11 @@ class TwoPhaseFlow(SPHModel):
                           mu1 = float(0.0), 
                           mu2 = float(0.0),
                           sigma12 = float(0.0), 
-                          omega = float(0.0), 
-                          artificialviscosity = bool(True), 
+                          omega = float(0.0),
+                          omega_adv = float(180.0),
+                          omega_rec = float(0.0),
+                          hysteresis = bool(False),
+                          artificialviscosity = bool(True),
                           alpha = float(0.2),
                           beta = float(0.0),
                           densitydiffusion = bool(False),
@@ -1861,6 +1864,11 @@ class TwoPhaseFlow(SPHModel):
         self.fickian_shifting = self._param_dict['fickian_shifting']
 
         self.set_params(self.mu1, self.mu2, self.sigma12, self.omega)
+        self.hysteresis = self._param_dict['hysteresis']
+        self.omega_adv  = self._param_dict['omega_adv']
+        self.omega_rec  = self._param_dict['omega_rec']
+        if self.hysteresis:
+            self._cpp_obj.setHysteresis(self.omega_rec, self.omega_adv)
         self.setdensitymethod(self.str_densitymethod)
         self.setviscositymethod(self.str_viscositymethod)
         self.setcolorgradientmethod(self.str_colorgradientmethod)
