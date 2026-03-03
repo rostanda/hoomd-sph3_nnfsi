@@ -2,7 +2,7 @@
 #SBATCH --job-name=caprise_c5_t135              # Job name
 #SBATCH --mail-type=BEGIN,END,FAIL        # Mail events (NONE, BEGIN, END, FAIL, ALL)
 #SBATCH --mail-user=david.krach@mib.uni-stuttgart.de
-#SBATCH --ntasks=32                     # Number of MPI tasks (i.e. processes)
+#SBATCH --ntasks=20                     # Number of MPI tasks (i.e. processes)
 #SBATCH --nodes=1                         # Maximum number of nodes to be allocated
 #SBATCH --distribution=cyclic:cyclic      # Distribute tasks cyclically first among nodes and then among sockets within a node
 #SBATCH --mem=60G
