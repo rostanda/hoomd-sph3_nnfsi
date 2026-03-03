@@ -95,7 +95,7 @@ drho       = 0.01         # allowed density variation         [–]
 #   For a clean U_T measurement the last third of the run must be at steady rise;
 #   50 001 steps → ~31.6 ms physical time (high-res, dx=25 µm) → bubble rises
 #   ≈ 0.18 mm ≈ 0.45 D, which gives a well-resolved terminal-velocity window.
-steps      = int(sys.argv[3]) if len(sys.argv) > 3 else 50001  # simulation steps
+steps      = int(sys.argv[3]) if len(sys.argv) > 3 else 20001  # simulation steps
 
 # Estimate reference velocity from buoyancy (Hadamard-Rybczynski upper bound):
 # $U_\mathrm{ref} \sim \sqrt{(\rho_1 - \rho_2) \, g \, R / \rho_1}$  (rough estimate)
