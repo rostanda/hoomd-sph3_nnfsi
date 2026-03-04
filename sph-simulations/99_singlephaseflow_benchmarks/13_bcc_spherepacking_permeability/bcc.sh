@@ -2,7 +2,7 @@
 #SBATCH --job-name=bcc_      # Job name
 #SBATCH --mail-type=BEGIN,END,FAIL         # Mail events (NONE, BEGIN, END, FAIL, ALL)
 #SBATCH --mail-user=david.krach@mib.uni-stuttgart.de    # Where to send mail.  Set this to your email address
-#SBATCH --ntasks=27                   # Number of MPI tasks (i.e. processes)
+#SBATCH --ntasks=64                   # Number of MPI tasks (i.e. processes)
 #SBATCH --nodes=1                    # Maximum number of nodes to be allocated
 #SBATCH --distribution=cyclic:cyclic # Distribute tasks cyclically first among nodes and then among sockets within a node
 #SBATCH --mem=100G

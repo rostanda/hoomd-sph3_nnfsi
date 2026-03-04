@@ -169,6 +169,15 @@ if device.communicator.rank == 0:
     print(f'Simulation Computes: {sim.operations.computes[:]}')
 
 pgsd_trigger = hoomd.trigger.Periodic(100)
+# Remove any stale output GSD left by a previous crashed run.
+# ALL ranks attempt the removal so each node's NFS metadata cache is flushed;
+# the first rank to run succeeds, the rest get FileNotFoundError (ignored).
+try:
+    os.remove(dumpname)
+except (FileNotFoundError, OSError):
+    pass
+device.communicator.barrier()
+
 pgsd_writer = hoomd.write.PGSD(filename=dumpname,
                              trigger=pgsd_trigger,
                              mode='wb',

@@ -814,15 +814,19 @@ void SinglePhaseFlowFS<KT_, SET_>::forcecomputation(uint64_t timestep)
                 // Pressure interaction (Adami 2013 TV): $\bar{p}_{ij} = (\rho_j p_i + \rho_i p_j)/(\rho_i+\rho_j)$
                 temp0 = (rhoj*Pi + rhoi*Pj) / (rhoi + rhoj);
                 // Direction-dependent floor (Bug 9/10 fix):
-                // - Solid BELOW fluid (dx.y > 0): enforce minimum positive pressure so the wall
-                //   always repels — prevents contact-line drift into the floor.
-                //   Bulk particles (temp0 >> 5 Pa): unaffected.
-                //   Contact-line particles (temp0 < 0): clipped to 5 Pa → small, stable repulsion.
+                // - Solid BELOW fluid (dx.y > 0): clip Adami pressure to the background
+                //   pressure (~180 Pa).  Contact-line particles have P < 0 (low-density
+                //   free surface) so their natural Adami average is negative → the wall
+                //   would attract them into the floor.  The 200 Pa floor ensures the solid
+                //   always repels at least as hard as the bulk fluid above pushes down
+                //   (~180 Pa background), preventing slow contact-line drift into the floor.
+                //   Bulk particles (temp0 ≈ 180 Pa): largely unaffected (only a ≤20 Pa bump).
                 // - Solid ABOVE fluid (dx.y < 0, fluid has penetrated floor): leave natural
-                //   Adami pressure (negative for contact-line) active → upward restoration force.
-                //   (The old Bug-9 fix applied 5 Pa unconditionally here too, which pushed
-                //    penetrated particles further INTO the solid — this is now avoided.)
-                if (issolid && dx.y > Scalar(0) && temp0 < Scalar(5.0)) temp0 = Scalar(5.0);
+                //   Adami pressure active — for deep penetration it is strongly negative →
+                //   provides upward restoration.  (The old Bug-9 fix applied the floor
+                //   unconditionally here too, which pushed penetrated particles further INTO
+                //   the solid — this is now avoided.)
+                if (issolid && dx.y > Scalar(0) && temp0 < Scalar(200.0)) temp0 = Scalar(200.0);
 
                 // Artificial viscosity (Monaghan 1983): $\Pi_{ij} = (-\alpha c \mu_{ij} + \beta \mu_{ij}^2)/\bar{\rho}_{ij}$
                 Scalar avc = Scalar(0);
