@@ -98,7 +98,7 @@ run_case() {
     local LABEL="$2"
     echo
     echo "── fx = ${FX} m/s²   (${LABEL}) ──"
-    mpirun -np 8 ./run_bcc_permeability.py \
+    mpirun -np $SLURM_NTASKS ./run_bcc_permeability.py \
         "${INIT}" "${FX}" "${STEPS}" "${DAMP}"
 }
 

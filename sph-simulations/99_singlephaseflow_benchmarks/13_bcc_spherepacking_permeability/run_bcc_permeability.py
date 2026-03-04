@@ -216,7 +216,9 @@ if device.communicator.rank == 0:
 # ─── Integrator ──────────────────────────────────────────────────────────────
 integrator = hoomd.sph.Integrator(dt=dt)
 vvb = hoomd.sph.methods.VelocityVerletBasic(filter=filterfluid,
-                                              densitymethod='SUMMATION')
+                                              densitymethod='SUMMATION',
+                                              vlimit=True, vlimit_val=2.0 * c,
+                                              xlimit=True, xlimit_val=0.5 * dx)
 integrator.methods.append(vvb)
 integrator.forces.append(model)
 sim.operations.integrator = integrator

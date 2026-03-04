@@ -42,5 +42,5 @@ else
 fi
 
 echo "── fx = ${FX} m/s²   (Re ≈ 15–20) ──"
-/usr/local.nfs/software/openmpi/5.0.1_gcc-12.2_cuda-12.3/bin/mpirun -np 8 ./run_bcc_permeability.py \
+/usr/local.nfs/software/openmpi/5.0.1_gcc-12.2_cuda-12.3/bin/mpirun -np $SLURM_NTASKS ./run_bcc_permeability.py \
     "${INIT}" "${FX}" "${STEPS}" "${DAMP}"
