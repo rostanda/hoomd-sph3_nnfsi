@@ -86,7 +86,10 @@ try:
     _rank = _MPI.COMM_WORLD.Get_rank()
 except ImportError:
     _MPI  = None
-    _rank = 0
+    # Fall back to OpenMPI / SLURM environment variables
+    _rank = int(os.environ.get('OMPI_COMM_WORLD_RANK',
+                os.environ.get('PMI_RANK',
+                os.environ.get('SLURM_PROCID', 0))))
 
 # ─── CLI args ────────────────────────────────────────────────────────────────
 num_length = int(sys.argv[1]) if len(sys.argv) > 1 else 20
