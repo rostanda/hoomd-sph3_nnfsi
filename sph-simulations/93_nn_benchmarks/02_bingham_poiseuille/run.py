@@ -221,9 +221,14 @@ def run_case(label, use_bingham, tauy_val=tau_y, m_val=m_reg, mu_min=0.0):
 
     logger = hoomd.logging.Logger(categories=['scalar', 'string'])
     logger.add(sim, quantities=['timestep', 'tps', 'walltime'])
-    table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(2000), logger=logger,
+    table = hoomd.write.Table(trigger=hoomd.trigger.Periodic(200), logger=logger,
                               max_header_len=10)
     sim.operations.writers.append(table)
+    log_file = open(dumpname.replace('_run.gsd', '_run.log'), mode='w+', newline='\n')
+    sim.operations.writers.append(
+        hoomd.write.Table(output=log_file,
+                          trigger=hoomd.trigger.Periodic(200),
+                          logger=logger, max_header_len=10))
 
     print(f'  Running {steps} steps ...')
     sim.run(steps, write_at_start=True)

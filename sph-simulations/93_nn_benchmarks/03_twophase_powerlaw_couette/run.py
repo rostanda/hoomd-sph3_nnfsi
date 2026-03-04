@@ -215,13 +215,18 @@ def run_case(label, n_W):
     model.activatePowerLaw1(K=K_W, n=n_W, mu_min=0.0)
 
     gw = hoomd.write.GSD(filename=dumpname,
-                          trigger=hoomd.trigger.Periodic(max(steps//10, 1)),
+                          trigger=hoomd.trigger.Periodic(100),
                           mode='wb', dynamic=['property', 'momentum'])
     sim.operations.writers.append(gw)
     log = hoomd.logging.Logger(categories=['scalar', 'string'])
     log.add(sim, quantities=['timestep', 'tps', 'walltime'])
     sim.operations.writers.append(
-        hoomd.write.Table(trigger=hoomd.trigger.Periodic(max(steps//10, 1)),
+        hoomd.write.Table(trigger=hoomd.trigger.Periodic(100),
+                          logger=log, max_header_len=10))
+    log_file = open(dumpname.replace('_run.gsd', '_run.log'), mode='w+', newline='\n')
+    sim.operations.writers.append(
+        hoomd.write.Table(output=log_file,
+                          trigger=hoomd.trigger.Periodic(max(steps//10, 1)),
                           logger=log, max_header_len=10))
 
     print(f'  Running {steps} steps ...')
