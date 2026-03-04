@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""
+r"""
 Copyright (c) 2025-2026 David Krach, Daniel Rostan.
 All rights reserved.
 
@@ -89,8 +89,13 @@ lref          = 0.001              # reference length                [m]
 R_drop        = 0.4 * lref        # initial semicircle radius       [m]
 dx            = R_drop / num_length
 rho0          = 1000.0             # rest density                    [kg/m³]
-viscosity     = 1e-3               # dynamic viscosity (water)       [Pa·s]
-sigma         = 0.072              # surface tension coeff. (water)  [N/m]
+# Viscosity chosen to give Oh = μ/sqrt(ρσR) ≈ 1.0 (critically damped) so the
+# contact line converges monotonically without growing oscillations.
+# Oh = μ/sqrt(ρσR) = μ/sqrt(1000×0.072×0.0004) = μ/0.1697 = 1.0 → μ = 0.1697 Pa·s
+# Oh≈0.3 (μ=0.051) caused underdamped parametric instability: growing oscillation
+# amplitude over O(10⁴) steps. Oh≈1 damps in ~2.3 viscous times (30001 steps).
+viscosity     = 0.170              # dynamic viscosity                [Pa·s]  (Oh≈1.0)
+sigma         = 0.072              # surface tension coeff.           [N/m]
 drho          = 0.01
 backpress     = 0.01
 nu            = viscosity / rho0
@@ -133,9 +138,9 @@ model.mu                  = viscosity
 model.gx                  = 0.0
 model.gy                  = 0.0     # no gravity — surface tension drives shape
 model.gz                  = 0.0
-model.damp                = 1000    # mild damping to reach equilibrium faster
+model.damp                = 1000    # ramps body force (=0 here, no gravity); kept for API completeness
 model.artificialviscosity = True
-model.alpha               = 0.1
+model.alpha               = 0.5    # AV damping; physical viscosity (Oh≈0.3) already provides main damping
 model.beta                = 0.0
 model.densitydiffusion    = False
 
@@ -174,6 +179,15 @@ integrator.forces.append(model)
 sim.operations.integrator = integrator
 
 # ─── Output ──────────────────────────────────────────────────────────────────
+# Remove any stale output GSD left by a previous crashed run.
+# ALL ranks attempt the removal so each node's NFS metadata cache is flushed;
+# the first rank to run succeeds, the rest get FileNotFoundError (ignored).
+try:
+    os.remove(dumpname)
+except (FileNotFoundError, OSError):
+    pass
+device.communicator.barrier()
+
 gsd_writer = hoomd.write.GSD(filename=dumpname,
                               trigger=hoomd.trigger.Periodic(1000),
                               mode='wb',
@@ -194,6 +208,15 @@ table_file = hoomd.write.Table(output=log_file,
                                 trigger=hoomd.trigger.Periodic(500),
                                 logger=logger, max_header_len=10)
 sim.operations.writers.append(table_file)
+
+# ─── Apply safety limiters after attachment ───────────────────────────────────
+# Trigger prepRun to attach all operations (integrator + writers).
+# Then set velocity and displacement limiters directly on the C++ object.
+# These prevent isolated surface particles from developing runaway positions
+# when surface-tension forces are large during the initial transient.
+sim.run(0, write_at_start=False)
+kdktv.setvLimit(2.0 * c)    # cap per-component velocity at 2x speed of sound
+kdktv.setxLimit(0.5 * dx)   # cap displacement per step at 0.5 particle spacings
 
 # ─── Run ─────────────────────────────────────────────────────────────────────
 if device.communicator.rank == 0:

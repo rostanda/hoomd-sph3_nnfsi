@@ -155,6 +155,15 @@ sim.operations.computes.append(spf_properties)
 sim.operations.computes.append(solid_properties)
 
 # ─── Output ──────────────────────────────────────────────────────────────────
+# Remove any stale output GSD left by a previous crashed run.
+# ALL ranks attempt the removal so each node's NFS metadata cache is flushed;
+# the first rank to run succeeds, the rest get FileNotFoundError (ignored).
+try:
+    os.remove(dumpname)
+except (FileNotFoundError, OSError):
+    pass
+device.communicator.barrier()
+
 gsd_writer = hoomd.write.GSD(filename=dumpname,
                               trigger=hoomd.trigger.Periodic(2000),
                               mode='wb',

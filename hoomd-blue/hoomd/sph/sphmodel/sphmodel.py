@@ -1716,6 +1716,7 @@ class TwoPhaseFlow(SPHModel):
                           shepardfreq = int(30),
                           compute_solid_forces = bool(False),
                           fickian_shifting = bool(False),
+                          consistent_interface_pressure = bool(False),
                           max_sl = float(0.0)
                           ))
 
@@ -1734,6 +1735,7 @@ class TwoPhaseFlow(SPHModel):
         self.str_colorgradientmethod = colorgradientmethod
         self.accel_set = False
         self.params_set = False
+        self.consistent_interface_pressure = False
 
         if self.str_densitymethod == str('SUMMATION'):
             self.cpp_densitymethod = hoomd.sph._sph.PhaseFlowDensityMethod.DENSITYSUMMATION
@@ -1894,6 +1896,12 @@ class TwoPhaseFlow(SPHModel):
         if (self.fickian_shifting == True):
             self.activateFickianShifting()
 
+        self.consistent_interface_pressure = self._param_dict['consistent_interface_pressure']
+        if self.consistent_interface_pressure:
+            self._cpp_obj.activateConsistentInterfacePressure()
+        else:
+            self._cpp_obj.deactivateConsistentInterfacePressure()
+
         self.setrcut(self.rcut, self.get_typelist())
 
         self.setBodyAcceleration(self.gx, self.gy, self.gz, self.damp)
@@ -1976,6 +1984,26 @@ class TwoPhaseFlow(SPHModel):
 
     def computeSolidForces(self):
         self._cpp_obj.computeSolidForces()
+
+    def activateFickianShifting(self):
+        self._cpp_obj.activateFickianShifting()
+
+    def activateConsistentInterfacePressure(self):
+        """Activate consistent interface pressure (Hu & Adams 2009).
+
+        Uses rest-density weighting plus hydrostatic correction for
+        cross-phase pressure averages.  Reduces parasitic currents and
+        prevents particle penetration at large density-ratio interfaces
+        (e.g. liquid/gas with rho_1/rho_2 = 10).  Requires SUMMATION
+        density method and a non-zero body acceleration (gravity).
+        """
+        self.consistent_interface_pressure = True
+        self._cpp_obj.activateConsistentInterfacePressure()
+
+    def deactivateConsistentInterfacePressure(self):
+        """Deactivate consistent interface pressure."""
+        self.consistent_interface_pressure = False
+        self._cpp_obj.deactivateConsistentInterfacePressure()
 
     def activatePowerLaw1(self, K, n, mu_min=0.0):
         self._cpp_obj.activatePowerLaw1(float(K), float(n), float(mu_min))

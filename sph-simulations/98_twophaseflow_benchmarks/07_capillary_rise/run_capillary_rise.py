@@ -240,6 +240,15 @@ sim.operations.integrator = integrator
 gsd_period = max(1, steps // 200)
 log_period = max(1, steps // 1000)
 
+# Remove any stale output GSD left by a previous crashed run.
+# ALL ranks attempt the removal so each node's NFS metadata cache is flushed;
+# the first rank to run succeeds, the rest get FileNotFoundError (ignored).
+try:
+    os.remove(dumpname)
+except (FileNotFoundError, OSError):
+    pass
+device.communicator.barrier()
+
 gsd_writer = hoomd.write.GSD(filename=dumpname,
                               trigger=hoomd.trigger.Periodic(gsd_period),
                               mode='wb',

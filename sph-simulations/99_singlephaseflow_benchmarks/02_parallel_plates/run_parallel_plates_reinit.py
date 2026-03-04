@@ -172,6 +172,15 @@ if device.communicator.rank == 0:
     print(f'Simulation Computes: {sim.operations.computes[:]}')
 
 gsd_trigger = hoomd.trigger.Periodic(1000)
+# Remove any stale output GSD left by a previous crashed run.
+# ALL ranks attempt the removal so each node's NFS metadata cache is flushed;
+# the first rank to run succeeds, the rest get FileNotFoundError (ignored).
+try:
+    os.remove(dumpname)
+except (FileNotFoundError, OSError):
+    pass
+device.communicator.barrier()
+
 gsd_writer = hoomd.write.GSD(filename=dumpname,
                              trigger=gsd_trigger,
                              mode='wb',

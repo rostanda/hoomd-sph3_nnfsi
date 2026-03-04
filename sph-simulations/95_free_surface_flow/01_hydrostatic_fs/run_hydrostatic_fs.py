@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""
+r"""
 Copyright (c) 2025-2026 David Krach, Daniel Rostan.
 All rights reserved.
 
@@ -159,6 +159,15 @@ integrator.forces.append(model)
 sim.operations.integrator = integrator
 
 # ─── Output ──────────────────────────────────────────────────────────────────
+# Remove any stale output GSD left by a previous crashed run.
+# ALL ranks attempt the removal so each node's NFS metadata cache is flushed;
+# the first rank to run succeeds, the rest get FileNotFoundError (ignored).
+try:
+    os.remove(dumpname)
+except (FileNotFoundError, OSError):
+    pass
+device.communicator.barrier()
+
 gsd_writer = hoomd.write.GSD(filename=dumpname,
                               trigger=hoomd.trigger.Periodic(1000),
                               mode='wb',
@@ -216,15 +225,23 @@ if device.communicator.rank == 0:
     y_top_layer = y_top - 1.5 * dx_loc
     n_top_layer = int(np.sum(y_f > y_top_layer))
 
-    # Pressure clamp check: no fluid particle should have P < 0
+    # Pressure clamp check: surface-detected particles (lambda < fs_threshold) have P
+    # clamped to 0 by apply_freesurface_pressure(). Interior particles near the surface
+    # with lambda >= fs_threshold are NOT clamped; their density is slightly below rho0
+    # due to truncated kernel support, which gives slightly negative Tait-EOS pressure.
+    # A small count of near-surface interior particles with P < 0 is therefore expected.
     n_neg_pres  = int(np.sum(pres_f < -1e-10))
+    # Top-layer particles (likely detected as surface) should be clamped; count those.
+    pres_top    = pres_f[y_f > y_top_layer]
+    n_neg_top   = int(np.sum(pres_top < -1e-10))
 
     print(f'\n── Hydrostatic FS check (last frame, step {snap.configuration.step}) ──')
     print(f'  Δp analytical (top→bottom)   = {rho0 * abs(gy) * lref:.4f} Pa')
     print(f'  L₂ density error vs profile  = {L2_rho:.3f} %')
     print(f'  RMS spurious velocity        = {v_spurious:.3e} m/s')
     print(f'  Particles in top fluid layer = {n_top_layer}  (should all have λ < {fs_threshold})')
-    print(f'  Particles with P < 0         = {n_neg_pres}  (should be 0 after clamping)')
+    print(f'  Top-layer particles with P<0 = {n_neg_top}  (should be 0: surface-detected → clamped)')
+    print(f'  All fluid particles with P<0 = {n_neg_pres}  (near-surface interior: some P<0 expected)')
 
 if HAS_VTU and device.communicator.rank == 0:
     export_gsd2vtu.export_fs(dumpname)

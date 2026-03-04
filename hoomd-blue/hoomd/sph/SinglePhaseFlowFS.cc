@@ -324,6 +324,7 @@ void SinglePhaseFlowFS<KT_, SET_>::detect_freesurface(uint64_t timestep)
             // Store lambda (already includes self contribution V_i * W_0).
             h_aux4.data[i].x = lambda;
             h_aux4.data[i].y = Scalar(0);  // kappa filled later by compute_curvature
+            h_aux4.data[i].z = Scalar(0);  // |∇λ| filled below for surface particles
 
             // Determine outward free-surface normal.
             Scalar gnorm_sq = dot(grad_lambda, grad_lambda);
@@ -331,6 +332,11 @@ void SinglePhaseFlowFS<KT_, SET_>::detect_freesurface(uint64_t timestep)
             if (lambda < m_fs_threshold && gnorm_sq > eps_sq)
                 {
                 Scalar gnorm = sqrt(gnorm_sq);
+                // Store |∇λ| for the CSF surface tension force (see forcecomputation).
+                // The correct force per particle is F = -σ κ |∇λ| Vᵢ n̂, so we need
+                // gnorm here to supply the missing surface-delta-function magnitude.
+                h_aux4.data[i].z = gnorm;
+
                 // Outward normal: $-\nabla\lambda/|\nabla\lambda|$ ($\nabla\lambda$ points inward toward bulk)
                 Scalar3 n_fs;
                 n_fs.x = -grad_lambda.x / gnorm;
@@ -344,10 +350,13 @@ void SinglePhaseFlowFS<KT_, SET_>::detect_freesurface(uint64_t timestep)
                     if (nw_sq > eps_sq)
                         {
                         Scalar nw_norm = sqrt(nw_sq);
+                        // n_wall_acc = Σ Vⱼ ∇Wᵢⱼ for solid neighbours, which points
+                        // FROM fluid INTO solid (e.g. downward for a floor wall).
+                        // Negate to get the wall outward normal pointing INTO the fluid.
                         Scalar3 n_w;
-                        n_w.x = n_wall_acc.x / nw_norm;
-                        n_w.y = n_wall_acc.y / nw_norm;
-                        n_w.z = n_wall_acc.z / nw_norm;
+                        n_w.x = -n_wall_acc.x / nw_norm;
+                        n_w.y = -n_wall_acc.y / nw_norm;
+                        n_w.z = -n_wall_acc.z / nw_norm;
 
                         // Tangential component of n_fs in the wall plane.
                         Scalar n_dot_nw = dot(n_fs, n_w);
@@ -456,7 +465,20 @@ void SinglePhaseFlowFS<KT_, SET_>::compute_curvature(uint64_t timestep)
             Scalar Vi   = mi / rhoi;
             Scalar hi   = this->m_const_slength ? this->m_ch : h_h.data[i];
 
-            Scalar kappa = Scalar(0);
+            // Accumulators for the split curvature formula:
+            //   kappa_nj = Σ_j V_j  n_j · ∇W_ij   (n_j contribution)
+            //   grad_lam = Σ_j V_j      ∇W_ij       (n_i coefficient ≡ local fluid ∇λ)
+            //
+            // This separation lets us choose n̂_i AFTER the loop. For
+            // contact-line particles (solid neighbour detected) we substitute
+            // the uncorrected normal  −grad_lam/|grad_lam|  so that the
+            // contact-angle-prescribed normal stored in h_fs_n does not
+            // artificially inflate κ.  For non-contact-line particles the
+            // stored n_i already equals the uncorrected normal, so the result
+            // is identical to the original formula.
+            Scalar  kappa_nj  = Scalar(0);
+            Scalar3 grad_lam  = make_scalar3(Scalar(0), Scalar(0), Scalar(0));
+            bool    has_solid  = false;
 
             size_t       myHead = h_head_list.data[i];
             unsigned int size   = (unsigned int)h_n_neigh.data[i];
@@ -466,7 +488,11 @@ void SinglePhaseFlowFS<KT_, SET_>::compute_curvature(uint64_t timestep)
                 unsigned int k = h_nlist_arr.data[myHead + j];
 
                 // Curvature is a fluid-fluid quantity; skip solid particles.
-                if (checksolid(h_type_property_map.data, h_pos.data[k].w)) continue;
+                if (checksolid(h_type_property_map.data, h_pos.data[k].w))
+                    {
+                    has_solid = true;
+                    continue;
+                    }
 
                 Scalar3 pj;
                 pj.x = h_pos.data[k].x;
@@ -497,15 +523,42 @@ void SinglePhaseFlowFS<KT_, SET_>::compute_curvature(uint64_t timestep)
                 Scalar dwdr   = this->m_skernel->dwijdr(meanh, r);
                 Scalar dwdr_r = dwdr / (r + epssqr);
 
-                // $\kappa_i \mathrel{+}= (1/V_i) \sum_j V_j (\hat{n}_j - \hat{n}_i) \cdot \nabla W_{ij}$
                 // $\nabla_i W_{ij} = (\partial W/\partial r)/r \cdot \mathbf{r}_{ij}$ (pointing from $j$ toward $i$)
-                Scalar3 dn;
-                dn.x = n_j.x - n_i.x;
-                dn.y = n_j.y - n_i.y;
-                dn.z = n_j.z - n_i.z;
+                Scalar3 gradW;
+                gradW.x = dwdr_r * dx.x;
+                gradW.y = dwdr_r * dx.y;
+                gradW.z = dwdr_r * dx.z;
 
-                kappa += Vj * dot(dn, dwdr_r * dx);
+                kappa_nj    += Vj * dot(n_j, gradW);
+                grad_lam.x  += Vj * gradW.x;
+                grad_lam.y  += Vj * gradW.y;
+                grad_lam.z  += Vj * gradW.z;
                 }
+
+            // Contact-line particles (solid neighbour detected): set κ = 0.
+            //
+            // The contact-angle-corrected n̂_i stored in h_fs_n IS still used
+            // by neighbouring free-surface particles when they evaluate their own
+            // κ (via the n_j term in Σ V_j (n_j − n_i)·∇W).  This preserves
+            // the Huber (2016) CA-enforcement mechanism through those neighbours
+            // without imposing a huge direct force on the contact-line particle
+            // itself (which would arise because the incomplete fluid neighbourhood
+            // at the contact line makes |∇λ| very large, inflating the −n̂_i·∇λ
+            // contribution to κ by orders of magnitude).
+            //
+            // A separate Young's-equation wetting force
+            //   F_Y = σ (cos θ_eq − cos θ_actual) |∇λ| V_i t̂_wall
+            // is added in forcecomputation() to supply the missing contact-line
+            // restoring force without the curvature explosion.
+            if (has_solid)
+                {
+                h_aux4.data[i].y = Scalar(0);
+                continue;
+                }
+
+            // κ_i = (Σ V_j n_j·∇W  −  n̂_i · Σ V_j ∇W) / V_i
+            //      = Σ V_j (n_j − n̂_i)·∇W / V_i
+            Scalar kappa = kappa_nj - dot(n_i, grad_lam);
 
             // Divide by V_i to get the divergence.
             h_aux4.data[i].y = kappa / Vi;
@@ -597,6 +650,9 @@ void SinglePhaseFlowFS<KT_, SET_>::forcecomputation(uint64_t timestep)
         Scalar  temp0  = Scalar(0);
         double  max_vel = 0.0;
 
+        // Contact-angle cosine for Young's wetting force.
+        const Scalar cos_ca = std::cos(m_contact_angle);
+
         for (unsigned int group_idx = 0; group_idx < group_size; group_idx++)
             {
             unsigned int i = this->m_fluidgroup->getMemberIndex(group_idx);
@@ -659,6 +715,11 @@ void SinglePhaseFlowFS<KT_, SET_>::forcecomputation(uint64_t timestep)
             size_t       myHead = h_head_list.data[i];
             unsigned int size   = (unsigned int)h_n_neigh.data[i];
 
+            // Accumulators for Young's wetting force (contact-line particles only).
+            Scalar3 grad_lam_fy   = make_scalar3(Scalar(0), Scalar(0), Scalar(0));
+            Scalar3 n_wall_acc_fy = make_scalar3(Scalar(0), Scalar(0), Scalar(0));
+            bool    has_solid_fy  = false;
+
             for (unsigned int j = 0; j < size; j++)
                 {
                 unsigned int k = h_nlist_arr.data[myHead + j];
@@ -683,6 +744,12 @@ void SinglePhaseFlowFS<KT_, SET_>::forcecomputation(uint64_t timestep)
                 // Velocity: fictitious (Adami 2012) for solid, physical for fluid.
                 Scalar3 vj = make_scalar3(Scalar(0), Scalar(0), Scalar(0));
                 Scalar  mj = h_velocity.data[k].w;
+
+                // Skip solid particles marked for removal (mass set to -999 by
+                // mark_solid_particles_toremove). Their Vj = mj/rhoj ≈ -0.999 would
+                // inflate vijsqr by ~10^19 and generate enormous spurious forces.
+                if (mj < Scalar(0)) continue;
+
                 if (issolid)
                     {
                     vj.x = h_vf.data[k].x;
@@ -729,8 +796,37 @@ void SinglePhaseFlowFS<KT_, SET_>::forcecomputation(uint64_t timestep)
                 Scalar dwdr   = this->m_skernel->dwijdr(meanh, r);
                 Scalar dwdr_r = dwdr / (r + epssqr);
 
+                // Accumulate ∇λ (fluid) and wall-normal (solid) for Young's wetting force.
+                if (!issolid)
+                    {
+                    grad_lam_fy.x += Vj * dwdr_r * dx.x;
+                    grad_lam_fy.y += Vj * dwdr_r * dx.y;
+                    grad_lam_fy.z += Vj * dwdr_r * dx.z;
+                    }
+                else
+                    {
+                    n_wall_acc_fy.x += Vj * dwdr_r * dx.x;
+                    n_wall_acc_fy.y += Vj * dwdr_r * dx.y;
+                    n_wall_acc_fy.z += Vj * dwdr_r * dx.z;
+                    has_solid_fy = true;
+                    }
+
                 // Pressure interaction (Adami 2013 TV): $\bar{p}_{ij} = (\rho_j p_i + \rho_i p_j)/(\rho_i+\rho_j)$
                 temp0 = (rhoj*Pi + rhoi*Pj) / (rhoi + rhoj);
+                // Direction-dependent floor (Bug 9/10 fix):
+                // - Solid BELOW fluid (dx.y > 0): clip Adami pressure to the background
+                //   pressure (~180 Pa).  Contact-line particles have P < 0 (low-density
+                //   free surface) so their natural Adami average is negative → the wall
+                //   would attract them into the floor.  The 200 Pa floor ensures the solid
+                //   always repels at least as hard as the bulk fluid above pushes down
+                //   (~180 Pa background), preventing slow contact-line drift into the floor.
+                //   Bulk particles (temp0 ≈ 180 Pa): largely unaffected (only a ≤20 Pa bump).
+                // - Solid ABOVE fluid (dx.y < 0, fluid has penetrated floor): leave natural
+                //   Adami pressure active — for deep penetration it is strongly negative →
+                //   provides upward restoration.  (The old Bug-9 fix applied the floor
+                //   unconditionally here too, which pushed penetrated particles further INTO
+                //   the solid — this is now avoided.)
+                if (issolid && dx.y > Scalar(0) && temp0 < Scalar(200.0)) temp0 = Scalar(200.0);
 
                 // Artificial viscosity (Monaghan 1983): $\Pi_{ij} = (-\alpha c \mu_{ij} + \beta \mu_{ij}^2)/\bar{\rho}_{ij}$
                 Scalar avc = Scalar(0);
@@ -811,13 +907,98 @@ void SinglePhaseFlowFS<KT_, SET_>::forcecomputation(uint64_t timestep)
                 h_ratedpe.data[i].y =
                     this->m_eos->dPressuredDensity(rhoi) * h_ratedpe.data[i].x;
 
+            // ── Young's-equation wetting force ───────────────────────────────
+            // Applied at contact-line free-surface particles (has_solid && is_surface).
+            // The Huber (2016) CA-enforcement through κ of neighbouring particles
+            // is disabled when all droplet-edge particles are within rcut of the
+            // wall (has_solid=true), so we add a direct Young's force instead:
+            //   F_Y = σ (cos θ_eq + cos_act) V_i^{1/3} t̂
+            // where cos_act = dot(n̂_nat, n̂_w) = −cos θ_actual (geometry: outward
+            // normal has cos component = −cos θ against the wall normal), so the
+            // force vanishes when cos_act = −cos θ_eq, i.e. θ_actual = θ_eq.
+            // V_i^{1/3} ≈ dx is the contact-line arc length per particle and
+            // t̂ = normalise(n̂_nat − cos_act · n̂_w) is the wall-tangential direction.
+            if (has_solid_fy && is_surface && m_sigma > Scalar(0)
+                && std::fabs(m_contact_angle - Scalar(M_PI_2)) > Scalar(0.01))
+                {
+                const Scalar fy_eps = Scalar(1e-12);
+                Scalar gl_sq = dot(grad_lam_fy, grad_lam_fy);
+                Scalar nw_sq = dot(n_wall_acc_fy, n_wall_acc_fy);
+                if (gl_sq > fy_eps && nw_sq > fy_eps)
+                    {
+                    // Natural (uncorrected) outward normal: −∇λ_fluid / |∇λ_fluid|
+                    Scalar gl_norm = sqrt(gl_sq);
+                    Scalar3 n_nat;
+                    n_nat.x = -grad_lam_fy.x / gl_norm;
+                    n_nat.y = -grad_lam_fy.y / gl_norm;
+                    n_nat.z = -grad_lam_fy.z / gl_norm;
+
+                    // Wall outward normal (pointing into fluid): −normalise(Σ_solid Vⱼ ∇W)
+                    Scalar nw_norm = sqrt(nw_sq);
+                    Scalar3 n_w;
+                    n_w.x = -n_wall_acc_fy.x / nw_norm;
+                    n_w.y = -n_wall_acc_fy.y / nw_norm;
+                    n_w.z = -n_wall_acc_fy.z / nw_norm;
+
+                    // Snap n̂_w to the nearest axis unit vector.
+                    // For a flat floor the dominant component should be ±y, but
+                    // asymmetric solid-neighbour coverage (contact line off the grid)
+                    // gives n̂_w a spurious x/z-component. That x/z tilt propagates
+                    // into t̂, giving it a small wall-normal component that drives
+                    // floor penetration. Using the exact axis direction eliminates
+                    // this without hardcoding a specific wall orientation.
+                    Scalar ax = std::fabs(n_w.x);
+                    Scalar ay = std::fabs(n_w.y);
+                    Scalar az = std::fabs(n_w.z);
+                    Scalar3 n_w_ax = make_scalar3(Scalar(0), Scalar(0), Scalar(0));
+                    if (ax >= ay && ax >= az)
+                        n_w_ax.x = (n_w.x > Scalar(0)) ? Scalar(1) : Scalar(-1);
+                    else if (ay >= ax && ay >= az)
+                        n_w_ax.y = (n_w.y > Scalar(0)) ? Scalar(1) : Scalar(-1);
+                    else
+                        n_w_ax.z = (n_w.z > Scalar(0)) ? Scalar(1) : Scalar(-1);
+
+                    // Actual contact-angle cosine (using snapped wall normal).
+                    Scalar cos_theta_act = dot(n_nat, n_w_ax);
+
+                    // Wall-tangential spreading direction t̂ (lies exactly in wall plane).
+                    Scalar3 n_t;
+                    n_t.x = n_nat.x - cos_theta_act * n_w_ax.x;
+                    n_t.y = n_nat.y - cos_theta_act * n_w_ax.y;
+                    n_t.z = n_nat.z - cos_theta_act * n_w_ax.z;
+                    Scalar nt_sq = dot(n_t, n_t);
+                    if (nt_sq > fy_eps)
+                        {
+                        Scalar nt_norm = sqrt(nt_sq);
+                        n_t.x /= nt_norm;
+                        n_t.y /= nt_norm;
+                        n_t.z /= nt_norm;
+
+                        // Contact-line arc length per particle ≈ V_i^{1/3} (= dx for cubic grid).
+                        Scalar Vi_cbrt = std::cbrt(Vi);
+
+                        // cos_theta_act = dot(n̂_nat, n̂_w) = −cos θ_actual (by geometry).
+                        // Equilibrium: cos_theta_act = −cos_ca → force = 0.
+                        // F_Y > 0 (spreading) when θ_actual > θ_eq; < 0 (retraction) otherwise.
+                        Scalar F_Y_mag = m_sigma * (cos_ca + cos_theta_act) * Vi_cbrt;
+                        h_force.data[i].x += F_Y_mag * n_t.x;
+                        h_force.data[i].y += F_Y_mag * n_t.y;
+                        h_force.data[i].z += F_Y_mag * n_t.z;
+                        }
+                    }
+                }
+
             // ── CSF surface tension force ─────────────────────────────────────
-            // F_{σ,i} = −σ · κ_i · n̂_i · (m_i / ρ_i)
-            // Sign: for a convex surface (κ > 0, n̂ outward) the force points
-            // inward, compressing the surface — consistent with CSF conventions.
+            // Correct CSF force per particle (Hu & Adams 2006):
+            //   F_{σ,i} = −σ · κ · |∇λ| · Vᵢ · n̂_i
+            // where κ = kappa_i * Vᵢ  and  |∇λ| = gnorm_i.
+            // In terms of stored kappa_i = κ/Vᵢ and Vᵢ = mᵢ/ρᵢ:
+            //   F = −σ · kappa_i · (mᵢ/ρᵢ)² · gnorm_i · n̂_i
+            // Units: [N/m] · [m⁻⁴] · [m⁶] · [m⁻¹] = N ✓
             if (is_surface && m_sigma > Scalar(0))
                 {
-                Scalar surf_coeff = -m_sigma * kappa_i * (mi / rhoi);
+                Scalar gnorm_i = h_aux4.data[i].z;
+                Scalar surf_coeff = -m_sigma * kappa_i * (mi / rhoi) * (mi / rhoi) * gnorm_i;
                 h_force.data[i].x += surf_coeff * n_fs_i.x;
                 h_force.data[i].y += surf_coeff * n_fs_i.y;
                 h_force.data[i].z += surf_coeff * n_fs_i.z;

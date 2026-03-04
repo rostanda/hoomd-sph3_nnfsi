@@ -146,6 +146,10 @@ model.artificialviscosity = True
 model.alpha            = 0.2
 model.beta             = 0.0
 model.densitydiffusion = False
+model.consistent_interface_pressure = True   # Hu & Adams (2009): rest-density-weighted
+                                              # cross-phase pressure + hydrostatic correction;
+                                              # prevents liquid particles penetrating the bubble
+                                              # by eliminating the "pressure hole" at the interface
 
 # ─── Speed of sound & timestep ───────────────────────────────────────────────
 maximum_smoothing_length = sph_helper.set_max_sl(sim, device, model)

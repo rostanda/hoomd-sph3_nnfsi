@@ -226,6 +226,15 @@ spf_properties = hoomd.sph.compute.SinglePhaseFlowBasicProperties(filterfluid)
 sim.operations.computes.append(spf_properties)
 
 # ─── Output ──────────────────────────────────────────────────────────────────
+# Remove any stale output GSD left by a previous crashed run.
+# ALL ranks attempt the removal so each node's NFS metadata cache is flushed;
+# the first rank to run succeeds, the rest get FileNotFoundError (ignored).
+try:
+    os.remove(dumpname)
+except (FileNotFoundError, OSError):
+    pass
+device.communicator.barrier()
+
 gsd_period = max(1, steps // 100)   # ≈ 100 frames total
 gsd_writer = hoomd.write.GSD(filename=dumpname,
                               trigger=hoomd.trigger.Periodic(gsd_period),

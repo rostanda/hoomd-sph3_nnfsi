@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""
+r"""
 Copyright (c) 2025-2026 David Krach, Daniel Rostan.
 All rights reserved.
 
@@ -162,6 +162,15 @@ sim.operations.integrator = integrator
 # ─── Output ──────────────────────────────────────────────────────────────────
 # Write more frequently so the front-position time series is well resolved
 write_period = max(100, steps // 200)
+# Remove any stale output GSD left by a previous crashed run.
+# ALL ranks attempt the removal so each node's NFS metadata cache is flushed;
+# the first rank to run succeeds, the rest get FileNotFoundError (ignored).
+try:
+    os.remove(dumpname)
+except (FileNotFoundError, OSError):
+    pass
+device.communicator.barrier()
+
 gsd_writer = hoomd.write.GSD(filename=dumpname,
                               trigger=hoomd.trigger.Periodic(write_period),
                               mode='wb',
@@ -182,6 +191,15 @@ table_file = hoomd.write.Table(output=log_file,
                                 trigger=hoomd.trigger.Periodic(500),
                                 logger=logger, max_header_len=10)
 sim.operations.writers.append(table_file)
+
+# ─── Apply safety limiters after attachment ───────────────────────────────────
+# Trigger prepRun to attach all operations (integrator + writers).
+# Then set velocity and displacement limiters directly on the C++ object.
+# These prevent isolated vacuum-region particles from producing runaway positions
+# when their kernel support drops and the Tait-EOS pressure becomes very negative.
+sim.run(0, write_at_start=False)
+kdktv.setvLimit(2.0 * c)    # cap per-component velocity at 2x speed of sound
+kdktv.setxLimit(0.5 * dx)   # cap displacement per step at 0.5 particle spacings
 
 # ─── Run ─────────────────────────────────────────────────────────────────────
 if device.communicator.rank == 0:

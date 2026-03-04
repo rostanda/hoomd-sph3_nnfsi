@@ -2,7 +2,7 @@
 #SBATCH --job-name=bcc_3em01             # Job name
 #SBATCH --mail-type=BEGIN,END,FAIL            # Mail events (NONE, BEGIN, END, FAIL, ALL)
 #SBATCH --mail-user=david.krach@mib.uni-stuttgart.de    # Where to send mail.  Set this to your email address
-#SBATCH --ntasks=27                            # Number of MPI tasks (i.e. processes)
+#SBATCH --ntasks=64                            # Number of MPI tasks (i.e. processes)
 #SBATCH --nodes=1                             # Maximum number of nodes to be allocated
 #SBATCH --distribution=cyclic:cyclic          # Distribute tasks cyclically first among nodes and then among sockets within a node
 #SBATCH --mem=50G
@@ -42,5 +42,4 @@ else
 fi
 
 echo "── fx = ${FX} m/s²   (Re ≈ 150–400) ──"
-/usr/local.nfs/software/openmpi/5.0.1_gcc-12.2_cuda-12.3/bin/mpirun -np 8 ./run_bcc_permeability.py \
-    "${INIT}" "${FX}" "${STEPS}" "${DAMP}"
+/usr/local.nfs/software/openmpi/5.0.1_gcc-12.2_cuda-12.3/bin/mpirun -np $SLURM_NTASKS ./run_bcc_permeability.py "${INIT}" "${FX}" "${STEPS}" "${DAMP}"

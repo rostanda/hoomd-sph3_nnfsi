@@ -109,4 +109,13 @@ pushd "${SCRIPT_DIR}/07_capillary_rise" > /dev/null
 bash run_all_configs.sh ${NL}
 popd > /dev/null
 
+# ─── 08 Sessile Droplet Snap-back ─────────────────────────────────────────────
+# 3-D domain with shear+snap-back and hysteresis wetting  →  np=8
+banner "08  Sessile Droplet Snap-back  (np=8)"
+pushd "${SCRIPT_DIR}/08_sessile_droplet_snapback" > /dev/null
+python3 create_input_geometry.py ${NL}
+INIT=$(ls -t *_init.gsd | head -1)
+mpirun -np 8 python3 run_sessile_droplet_snapback.py ${NL} "${INIT}"
+popd > /dev/null
+
 banner "All two-phase flow benchmarks complete."

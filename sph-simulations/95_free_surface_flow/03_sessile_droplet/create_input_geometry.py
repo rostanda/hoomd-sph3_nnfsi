@@ -66,13 +66,19 @@ slength    = hoomd.sph.kernel.OptimalH[kernel] * dx
 rcut       = hoomd.sph.kernel.Kappa[kernel] * slength
 
 n_s    = math.ceil(rcut / dx)       # solid wall layers
-n_buf  = 3 * n_s                    # vacuum buffer above droplet
+# Buffer must be large enough for the inertia-driven contact-line oscillations
+# (Ohnesorge number << 1 → large overshoot).  Use 3×R_drop so that even a
+# 3× overshoot of the equilibrium spreading displacement stays well within the
+# domain.  Same criterion in x: use 8×R_drop instead of 4× so the droplet
+# never reaches the periodic x-boundary during transient spreading.
+n_buf  = max(math.ceil(3 * R_drop / dx), 3 * n_s)  # vacuum buffer above droplet
 nz     = max(3, math.ceil(2.5 * hoomd.sph.kernel.Kappa[kernel] * rcut / dx))
 
 # ─── Domain ──────────────────────────────────────────────────────────────────
-# x: periodic, width = 4*R_drop (droplet centred, enough space around it)
+# x: periodic, width = 8*R_drop (4× was too small: the inertia-driven contact
+#    line overshoots past the x-boundary for Oh << 1, causing x-periodic wrap)
 # y: solid floor (n_s layers) + droplet height R_drop + vacuum (n_buf layers)
-Lx = 4.0 * R_drop
+Lx = 8.0 * R_drop
 Ly_solid = n_s * dx
 Ly_fluid = R_drop            # maximum droplet height (semicircle top)
 Ly_buf   = n_buf * dx
