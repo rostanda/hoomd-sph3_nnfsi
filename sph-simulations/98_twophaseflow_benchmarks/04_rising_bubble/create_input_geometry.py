@@ -30,8 +30,9 @@ the bottom quarter of a tall rectangular domain filled with liquid 'W'
 (ρ₁ = 1000 kg/m³).  Gravity acts in the −y direction.  Solid walls bound the
 domain in y; x and z are periodic.
 
-Domain: lref × 2·lref × lref  (width × height × depth)
-Bubble: radius R = 0.2 × lref, centre at y = −lref/2
+Domain: 4D × 8D × 4D  (width × height × depth, D = bubble diameter)
+  → D/L = 0.25 in the periodic x,z directions (adequate for benchmarks)
+Bubble: diameter D = 2R = 0.4 mm, centre 1D above the bottom fluid boundary
 
 Key dimensionless numbers (default parameters):
   Eötvös   Eo = (ρ₁ − ρ₂) g D² / σ
@@ -73,12 +74,16 @@ kernel  = 'WendlandC4'
 slength = hoomd.sph.kernel.OptimalH[kernel] * dx
 
 # ─── Box geometry ────────────────────────────────────────────────────────────
-# Fluid region: lref (x) × 2·lref (y) × lref (z)
+# Fluid region: 4D (x) × 8D (y) × 4D (z)  with D = 2·R_bub = bubble diameter.
+# D/L = 1/4 = 0.25 in the periodic x,z directions.
 # Solid layers: n_solid rows added top and bottom in y.
-nx     = num_length
-ny_flu = 2 * num_length            # fluid rows in y
-ny     = ny_flu + 2 * n_solid      # total rows including walls
-nz     = num_length
+D_bub  = 2 * R_bub                            # bubble diameter           [m]
+n_lat  = 4                                    # lateral extent  [×D]  D/L = 0.25
+n_vert = 8                                    # vertical extent [×D]
+nx     = int(round(n_lat  * D_bub / dx))      # ≈ 64 at N=40, 32 at N=20
+nz     = nx
+ny_flu = int(round(n_vert * D_bub / dx))      # ≈ 128 at N=40, 64 at N=20
+ny     = ny_flu + 2 * n_solid                 # total rows including walls
 lx = nx * dx
 ly = ny * dx
 lz = nz * dx
@@ -106,8 +111,11 @@ y = positions[:, 1]
 x = positions[:, 0]
 z = positions[:, 2]
 
-# Bubble centre at y = −lref/2 (bottom quarter of fluid region)
-y_bub = -lref / 2
+# Bubble centre: 1 D above the bottom fluid boundary
+# Bottom fluid boundary: -ny_flu/2 * dx = -(n_vert/2)·D from domain centre
+# → y_bub = -(n_vert/2 − 1)·D  (= −3D = −1.2 mm at default parameters)
+# This leaves ~6D of clear rise path above the bubble top.
+y_bub = -(n_vert / 2 - 1) * D_bub
 r_sq  = x**2 + (y - y_bub)**2 + z**2
 inside_bubble = r_sq < R_bub**2
 
@@ -136,9 +144,9 @@ init_filename = f'rising_bubble_{nx}_{ny}_{nz}_vs_{dx:.6f}_init.gsd'
 with gsd.hoomd.open(name=init_filename, mode='w') as f:
     f.append(snapshot)
 
-sigma = 0.05
+sigma = 5e-5    # must match run_rising_bubble.py (was incorrectly 0.05)
 gy    = 9.81
-D     = 2 * R_bub
+D     = D_bub
 Eo    = (rho01 - rho02) * gy * D**2 / sigma
 
 print(f'Created {init_filename}')
@@ -148,4 +156,4 @@ print(f'  Bubble N         : {int(np.sum(typeids==1))} particles, ρ={rho02} kg/
 print(f'  Solid S          : {int(np.sum(typeids==2))} particles')
 print(f'  Bubble radius    : R = {R_bub*1e3:.3f} mm')
 print(f'  Density ratio    : {rho01/rho02:.0f}:1')
-print(f'  Eötvös number    : Eo = {Eo:.1f}  (for σ=0.05 N/m, g=9.81 m/s²)')
+print(f'  Eötvös number    : Eo = {Eo:.1f}  (for σ={sigma:.2e} N/m, g={gy:.2f} m/s²)')

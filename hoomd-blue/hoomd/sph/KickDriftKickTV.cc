@@ -187,13 +187,15 @@ void KickDriftKickTV::integrateStepOne(uint64_t timestep)
             Scalar dz = h_tv.data[j].z * m_deltaT;
 
             // limit the movement of the particles
+            // Note: use !(fabs(d) <= limit) rather than fabs(d) > limit so that
+            // NaN displacements are caught (NaN comparisons always return false).
             if (m_xlimit)
                 {
-                if (fabs(dx) > m_xlimit_val)
+                if (!(fabs(dx) <= m_xlimit_val))
                     dx = (dx > Scalar(0)) ? m_xlimit_val : -m_xlimit_val;
-                if (fabs(dy) > m_xlimit_val)
+                if (!(fabs(dy) <= m_xlimit_val))
                     dy = (dy > Scalar(0)) ? m_xlimit_val : -m_xlimit_val;
-                if (fabs(dz) > m_xlimit_val)
+                if (!(fabs(dz) <= m_xlimit_val))
                     dz = (dz > Scalar(0)) ? m_xlimit_val : -m_xlimit_val;
                 }
 
@@ -274,13 +276,16 @@ void KickDriftKickTV::integrateStepTwo(uint64_t timestep)
             h_vel.data[j].z += temp0 * h_accel.data[j].z;
 
             // limit the velocity of the particles
+            // Note: use !(fabs(v) <= limit) rather than fabs(v) > limit so that
+            // NaN velocities are caught (NaN comparisons always return false, so
+            // fabs(NaN) > limit is false and NaN would bypass the clamp).
             if (m_vlimit)
                 {
-                if (fabs(h_vel.data[j].x) > m_vlimit_val)
+                if (!(fabs(h_vel.data[j].x) <= m_vlimit_val))
                     h_vel.data[j].x = (h_vel.data[j].x > Scalar(0)) ? m_vlimit_val : -m_vlimit_val;
-                if (fabs(h_vel.data[j].y) > m_vlimit_val)
+                if (!(fabs(h_vel.data[j].y) <= m_vlimit_val))
                     h_vel.data[j].y = (h_vel.data[j].y > Scalar(0)) ? m_vlimit_val : -m_vlimit_val;
-                if (fabs(h_vel.data[j].z) > m_vlimit_val)
+                if (!(fabs(h_vel.data[j].z) <= m_vlimit_val))
                     h_vel.data[j].z = (h_vel.data[j].z > Scalar(0)) ? m_vlimit_val : -m_vlimit_val;
                 }
             }

@@ -65,7 +65,8 @@ class Method(AutotunedObject):
         self._simulation.state.update_group_dof()
 
     def _detach_hook(self):
-        self._simulation.state.update_group_dof()
+        if self._simulation is not None:
+            self._simulation.state.update_group_dof()
 
 
 

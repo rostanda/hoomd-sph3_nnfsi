@@ -61,6 +61,46 @@ try:
 except ImportError:
     HAS_VTU = False
 
+
+class BubbleCentroidAction(hoomd.custom.Action):
+    """MPI-safe tracker of bubble centre-of-mass position and rise velocity.
+
+    Calls ``get_snapshot()`` (MPI-collective) at each trigger, computes y_cm
+    on rank 0, and exposes ``y_cm`` / ``vy_cm`` as loggable quantities so they
+    appear as columns in the hoomd.write.Table log.  Non-root ranks keep 0.0
+    (the logger broadcasts rank-0 values when writing the table).
+    """
+
+    def __init__(self):
+        self._y_cm      = 0.0
+        self._vy_cm     = 0.0
+        self._prev_y    = None
+        self._prev_step = None
+        self._dt        = None   # assigned after dt is computed
+
+    def act(self, timestep):
+        snap = self._state.get_snapshot()        # collective across all ranks
+        if self._state.communicator.rank == 0 and snap is not None:
+            bub = snap.particles.typeid == 1     # type 'N' = gas bubble
+            if bub.any():
+                y_new = float(np.mean(snap.particles.position[bub, 1]))
+                if self._prev_step is not None and self._dt is not None:
+                    self._vy_cm = (y_new - self._prev_y) / (
+                        (timestep - self._prev_step) * self._dt)
+                self._y_cm      = y_new
+                self._prev_y    = y_new
+                self._prev_step = timestep
+
+    @hoomd.logging.log
+    def y_cm(self):
+        """Bubble centre-of-mass y position [m]."""
+        return self._y_cm
+
+    @hoomd.logging.log
+    def vy_cm(self):
+        """Bubble centre-of-mass rise velocity [m/s]."""
+        return self._vy_cm
+
 # ─── Device & simulation ─────────────────────────────────────────────────────
 device = hoomd.device.CPU(notice_level=2)
 sim    = hoomd.Simulation(device=device)
@@ -91,10 +131,10 @@ gy         = -9.81        # gravitational acceleration        [m/s²]
 backpress  = 0.01         # background pressure coeff         [–]
 drho       = 0.01         # allowed density variation         [–]
 # Steps to reach terminal velocity:
-#   τ_relax = ρ₂ 2R² / (9 μ₁) ≈ 89 µs → 5τ ≈ 444 µs ≈ 700 steps (high-res).
-#   For a clean U_T measurement the last third of the run must be at steady rise;
-#   50 001 steps → ~31.6 ms physical time (high-res, dx=25 µm) → bubble rises
-#   ≈ 0.18 mm ≈ 0.45 D, which gives a well-resolved terminal-velocity window.
+#   τ_Stokes = ρ₂ 2R² / (9 μ₁) ≈ 89 µs ≈ 142 steps (dx=25 µm, dt≈6.3e-7 s).
+#   20 001 steps = 12.5 ms ≈ 140 τ_Stokes — well past terminal velocity.
+#   With the 4D×8D×4D domain the bubble rises ≈ 0.06 mm (0.15 D) in that time
+#   at U_T ≈ 5 mm/s, giving a clean steady-rise window in the last third.
 steps      = int(sys.argv[3]) if len(sys.argv) > 3 else 20001  # simulation steps
 
 # Estimate reference velocity from buoyancy (Hadamard-Rybczynski upper bound):
@@ -163,6 +203,14 @@ if device.communicator.rank == 0:
 sph_helper.update_min_c0_tpf(device, model, c1, c2,
                               mode='plain', lref=lref, uref=U_ref, cfactor=10.0)
 
+# Equalize background pressures so both phases sit at the same absolute P_bg
+# at their rest densities.  Without this fix, m_bp = bpfactor × ρ₀ × c² gives
+# P_bg(W) ≈ 10 × P_bg(N) (because ρ₀W / ρ₀N = 10), creating a spurious
+# inter-phase pressure gradient ΔP_bg ≈ 9 126 Pa — some 18 000× the Laplace
+# pressure (≈ 0.5 Pa) — that drives liquid particles into the bubble.
+P_bg = eos1.getBackgroundPressure()   # = backpress × ρ₀W × c1²
+eos2.setBackPressure(P_bg)            # override eos2: P_bg(N) → P_bg(W)
+
 dt, dt_cond = model.compute_dt(
     LREF=lref, UREF=U_ref, DX=dx, DRHO=drho,
     H=maximum_smoothing_length,
@@ -175,6 +223,13 @@ if device.communicator.rank == 0:
     Eo  = drho_b * g_mag * D**2 / sigma
     print(f'Eötvös number Eo = {Eo:.1f}')
     print(f'Density ratio    = {rho01/rho02:.0f}:1')
+
+# ─── Bubble centroid tracker ──────────────────────────────────────────────────
+bub_centroid    = BubbleCentroidAction()
+bub_centroid._dt = dt
+centroid_writer = hoomd.write.CustomWriter(
+    trigger=hoomd.trigger.Periodic(200),
+    action=bub_centroid)
 
 # ─── Integrator ──────────────────────────────────────────────────────────────
 integrator = hoomd.sph.Integrator(dt=dt)
@@ -211,6 +266,11 @@ table_file = hoomd.write.Table(output=log_file,
                                 trigger=hoomd.trigger.Periodic(200),
                                 logger=logger, max_header_len=10)
 sim.operations.writers.append(table_file)
+
+# Centroid writer must fire before Table writers so y_cm/vy_cm are current.
+# insert(0, ...) places it at the front of the writers list.
+sim.operations.writers.insert(0, centroid_writer)
+logger.add(bub_centroid, quantities=['y_cm', 'vy_cm'])
 
 # ─── Run ─────────────────────────────────────────────────────────────────────
 if device.communicator.rank == 0:

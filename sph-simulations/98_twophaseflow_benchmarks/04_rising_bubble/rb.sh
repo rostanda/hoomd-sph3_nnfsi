@@ -2,7 +2,7 @@
 #SBATCH --job-name=rb              # Job name
 #SBATCH --mail-type=BEGIN,END,FAIL        # Mail events (NONE, BEGIN, END, FAIL, ALL)
 #SBATCH --mail-user=david.krach@mib.uni-stuttgart.de
-#SBATCH --ntasks=4                     # Number of MPI tasks (i.e. processes)
+#SBATCH --ntasks=8                     # Number of MPI tasks (4D×8D×4D domain ≈ 549K particles at N=40)
 #SBATCH --nodes=1                         # Maximum number of nodes to be allocated
 #SBATCH --distribution=cyclic:cyclic      # Distribute tasks cyclically first among nodes and then among sockets within a node
 #SBATCH --mem=25G
@@ -31,5 +31,5 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 pushd "${SCRIPT_DIR}" > /dev/null
 python3 create_input_geometry.py ${NL}
 INIT=$(ls -t *_init.gsd | head -1)
-/usr/local.nfs/software/openmpi/5.0.1_gcc-12.2_cuda-12.3/bin/mpirun -np 4 python3 run_rising_bubble.py ${NL} "${INIT}"
+/usr/local.nfs/software/openmpi/5.0.1_gcc-12.2_cuda-12.3/bin/mpirun -np 8 python3 run_rising_bubble.py ${NL} "${INIT}"
 popd > /dev/null
