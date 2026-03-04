@@ -1716,6 +1716,7 @@ class TwoPhaseFlow(SPHModel):
                           shepardfreq = int(30),
                           compute_solid_forces = bool(False),
                           fickian_shifting = bool(False),
+                          consistent_interface_pressure = bool(False),
                           max_sl = float(0.0)
                           ))
 
@@ -1734,6 +1735,7 @@ class TwoPhaseFlow(SPHModel):
         self.str_colorgradientmethod = colorgradientmethod
         self.accel_set = False
         self.params_set = False
+        self.consistent_interface_pressure = False
 
         if self.str_densitymethod == str('SUMMATION'):
             self.cpp_densitymethod = hoomd.sph._sph.PhaseFlowDensityMethod.DENSITYSUMMATION
