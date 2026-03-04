@@ -81,6 +81,13 @@ import numpy as np
 import gsd.hoomd
 import sph_helper
 
+try:
+    from mpi4py import MPI as _MPI
+    _rank = _MPI.COMM_WORLD.Get_rank()
+except ImportError:
+    _MPI  = None
+    _rank = 0
+
 # ─── CLI args ────────────────────────────────────────────────────────────────
 num_length = int(sys.argv[1]) if len(sys.argv) > 1 else 20
 steps_A    = int(sys.argv[2]) if len(sys.argv) > 2 else 5000
@@ -117,14 +124,15 @@ h_c_exact = (3.0 * tau_y * H0 * L0 / (rho0 * g)) ** (1.0 / 3.0)
 x_f_exact = h_c_exact**2 * rho0 * g / (2.0 * tau_y)
 slump_S   = H0 - h_c_exact
 
-print(f'Bingham slump test parameters:')
-print(f'  H0={H0*1e2:.1f} cm, L0={L0*1e2:.1f} cm, ρ={rho0:.0f} kg/m³')
-print(f'  μ_p={mu_p} Pa·s, τ_y={tau_y} Pa, m_reg={m_reg} s')
-print(f'  μ_max (Papanastasiou limit) = {mu_max} Pa·s')
-print(f'\nAnalytical equilibrium profile:')
-print(f'  h_c  = {h_c_exact*1e3:.3f} mm  ({h_c_exact/H0*100:.1f} % of H0)')
-print(f'  x_f  = {x_f_exact*1e3:.1f} mm  (half-spread from x=0)')
-print(f'  S    = {slump_S*1e3:.1f} mm  (slump = {slump_S/H0*100:.1f} % of H0)')
+if _rank == 0:
+    print(f'Bingham slump test parameters:')
+    print(f'  H0={H0*1e2:.1f} cm, L0={L0*1e2:.1f} cm, ρ={rho0:.0f} kg/m³')
+    print(f'  μ_p={mu_p} Pa·s, τ_y={tau_y} Pa, m_reg={m_reg} s')
+    print(f'  μ_max (Papanastasiou limit) = {mu_max} Pa·s')
+    print(f'\nAnalytical equilibrium profile:')
+    print(f'  h_c  = {h_c_exact*1e3:.3f} mm  ({h_c_exact/H0*100:.1f} % of H0)')
+    print(f'  x_f  = {x_f_exact*1e3:.1f} mm  (half-spread from x=0)')
+    print(f'  S    = {slump_S*1e3:.1f} mm  (slump = {slump_S/H0*100:.1f} % of H0)')
 
 
 def h_analytical(x):
@@ -192,10 +200,17 @@ def make_slump_gsd(filename):
     return int(np.sum(tid == 0)), int(np.sum(tid == 1))
 
 
-nf, ns = make_slump_gsd(GSD_FILE)
-print(f'\nGeometry (num_length={num_length}):')
-print(f'  dx = {dx*1e3:.2f} mm')
-print(f'  {nf} fluid + {ns} solid particles')
+if _rank == 0:
+    nf, ns = make_slump_gsd(GSD_FILE)
+else:
+    nf, ns = None, None
+if _MPI is not None:
+    _MPI.COMM_WORLD.Barrier()
+    nf, ns = _MPI.COMM_WORLD.bcast((nf, ns), root=0)
+if _rank == 0:
+    print(f'\nGeometry (num_length={num_length}):')
+    print(f'  dx = {dx*1e3:.2f} mm')
+    print(f'  {nf} fluid + {ns} solid particles')
 
 
 # ─── Case runner ─────────────────────────────────────────────────────────────
@@ -281,9 +296,14 @@ def run_case(label, tau_y_val, steps_val):
     logger = hoomd.logging.Logger(categories=['scalar', 'string'])
     logger.add(sim, quantities=['timestep', 'tps', 'walltime'])
     table = hoomd.write.Table(
-        trigger=hoomd.trigger.Periodic(max(steps_val // 20, 1)),
+        trigger=hoomd.trigger.Periodic(100),
         logger=logger, max_header_len=10)
     sim.operations.writers.append(table)
+    log_file = open(dumpname.replace('_run.gsd', '_run.log'), mode='w+', newline='\n')
+    sim.operations.writers.append(
+        hoomd.write.Table(output=log_file,
+                          trigger=hoomd.trigger.Periodic(max(steps_val // 20, 1)),
+                          logger=logger, max_header_len=10))
 
     print(f'  Running {steps_val} steps ...')
     sim.run(steps_val, write_at_start=True)
@@ -415,17 +435,17 @@ err_hc, err_xf, L2_B = run_case('caseB_bingham', tau_y, steps_B)
 
 # ─── Summary ─────────────────────────────────────────────────────────────────
 XSTAR_THRESHOLD = 1.3   # front must advance at least 0.3*L0 by T*=2
-print(f'\n{"═"*60}')
-print(f'  BENCHMARK SUMMARY (num_length={num_length})')
-print(f'{"═"*60}')
-print(f'  Case A  τ_y=0 (Newtonian regression):')
-print(f'    X*(T*=2) = {err_A:.3f}  (threshold > {XSTAR_THRESHOLD:.1f}; confirms spreading, not arrest)')
-print(f'  Case B  Bingham τ_y={tau_y} Pa:')
-print(f'    h_c error    = {err_hc:.1f} %  (threshold < 25 %)')
-print(f'    x_f error    = {err_xf:.1f} %  (threshold < 30 %)')
-print(f'    Profile L₂   = {L2_B:.2f} %   (threshold < 20 %)')
-
 pass_A = err_A > XSTAR_THRESHOLD
 pass_B = (err_hc < 25.0) and (err_xf < 30.0) and (L2_B < 20.0)
 result = 'PASS' if (pass_A and pass_B) else 'FAIL'
-print(f'  Result: {result}')
+if _rank == 0:
+    print(f'\n{"═"*60}')
+    print(f'  BENCHMARK SUMMARY (num_length={num_length})')
+    print(f'{"═"*60}')
+    print(f'  Case A  τ_y=0 (Newtonian regression):')
+    print(f'    X*(T*=2) = {err_A:.3f}  (threshold > {XSTAR_THRESHOLD:.1f}; confirms spreading, not arrest)')
+    print(f'  Case B  Bingham τ_y={tau_y} Pa:')
+    print(f'    h_c error    = {err_hc:.1f} %  (threshold < 25 %)')
+    print(f'    x_f error    = {err_xf:.1f} %  (threshold < 30 %)')
+    print(f'    Profile L₂   = {L2_B:.2f} %   (threshold < 20 %)')
+    print(f'  Result: {result}')
