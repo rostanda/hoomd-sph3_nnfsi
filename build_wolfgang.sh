@@ -8,7 +8,7 @@ cd build
 CC=/usr/local.nfs/software/openmpi/4.1.4_gcc-11.3_cuda-11.7/bin/mpicc CXX=/usr/local.nfs/software/openmpi/4.1.4_gcc-11.3_cuda-11.7/bin/mpicxx cmake .. 
 make 
 cd $GIT_SRC
-cd dependencies/gsd-sph/gsd-3.2.0/
+cd dependencies/gsd-sph/gsd-3.4.2/
 rm -rf build
 mkdir build
 cd build 
