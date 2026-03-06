@@ -51,7 +51,7 @@ sim = hoomd.Simulation(device=device)
 
 # get stuff from input file
 infile = str(sys.argv[1])
-params = read_input_fromtxt.get_input_data_from_file(infile)
+params = read_input_fromtxt.get_input_data_from_file(infile, TEST_SANITY = False)
 
 FX    = 0.01
 

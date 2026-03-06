@@ -99,7 +99,7 @@ def sanity_check_input(input_dict):
 
 
 
-def get_input_data_from_file(inputfile):
+def get_input_data_from_file(inputfile, TEST_SANITY = True):
     """Read simulation input parameters from a structured text file.
 
     The text file must follow the layout below (two header lines are skipped,
@@ -156,6 +156,7 @@ def get_input_data_from_file(inputfile):
     parameter_dict.update({'delete_flag' : np.int32(flts[6]) })
     parameter_dict.update({'porosity'    : np.float64(flts[7]) })
 
-    sanity_check_input(parameter_dict)
+    if TEST_SANITY:
+        sanity_check_input(parameter_dict)
 
     return parameter_dict
