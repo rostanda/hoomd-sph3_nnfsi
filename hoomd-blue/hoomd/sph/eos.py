@@ -84,14 +84,31 @@ class _StateEquation(_HOOMDBaseObject):
 
 
 class Tait(_StateEquation):
-    R""" Tait Equation of state
+    R"""Tait (weakly-compressible) equation of state.
+
+    .. math::
+
+        p(\rho) = \frac{\rho_0 c_0^2}{\gamma}
+                  \left[\left(\frac{\rho}{\rho_0}\right)^\gamma - 1\right]
+                  + p_b
+
+    where :math:`\rho_0` is the rest density, :math:`c_0` is the reference
+    speed of sound, :math:`\gamma = 7` (water-like exponent), and :math:`p_b`
+    is the background pressure.
     """
     def __init__(self):
         _StateEquation.__init__(self, "Tait")
         self.cpp_stateequation = _sph.Tait()
 
 class Linear(_StateEquation):
-    R""" Linear Equation of state
+    R"""Linear (acoustic) equation of state.
+
+    .. math::
+
+        p(\rho) = c_0^2 (\rho - \rho_0) + p_b
+
+    where :math:`\rho_0` is the rest density, :math:`c_0` is the reference
+    speed of sound, and :math:`p_b` is the background pressure.
     """
     def __init__(self):
         _StateEquation.__init__(self, "Linear")

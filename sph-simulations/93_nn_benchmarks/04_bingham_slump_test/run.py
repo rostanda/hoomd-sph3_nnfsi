@@ -25,31 +25,31 @@ Bingham plastic slump test (concrete-like) — Non-Newtonian benchmark.
 
 BENCHMARK DESCRIPTION
 ---------------------
-A rectangular column of Bingham plastic (H0 × 2*L0) collapses under gravity
+A rectangular column of Bingham plastic ($H_0 \times 2L_0$) collapses under gravity
 onto a solid floor.  At equilibrium the yield stress balances the gravitational
 surface stress everywhere, producing a parabolic (Herschel) free-surface profile.
 
 Analytical equilibrium profile (2-D Bingham dam-break, symmetric):
 
-    h(x) = sqrt(h_c² − 2·τ_y·|x| / (ρ·g))   for |x| ≤ x_f
+    $h(x) = \sqrt{h_c^2 - 2 \cdot \tau_y \cdot |x| / (\rho \cdot g)}$   for $|x| \leq x_f$
 
-    h_c = (3·τ_y·H0·L0 / (ρ·g))^(1/3)        (centre height, volume conservation)
-    x_f = h_c²·ρ·g / (2·τ_y)                  (front position, h(x_f) = 0)
-    S   = H0 − h_c                              (slump height)
+    $h_c = (3 \cdot \tau_y \cdot H_0 \cdot L_0 / (\rho \cdot g))^{1/3}$        (centre height, volume conservation)
+    $x_f = h_c^2 \cdot \rho \cdot g / (2 \cdot \tau_y)$                  (front position, $h(x_f) = 0$)
+    $S   = H_0 - h_c$                              (slump height)
 
 Two sub-cases:
 
-  Case A — Newtonian regression (τ_y = 0)
-    Model reduces to Newtonian with μ = μ_p.  Fluid spreads freely.
-    Front position X*(T*) compared to Martin-Moyce (1952) shallow-water theory
-    (inviscid reference, Re ≈ 20 so deviation expected):
-        X*(T*) = 1 + 2√2·T*,   T* = t·√(g/L0)
-    Pass: X*(T*=2) > 1.3 (front advancing — not arrested like Bingham case).
+  Case A — Newtonian regression ($\tau_y = 0$)
+    Model reduces to Newtonian with $\mu = \mu_p$.  Fluid spreads freely.
+    Front position $X^*(T^*)$ compared to Martin-Moyce (1952) shallow-water theory
+    (inviscid reference, Re $\approx$ 20 so deviation expected):
+        $X^*(T^*) = 1 + 2\sqrt{2} \cdot T^*$,   $T^* = t \cdot \sqrt{g/L_0}$
+    Pass: $X^*(T^*=2) > 1.3$ (front advancing — not arrested like Bingham case).
 
-  Case B — Bingham slump (τ_y = 50 Pa)
+  Case B — Bingham slump ($\tau_y = 50$ Pa)
     Fluid arrests at the parabolic Herschel profile.
-    Pass: h_c error < 25 %, x_f error < 30 %, profile L₂/H0 < 20 %.
-    (Papanastasiou regularisation never fully arrests; at nl=20 h_c spans ~6.5
+    Pass: $h_c$ error < 25 %, $x_f$ error < 30 %, profile $L_2/H_0 < 20\,\%$.
+    (Papanastasiou regularisation never fully arrests; at nl=20 $h_c$ spans ~6.5
     particle diameters, limiting discrete accuracy to ~20-25 %.)
 
 Model: SinglePhaseFlowFS + KickDriftKickTV (same as dam-break benchmark).
@@ -58,12 +58,12 @@ activateBingham is available on SinglePhaseFlowFS; sigma=0 disables surface tens
 Parameters:
   H0    = 0.10 m    (initial column height; also lref)
   L0    = 0.05 m    (initial half-width; aspect ratio H0/(2L0) = 1)
-  ρ     = 2200 kg/m³
-  μ_p   = 10 Pa·s   (plastic viscosity)
-  τ_y   = 50 Pa     (yield stress)
+  $\rho$     = 2200 kg/m$^3$
+  $\mu_p$   = 10 $\mathrm{Pa \cdot s}$   (plastic viscosity)
+  $\tau_y$   = 50 Pa     (yield stress)
   m_reg = 1 s       (Papanastasiou regularisation)
-  g     = 9.81 m/s²
-  μ_max = μ_p + τ_y·m_reg = 60 Pa·s  (Papanastasiou limit; used for CFL in Case B)
+  g     = 9.81 m/s$^2$
+  $\mu_\mathrm{max} = \mu_p + \tau_y \cdot m_\mathrm{reg} = 60\,\mathrm{Pa \cdot s}$  (Papanastasiou limit; used for CFL in Case B)
 
 Usage:
     python3 run.py [num_length [steps_A [steps_B]]]
@@ -153,8 +153,8 @@ def make_slump_gsd(filename):
     Create the initial GSD snapshot: a fluid column resting on a solid floor.
 
     Layout (physical coordinates, y=0 at floor):
-        Fluid: x ∈ [-L0, L0],  y ∈ [0, H0]   (num_length × num_length in x-y)
-        Solid: x ∈ [-x_box/2, x_box/2],  y < 0  (n_solid layers, full width)
+        Fluid: $x \in [-L_0, L_0]$,  $y \in [0, H_0]$   (num_length $\times$ num_length in x-y)
+        Solid: $x \in [-x_\mathrm{box}/2, x_\mathrm{box}/2]$,  $y < 0$  (n_solid layers, full width)
         z: quasi-2D (nz layers, periodic)
     """
     n_solid = math.ceil(rcut / dx) + 1          # solid layers below y=0
@@ -354,7 +354,7 @@ def _check_martin_moyce(dumpname, dt):
     # Regression pass criterion: front must have advanced by at least 30% of L0
     # beyond its initial position by T*=2.  This checks gravity + Newtonian flow
     # (not arrested like Bingham), without requiring inviscid M&M accuracy.
-    # Re ≈ sqrt(g*H0)*L0/nu ~ 20, so viscous effects are significant.
+    # $Re \approx \sqrt{g \cdot H_0} \cdot L_0 / \nu \sim 20$, so viscous effects are significant.
     XSTAR_THRESHOLD = 1.3   # X* > 1.3 means front moved at least 0.3*L0
 
     print(f'\n  ── Martin-Moyce front check (Newtonian regression, τ_y=0) ──')
@@ -408,7 +408,7 @@ def _check_bingham_slump(dumpname):
     else:
         x_f_sph = 0.0
 
-    # Profile L₂: compare h_sph vs analytical over active columns
+    # Profile $L_2$: compare h_sph vs analytical over active columns
     h_an_cents = h_analytical(x_cents)
     active = (h_sph > 0.01 * H0) | (h_an_cents > 0.01 * H0)
     if np.any(active):
@@ -430,10 +430,10 @@ def _check_bingham_slump(dumpname):
 # ─── Reference velocity for Re print (Case A info line) ──────────────────────
 U_ref_A = math.sqrt(g * H0)   # = U_char for Case A
 
-# ─── Run Case A: Newtonian regression (τ_y = 0) ──────────────────────────────
+# ─── Run Case A: Newtonian regression ($\tau_y = 0$) ──────────────────────────────
 err_A = run_case('caseA_newtonian', 0.0, steps_A)
 
-# ─── Run Case B: Bingham slump (τ_y = 50 Pa) ─────────────────────────────────
+# ─── Run Case B: Bingham slump ($\tau_y = 50$ Pa) ─────────────────────────────────
 err_hc, err_xf, L2_B = run_case('caseB_bingham', tau_y, steps_B)
 
 # ─── Summary ─────────────────────────────────────────────────────────────────

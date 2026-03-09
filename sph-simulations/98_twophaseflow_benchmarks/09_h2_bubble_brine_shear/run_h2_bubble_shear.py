@@ -21,28 +21,28 @@ WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIME
 
 maintainer: dkrach, david.krach@mib.uni-stuttgart.de
 
-H₂ Bubble in Brine Under Shear + Snap-back — three-phase WCSPH run script.
+H$_2$ Bubble in Brine Under Shear + Snap-back — three-phase WCSPH run script.
 
 BENCHMARK DESCRIPTION
 ---------------------
-Underground Hydrogen Storage (UHS) pore-scale benchmark.  A sessile H₂ bubble
+Underground Hydrogen Storage (UHS) pore-scale benchmark.  A sessile H$_2$ bubble
 is attached to the underside of a caprock (top solid wall) in brine.  The
 simulation runs in three consecutive phases without restart:
 
 Phase 1 — Relaxation
-  A cubic patch of H₂ ('W') sits against the stationary top caprock wall,
-  surrounded by brine ('N').  Surface tension (σ) and the prescribed contact
-  angle (θ_eq, typically 40° — hydrophobic caprock in UHS conditions) reshape
+  A cubic patch of H$_2$ ('W') sits against the stationary top caprock wall,
+  surrounded by brine ('N').  Surface tension ($\sigma$) and the prescribed contact
+  angle ($\theta_\mathrm{eq}$, typically 40° — hydrophobic caprock in UHS conditions) reshape
   the cube into a spherical-cap bubble.  Both solid walls are stationary.
-  Gravity acts in the −y direction; H₂ is buoyant (ρ_H2 ≈ 100 kg/m³ at
+  Gravity acts in the $-y$ direction; H$_2$ is buoyant ($\rho_\mathrm{H_2} \approx 100\,\mathrm{kg/m^3}$ at
   130 bar) so it remains pressed against the caprock.
 
 Phase 2 — Shear
   After relaxation the BOTTOM solid wall is set to velocity U_wall in the
   x direction (Couette-like driving).  The resulting shear flow deforms the
-  bubble.  Contact-angle hysteresis (θ_rec, θ_adv) pins the contact line,
+  bubble.  Contact-angle hysteresis ($\theta_\mathrm{rec}$, $\theta_\mathrm{adv}$) pins the contact line,
   so the bubble tilts but the contact area does not fully slide.  The extent
-  of deformation is characterised by the capillary number Ca = μ_brine U_wall / σ.
+  of deformation is characterised by the capillary number $\mathrm{Ca} = \mu_\mathrm{brine} U_\mathrm{wall} / \sigma$.
 
 Phase 3 — Snap-back
   The bottom wall velocity is reset to zero.  With hysteresis pinning active
@@ -50,20 +50,20 @@ Phase 3 — Snap-back
   x-displacement is the trapping/recovery metric.
 
 Domain:
-  x : 4·lref    periodic
-  y : 2·lref     solid walls  (top = caprock stationary, bottom moves in shear)
-  z : 2·lref     periodic
+  x : 4$\cdot$lref    periodic
+  y : 2$\cdot$lref     solid walls  (top = caprock stationary, bottom moves in shear)
+  z : 2$\cdot$lref     periodic
 
-Physical parameters (H₂–brine at UHS conditions, ≈130 bar):
-  ρ_H2      = 100  kg/m³   (density ratio 1:10 with brine)
-  ρ_brine   = 1000 kg/m³
-  μ_H2      = 1e-4 Pa·s
-  μ_brine   = 1e-3 Pa·s
+Physical parameters (H$_2$–brine at UHS conditions, $\approx$130 bar):
+  $\rho_\mathrm{H_2}$      = 100  kg/m$^3$   (density ratio 1:10 with brine)
+  $\rho_\mathrm{brine}$   = 1000 kg/m$^3$
+  $\mu_\mathrm{H_2}$      = 1e-4 $\mathrm{Pa \cdot s}$
+  $\mu_\mathrm{brine}$   = 1e-3 $\mathrm{Pa \cdot s}$
 
 Key dimensionless numbers:
-  Bond number  Bo = Δρ g R² / σ  ≈ 0.88   (buoyancy important)
-  Capillary    Ca = μ_brine U_wall / σ = 0.001  (surface-tension dominated)
-  Reynolds     Re = ρ_brine U_wall lref / μ_brine = 10
+  Bond number  $\mathrm{Bo} = \Delta\rho\, g R^2 / \sigma \approx 0.88$   (buoyancy important)
+  Capillary    $\mathrm{Ca} = \mu_\mathrm{brine} U_\mathrm{wall} / \sigma = 0.001$  (surface-tension dominated)
+  Reynolds     $\mathrm{Re} = \rho_\mathrm{brine} U_\mathrm{wall} l_\mathrm{ref} / \mu_\mathrm{brine} = 10$
 
 Usage:
     python3 run_h2_bubble_shear.py <num_length> <init_gsd_file> \\
@@ -80,7 +80,7 @@ Usage:
     steps_shear   : shear steps                        (default 50001)
     steps_snapback: snap-back steps                    (default 50001)
     gsd_period    : GSD write interval                 (default 200)
-    ca            : capillary number (→ U_wall = ca·σ/μ_brine) (default 0.001)
+    ca            : capillary number ($\to$ U_wall = ca$\cdot\sigma/\mu_\mathrm{brine}$) (default 0.001)
     sigma         : surface tension [N/m]              (default 0.01)
 """
 
@@ -135,7 +135,7 @@ gy         = -9.81        # gravitational acceleration (−y direction)      [m/
 backpress  = 0.01         # background pressure coefficient                [–]
 drho       = 0.01         # allowed density variation                      [–]
 
-# U_wall derived from capillary number: Ca = μ_brine · U_wall / σ
+# U_wall derived from capillary number: $Ca = \mu_\mathrm{brine} \cdot U_\mathrm{wall} / \sigma$
 U_wall = ca * sigma / viscosity2
 
 H_flu          = 2 * lref                                   # fluid channel height  [m]
@@ -359,7 +359,7 @@ if device.communicator.rank == 0:
         D_param = (L - B) / (L + B) if (L + B) > 0 else 0.0
         delta_x_shear = cx_s - cx_r
         # Spherical-cap contact angle estimate (bubble on ceiling, extends downward)
-        # R = (r² + h²)/(2h),  cos(θ_cap) = (R - h)/R = 1 - 2h²/(r² + h²)
+        # $R = (r^2 + h^2)/(2h)$,  $\cos(\theta_\mathrm{cap}) = (R - h)/R = 1 - 2h^2/(r^2 + h^2)$
         r_cap = dx_s / 2.0
         h_cap = dy_s
         if r_cap**2 + h_cap**2 > 0:

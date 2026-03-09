@@ -51,8 +51,8 @@ export_tpf       + fictitious solid velocity (aux1), solid-fluid normal (aux2),
                  fluid-fluid normal (aux3), surface-force density (aux4)
 export_gdgd      + fictitious solid velocity (aux1), scalar field T (aux4.x)
 export_fs        + fictitious solid velocity (aux1), back-pressure correction (aux2),
-                 transport velocity (aux3), kernel completeness λ (aux4.x),
-                 curvature κ (aux4.y)
+                 transport velocity (aux3), kernel completeness :math:`\lambda` (aux4.x),
+                 curvature :math:`\kappa` (aux4.y)
 export_tpftv     + fictitious solid velocity (aux1), back-pressure correction (aux2),
                  transport velocity (aux3), surface-force density (aux4)
 export_all       + all four auxiliary vectors (raw labels)
@@ -467,9 +467,9 @@ def export_fs(GSDfilename):
       free-surface outward normal that temporarily occupies this slot during
       ``detect_freesurface()`` has already been overwritten by ``forcecomputation()``
     - ``auxiliary3`` — transport velocity
-    - ``auxiliary4.x`` — kernel completeness λ (Shepard sum; λ < fs_threshold
-      identifies free-surface particles)
-    - ``auxiliary4.y`` — mean curvature κ (computed only for surface particles;
+    - ``auxiliary4.x`` — kernel completeness :math:`\lambda` (Shepard sum;
+      :math:`\lambda < ` ``fs_threshold`` identifies free-surface particles)
+    - ``auxiliary4.y`` — mean curvature :math:`\kappa` (computed only for surface particles;
       zero for bulk particles)
 
     Parameters

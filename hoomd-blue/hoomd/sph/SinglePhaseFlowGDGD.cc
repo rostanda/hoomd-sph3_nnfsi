@@ -154,7 +154,7 @@ SinglePhaseFlowGDGD<KT_, SET_>::~SinglePhaseFlowGDGD()
 // Parameter setter
 // ─────────────────────────────────────────────────────────────────────────────
 
-/*! \param kappa_s    Scalar diffusivity [m²/s]
+/*! \param kappa_s    Scalar diffusivity [m\f$^2\f$/s]
     \param beta_s    Expansion coefficient [1/K or 1/concentration unit]
     \param scalar_ref Reference scalar value (T_ref or c_ref)
     \param boussinesq If true, Boussinesq approximation; if false, VRD approach
@@ -296,10 +296,10 @@ void SinglePhaseFlowGDGD<KT_, SET_>::forcecomputation(uint64_t timestep)
             Scalar Ti = h_aux4.data[i].x;
 
             // Per-particle local rest density (VRD) or global rest density (Boussinesq).
-            // ρ₀_i = ρ₀_ref · (1 − β · (T_i − T_ref))
+            // $\rho_{0,i} = \rho_{0,\mathrm{ref}} \cdot (1 - \beta \cdot (T_i - T_\mathrm{ref}))$
             // Used in: (a) VRD pressure computation on-the-fly for SUMMATION,
-            //          (b) VRD dp/dρ chain rule for CONTINUITY,
-            //          (c) Boussinesq: set to global ρ₀ (unchanged EOS).
+            //          (b) VRD $\mathrm{d}p/\mathrm{d}\rho$ chain rule for CONTINUITY,
+            //          (c) Boussinesq: set to global $\rho_0$ (unchanged EOS).
             Scalar rho0_i = m_boussinesq
                             ? this->m_rho0
                             : this->m_rho0 * (Scalar(1.0) - m_beta_s * (Ti - m_scalar_ref));
@@ -398,17 +398,17 @@ void SinglePhaseFlowGDGD<KT_, SET_>::forcecomputation(uint64_t timestep)
                 Scalar dwdr   = this->m_skernel->dwijdr(meanh, r);
                 Scalar dwdr_r = dwdr / (r + epssqr);
 
-                // Symmetric volume factor (Vi² + Vj²) — used for pressure (SUMMATION),
+                // Symmetric volume factor $(V_i^2 + V_j^2)$ -- used for pressure (SUMMATION),
                 // viscosity, and scalar diffusion.
                 Scalar vijsqr = Vi*Vi + Vj*Vj;
 
                 // ── Pressure force ────────────────────────────────────────────
                 // DENSITYSUMMATION: symmetric Adami 2013 formulation.
-                //   temp0 = (V_i²+V_j²) · (ρ_j·P_i + ρ_i·P_j) / (ρ_i+ρ_j)
-                //   F_p   = −temp0 · dW/dr / r · dx
+                //   $\mathrm{temp0} = (V_i^2+V_j^2) \cdot (\rho_j P_i + \rho_i P_j) / (\rho_i+\rho_j)$
+                //   $F_p = -\mathrm{temp0} \cdot \mathrm{d}W/\mathrm{d}r / r \cdot \mathrm{d}x$
                 // DENSITYCONTINUITY: weakly-compressible pressure interaction.
-                //   temp0 = m_i·m_j · (P_i + P_j) / (ρ_i·ρ_j)
-                //   (vijsqr factor is absorbed into mi·mj normalisation)
+                //   $\mathrm{temp0} = m_i m_j \cdot (P_i + P_j) / (\rho_i \rho_j)$
+                //   (vijsqr factor is absorbed into $m_i m_j$ normalisation)
                 Scalar temp0;
                 if (this->m_density_method == DENSITYSUMMATION)
                     temp0 = vijsqr * (rhoj * Pi_use + rhoi * Pj_use) / (rhoi + rhoj);
@@ -440,7 +440,7 @@ void SinglePhaseFlowGDGD<KT_, SET_>::forcecomputation(uint64_t timestep)
                 h_force.data[i].z -= (temp0 + avc) * dwdr_r * dx.z;
 
                 // ── Viscous force ─────────────────────────────────────────────
-                // F_visc = μ_eff · (V_i²+V_j²) · dW/dr/r · (v_i − v_j)
+                // $F_\mathrm{visc} = \mu_\mathrm{eff} \cdot (V_i^2+V_j^2) \cdot \mathrm{d}W/\mathrm{d}r/r \cdot (v_i - v_j)$
                 // (same formula for both density methods — uses vijsqr)
                 {
                 Scalar dvnorm    = sqrt(dot(dv, dv));
@@ -458,8 +458,8 @@ void SinglePhaseFlowGDGD<KT_, SET_>::forcecomputation(uint64_t timestep)
 
                 // ── Scalar diffusion ──────────────────────────────────────────
                 // Morris-Fox-Zhu (1997) SPH Laplacian operator applied to T:
-                //   dT_i/dt += (κ_s / V_i) · (V_i²+V_j²) · (T_i−T_j) · dW/dr / r
-                // Units: [m²/s]/[m³] · [m⁶] · [K] · [m⁻⁵] = [K/s]  ✓
+                //   $\mathrm{d}T_i/\mathrm{d}t \mathrel{+}= (\kappa_s / V_i) \cdot (V_i^2+V_j^2) \cdot (T_i-T_j) \cdot \mathrm{d}W/\mathrm{d}r / r$
+                // Units: [m$^2$/s]/[m$^3$] $\cdot$ [m$^6$] $\cdot$ [K] $\cdot$ [m$^{-5}$] = [K/s]
                 // Applied for all neighbours including solid particles, enabling
                 // Dirichlet wall temperature BCs via prescribed aux4.x on solid particles.
                 h_ratedpe.data[i].z += m_kappa_s / Vi * vijsqr * (Ti - Tj) * dwdr_r;
@@ -479,7 +479,7 @@ void SinglePhaseFlowGDGD<KT_, SET_>::forcecomputation(uint64_t timestep)
                         dv.z = vi.z - vj.z;
                         }
 
-                    // dρ_i/dt += ρ_i · V_j · (v_i − v_j) · ∇W_{ij}
+                    // $\mathrm{d}\rho_i/\mathrm{d}t += \rho_i \cdot V_j \cdot (\mathbf{v}_i - \mathbf{v}_j) \cdot \nabla W_{ij}$
                     h_ratedpe.data[i].x += rhoi * Vj * dot(dv, dwdr_r * dx);
 
                     // Density diffusion (Molteni & Colagrossi 2009), if enabled
@@ -494,9 +494,9 @@ void SinglePhaseFlowGDGD<KT_, SET_>::forcecomputation(uint64_t timestep)
 
             // ── Post-pair per-particle updates ────────────────────────────────
 
-            // dp/dt chain rule (DENSITYCONTINUITY only).
-            // In VRD mode: ∂P/∂ρ is evaluated at the per-particle rest density ρ₀_i.
-            // In Boussinesq mode: global ρ₀ is used (standard single-phase EOS).
+            // $\mathrm{d}p/\mathrm{d}t$ chain rule (DENSITYCONTINUITY only).
+            // In VRD mode: $\partial P/\partial\rho$ is evaluated at the per-particle rest density $\rho_{0,i}$.
+            // In Boussinesq mode: global $\rho_0$ is used (standard single-phase EOS).
             if (this->m_density_method == DENSITYCONTINUITY)
                 {
                 Scalar dpdrho = m_boussinesq
@@ -506,10 +506,10 @@ void SinglePhaseFlowGDGD<KT_, SET_>::forcecomputation(uint64_t timestep)
                 }
 
             // ── Boussinesq buoyancy correction ────────────────────────────────
-            // Standard gravity F_g = m·g is applied uniformly by applyBodyForce().
+            // Standard gravity $F_g = m \cdot g$ is applied uniformly by applyBodyForce().
             // Boussinesq adds the density-deviation-driven buoyancy part:
-            //   ΔF_b = m_i · g · (−β · (T_i − T_ref))
-            // so the net body force per particle becomes m·g·(1 − β·(T_i − T_ref)).
+            //   $\Delta F_b = m_i \cdot g \cdot (-\beta \cdot (T_i - T_\mathrm{ref}))$
+            // so the net body force per particle becomes $m g (1 - \beta (T_i - T_\mathrm{ref}))$.
             // In VRD mode this correction is NOT applied: buoyancy emerges naturally
             // from the variable-reference-density pressure gradient.
             if (m_boussinesq)
@@ -527,9 +527,9 @@ void SinglePhaseFlowGDGD<KT_, SET_>::forcecomputation(uint64_t timestep)
         } // End GPU Array Scope
 
     // Apply uniform gravity / body force to all fluid particles.
-    // In Boussinesq mode this contributes F_g = m·g; the correction ΔF_b added
-    // inside the loop makes the total m·g·(1 − β·(T−T_ref)).
-    // In VRD mode this contributes F_g = m·g; buoyancy is implicit in pressure.
+    // In Boussinesq mode this contributes $F_g = m g$; the correction $\Delta F_b$ added
+    // inside the loop makes the total $m g (1 - \beta (T - T_\mathrm{ref}))$.
+    // In VRD mode this contributes $F_g = m g$; buoyancy is implicit in pressure.
     this->applyBodyForce(timestep, this->m_fluidgroup);
     }
 
@@ -594,7 +594,7 @@ void export_SinglePhaseFlowGDGD(pybind11::module& m, std::string name)
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Explicit template instantiations (5 kernels × 2 EOS = 10 variants)
+// Explicit template instantiations (5 kernels x 2 EOS = 10 variants)
 // ─────────────────────────────────────────────────────────────────────────────
 
 template class PYBIND11_EXPORT SinglePhaseFlowGDGD<wendlandc2, linear>;

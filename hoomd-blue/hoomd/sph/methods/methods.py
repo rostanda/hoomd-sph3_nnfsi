@@ -71,16 +71,25 @@ class Method(AutotunedObject):
 
 
 class VelocityVerlet(Method):
-    r"""
+    r"""Velocity-Verlet SPH integration method.
 
     Args:
         filter (hoomd.filter.filter_like): Subset of particles on which to
             apply this method.
+        densitymethod (str): Density computation strategy,
+            ``'SUMMATION'`` or ``'CONTINUITY'``.
 
-    Based on md-`NVE` integrates integrates translational degrees of freedom
-    using Velocity-Verlet.
+    Integrates translational degrees of freedom using the Velocity-Verlet
+    (leapfrog) scheme:
 
-    Examples::
+    .. math::
+
+        \mathbf{v}_i^{n+1/2} &= \mathbf{v}_i^n
+                               + \frac{\Delta t}{2} \mathbf{a}_i^n \\
+        \mathbf{r}_i^{n+1}   &= \mathbf{r}_i^n
+                               + \Delta t\, \mathbf{v}_i^{n+1/2} \\
+        \mathbf{v}_i^{n+1}   &= \mathbf{v}_i^{n+1/2}
+                               + \frac{\Delta t}{2} \mathbf{a}_i^{n+1}
 
     Attributes:
         filter (hoomd.filter.filter_like): Subset of particles on which to
@@ -150,16 +159,17 @@ class VelocityVerlet(Method):
 
 
 class VelocityVerletBasic(Method):
-    r"""
+    r"""Basic Velocity-Verlet SPH integration method (single-phase only).
 
     Args:
         filter (hoomd.filter.filter_like): Subset of particles on which to
             apply this method.
+        densitymethod (str): Density computation strategy,
+            ``'SUMMATION'`` or ``'CONTINUITY'``.
 
-    Based on md-`NVE` integrates integrates translational degrees of freedom
-    using Velocity-Verlet.
-
-    Examples::
+    Simplified Velocity-Verlet integrator without transport-velocity
+    corrections; equivalent to `VelocityVerlet` but without the TV
+    half-step for the position update.
 
     Attributes:
         filter (hoomd.filter.filter_like): Subset of particles on which to
@@ -227,16 +237,34 @@ class VelocityVerletBasic(Method):
         
 
 class KickDriftKickTV(Method):
-    r"""
+    r"""Kick-Drift-Kick integration method with transport-velocity (TV) correction.
 
     Args:
         filter (hoomd.filter.filter_like): Subset of particles on which to
             apply this method.
+        densitymethod (str): Density computation strategy,
+            ``'SUMMATION'`` or ``'CONTINUITY'``.
+        vlimit (bool): Enable velocity limiter.  Default ``False``.
+        vlimit_val (float): Maximum allowed velocity magnitude.
+        xlimit (bool): Enable position limiter.  Default ``False``.
+        xlimit_val (float): Maximum allowed position displacement per step.
 
-    Based on md-`NVE` integrates integrates translational degrees of freedom
-    using Velocity-Verlet.
+    Implements the transport-velocity formulation of Adami et al. (2013).
+    Particle positions are advanced along the smooth transport velocity
+    :math:`\tilde{\mathbf{v}}_i` rather than the physical velocity
+    :math:`\mathbf{v}_i`:
 
-    Examples::
+    .. math::
+
+        \tilde{\mathbf{v}}_i^{n+1/2} &= \mathbf{v}_i^n
+                                       + \frac{\Delta t}{2}
+                                         \mathbf{a}_i^n \\
+        \mathbf{r}_i^{n+1}           &= \mathbf{r}_i^n
+                                       + \Delta t\,
+                                         \tilde{\mathbf{v}}_i^{n+1/2} \\
+        \mathbf{v}_i^{n+1}           &= \mathbf{v}_i^{n+1/2}
+                                       + \frac{\Delta t}{2}
+                                         \mathbf{a}_i^{n+1}
 
     Attributes:
         filter (hoomd.filter.filter_like): Subset of particles on which to

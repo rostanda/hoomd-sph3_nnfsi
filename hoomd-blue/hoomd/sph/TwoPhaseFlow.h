@@ -172,17 +172,17 @@ class PYBIND11_EXPORT TwoPhaseFlow : public SPHBaseClass<KT_, SET1_>
         /*! Turn Monaghan artificial viscosity (AV) on.
          *
          *  Adds a viscous dissipation term to the pressure force for approaching
-         *  fluid particle pairs (v_ij · r_ij < 0) only.  The Monaghan 1992 form:
+         *  fluid particle pairs (\f$v_{ij} \cdot r_{ij} < 0\f$) only.  The Monaghan 1992 form:
          *
-         *    Π_ij = (−α c_max μ_ij + β μ_ij²) / ρ̄_ij
+         *    \f$\Pi_{ij} = (-\alpha c_\mathrm{max} \mu_{ij} + \beta \mu_{ij}^2) / \bar{\rho}_{ij}\f$
          *
-         *  where  μ_ij = h̄ (v_ij · r_ij) / (r_ij² + η²),  η = 0.1 h̄,
-         *         c_max is the global maximum speed of sound (from setParams),
-         *         ρ̄_ij = (ρ_i + ρ_j) / 2.
+         *  where  \f$\mu_{ij} = \bar{h} (v_{ij} \cdot r_{ij}) / (r_{ij}^2 + \eta^2)\f$, \f$\eta = 0.1\bar{h}\f$,
+         *         \f$c_\mathrm{max}\f$ is the global maximum speed of sound (from setParams),
+         *         \f$\bar{\rho}_{ij} = (\rho_i + \rho_j) / 2\f$.
          *
-         *  The linear term (α) diffuses velocity divergence; the quadratic term (β)
+         *  The linear term (\f$\alpha\f$) diffuses velocity divergence; the quadratic term (\f$\beta\f$)
          *  is a Rankine–Hugoniot correction active only in shock-like conditions.
-         *  For most weakly-compressible flows β = 0 and α ∈ [0.01, 0.1] suffices.
+         *  For most weakly-compressible flows \f$\beta = 0\f$ and \f$\alpha \in [0.01, 0.1]\f$ suffices.
          *  Applied only to fluid–fluid pairs.  Mutually exclusive with Riemann
          *  dissipation (activateRiemannDissipation).
          *
@@ -283,25 +283,25 @@ class PYBIND11_EXPORT TwoPhaseFlow : public SPHBaseClass<KT_, SET1_>
 
         /*! Turn consistent interface pressure (CIP) on.
          *
-         *  For DENSITYSUMMATION and cross-phase fluid pairs (fluid 1 ↔ fluid 2),
+         *  For DENSITYSUMMATION and cross-phase fluid pairs (fluid 1 \f$\leftrightarrow\f$ fluid 2),
          *  replaces the standard actual-density-weighted pressure average
          *
-         *    p̄_ij = (ρ_j · p_i  +  ρ_i · p_j) / (ρ_i + ρ_j)            [standard]
+         *    \f$\bar{p}_{ij} = (\rho_j p_i + \rho_i p_j) / (\rho_i + \rho_j)\f$            [standard]
          *
          *  with a rest-density-weighted form plus a hydrostatic correction:
          *
-         *    p̄_ij = (ρ₀ⱼ · p_i  +  ρ₀ᵢ · p_j  +  ρ₀ᵢ ρ₀ⱼ (g · r_ij)) / (ρ₀ᵢ + ρ₀ⱼ)
+         *    \f$\bar{p}_{ij} = (\rho_{0j} p_i + \rho_{0i} p_j + \rho_{0i} \rho_{0j} (g \cdot r_{ij})) / (\rho_{0i} + \rho_{0j})\f$
          *
-         *  where g = getAcceleration(timestep) is the body-force acceleration and
-         *  r_ij = r_i − r_j.
+         *  where \f$g\f$ = getAcceleration(timestep) is the body-force acceleration and
+         *  \f$r_{ij} = r_i - r_j\f$.
          *
          *  Physical motivation: in hydrostatic equilibrium the pressure gradient is
-         *  ∇p = ρ g, which is discontinuous at a density-ratio interface.  The
+         *  \f$\nabla p = \rho g\f$, which is discontinuous at a density-ratio interface.  The
          *  standard density-weighted average introduces a systematic error proportional
-         *  to (ρ₁ − ρ₂) that drives spurious "parasitic" interfacial velocities.
-         *  Rest-density weighting removes this bias; the g · r_ij term ensures the
+         *  to \f$(\rho_1 - \rho_2)\f$ that drives spurious "parasitic" interfacial velocities.
+         *  Rest-density weighting removes this bias; the \f$g \cdot r_{ij}\f$ term ensures the
          *  discretised pressure gradient exactly reproduces gravity for a static column,
-         *  regardless of density ratio.  Especially beneficial for water/air (ρ ratio
+         *  regardless of density ratio.  Especially beneficial for water/air (\f$\rho\f$ ratio
          *  ~ 1000:1) cases.
          *
          *  Same-phase pairs, solid-boundary interactions, and DENSITYCONTINUITY are
@@ -326,20 +326,20 @@ class PYBIND11_EXPORT TwoPhaseFlow : public SPHBaseClass<KT_, SET1_>
          *
          *  Replaces Monaghan AV with a physically-motivated dissipation derived from
          *  the linearised inter-particle Riemann problem.  Uses the harmonic mean of
-         *  acoustic impedances Z = ρ c to handle density and speed-of-sound contrasts
+         *  acoustic impedances \f$Z = \rho c\f$ to handle density and speed-of-sound contrasts
          *  across the interface naturally:
          *
-         *    Z*_ij  =  Z_i · Z_j / (Z_i + Z_j),   Z = ρ c        [harmonic impedance]
-         *    u_ij   =  (v_i − v_j) · (r_i − r_j) / (|r_ij| + η)  [signed radial vel.]
-         *    avc    =  −β_R · Z*_ij · u_ij⁻ / ρ̄_ij               (u⁻ = min(u, 0))
+         *    \f$Z^*_{ij}  =  Z_i \cdot Z_j / (Z_i + Z_j)\f$,   \f$Z = \rho c\f$        [harmonic impedance]
+         *    \f$u_{ij}   =  (v_i - v_j) \cdot (r_i - r_j) / (|r_{ij}| + \eta)\f$  [signed radial vel.]
+         *    \f$\mathrm{avc}    =  -\beta_R \cdot Z^*_{ij} \cdot u_{ij}^- / \bar{\rho}_{ij}\f$               (\f$u^- = \min(u, 0)\f$)
          *
-         *  where ρ̄_ij = (ρ_i + ρ_j) / 2.  Applied only to approaching fluid–fluid
-         *  pairs (v_ij · r_ij < 0).  Mutually exclusive with Monaghan AV.
+         *  where \f$\bar{\rho}_{ij} = (\rho_i + \rho_j) / 2\f$.  Applied only to approaching fluid–fluid
+         *  pairs (\f$v_{ij} \cdot r_{ij} < 0\f$).  Mutually exclusive with Monaghan AV.
          *
          *  Advantages over Monaghan AV for two-phase flows:
-         *    - No α/β parameters to tune per problem (only one global β_R ≈ 1).
+         *    - No \f$\alpha\f$/\f$\beta\f$ parameters to tune per problem (only one global \f$\beta_R \approx 1\f$).
          *    - Impedance mismatch at the interface is handled automatically:
-         *      Z* → Z_light/2 when Z_heavy >> Z_light (e.g. water/air).
+         *      \f$Z^* \rightarrow Z_\mathrm{light}/2\f$ when \f$Z_\mathrm{heavy} \gg Z_\mathrm{light}\f$ (e.g. water/air).
          *    - Low dissipation in smooth regions; increases only near shocks/interfaces.
          *
          *  Reference: Zhang, Hu & Adams (2017) J. Comput. Phys. 340, 439–455.
@@ -362,13 +362,13 @@ class PYBIND11_EXPORT TwoPhaseFlow : public SPHBaseClass<KT_, SET1_>
 
         /*! Turn Molteni–Colagrossi density diffusion on (DENSITYCONTINUITY only).
          *
-         *  Adds a diffusive correction to dρ/dt to smooth density oscillations:
+         *  Adds a diffusive correction to \f$\mathrm{d}\rho/\mathrm{d}t\f$ to smooth density oscillations:
          *
-         *    dρ_i/dt += −2 δ h̄ c_max m_j (ρ_i/ρ₀ᵢ − ρ_j/ρ₀ⱼ) (r_ij · ∇W_ij) / (r²+η²)
+         *    \f$\mathrm{d}\rho_i/\mathrm{d}t \mathrel{+}= -2\delta\bar{h} c_\mathrm{max} m_j (\rho_i/\rho_{0i} - \rho_j/\rho_{0j}) (r_{ij} \cdot \nabla W_{ij}) / (r^2+\eta^2)\f$
          *
-         *  The drive term (ρ_i/ρ₀ᵢ − ρ_j/ρ₀ⱼ) is the rest-density-normalised form
-         *  rather than the original (ρ_i/ρ_j − 1).  The original is non-zero at
-         *  equilibrium when the two phases have different rest densities (ρ₀₁ ≠ ρ₀₂),
+         *  The drive term \f$(\rho_i/\rho_{0i} - \rho_j/\rho_{0j})\f$ is the rest-density-normalised form
+         *  rather than the original \f$(\rho_i/\rho_j - 1)\f$.  The original is non-zero at
+         *  equilibrium when the two phases have different rest densities (\f$\rho_{01} \neq \rho_{02}\f$),
          *  causing unphysical density drift across the interface.  The normalised form
          *  equals zero at equilibrium for both single- and two-phase flows, correcting
          *  stratified-flow artefacts.
@@ -376,7 +376,7 @@ class PYBIND11_EXPORT TwoPhaseFlow : public SPHBaseClass<KT_, SET1_>
          *  Reference: Molteni & Colagrossi (2009) Comput. Phys. Commun. 180, 861–872.
          *             Two-phase correction: see also Grenier et al. (2013).
          *
-         * \param ddiff  Diffusion coefficient δ (typically 0.1; range 0.05–0.2)
+         * \param ddiff  Diffusion coefficient \f$\delta\f$ (typically 0.1; range 0.05–0.2)
          */
         void activateDensityDiffusion(Scalar ddiff)
             {
@@ -433,7 +433,7 @@ class PYBIND11_EXPORT TwoPhaseFlow : public SPHBaseClass<KT_, SET1_>
             m_fickian_shifting = false;
             }
 
-        /*! Activate δ⁺-SPH particle shifting (Sun et al. 2017, Comput. Fluids).
+        /*! Activate \f$\delta^+\f$-SPH particle shifting (Sun et al. 2017, Comput. Fluids).
          * Shifts fluid particle positions each step to maintain regularity and
          * prevent clustering. The interface-normal component is projected out so
          * that particles cannot cross the fluid-fluid interface.
@@ -447,7 +447,7 @@ class PYBIND11_EXPORT TwoPhaseFlow : public SPHBaseClass<KT_, SET1_>
                                        unsigned int n = 4,
                                        bool interface_condition = true);
 
-        /*! Turn δ⁺-SPH particle shifting off.
+        /*! Turn \f$\delta^+\f$-SPH particle shifting off.
          */
         void deactivateParticleShifting()
             {
@@ -531,9 +531,9 @@ class PYBIND11_EXPORT TwoPhaseFlow : public SPHBaseClass<KT_, SET1_>
         Scalar m_omega_rec; //!< Receding  contact angle for hysteresis [deg]
         bool   m_hysteresis; //!< True if contact-angle hysteresis is active
 
-        Scalar m_avalpha; //!< Monaghan AV: linear (volumetric) diffusion coefficient α
-        Scalar m_avbeta;  //!< Monaghan AV: quadratic (shock) diffusion coefficient β
-        Scalar m_riemann_beta; //!< Riemann dissipation: scaling coefficient β_R (Zhang et al. 2017)
+        Scalar m_avalpha; //!< Monaghan AV: linear (volumetric) diffusion coefficient \f$\alpha\f$
+        Scalar m_avbeta;  //!< Monaghan AV: quadratic (shock) diffusion coefficient \f$\beta\f$
+        Scalar m_riemann_beta; //!< Riemann dissipation: scaling coefficient \f$\beta_R\f$ (Zhang et al. 2017)
         Scalar m_ddiff; //!< Diffusion coefficient for Molteni type density diffusion
         unsigned int m_shepardfreq; //!< Time step frequency for Shepard reinitialization
 
@@ -571,8 +571,8 @@ class PYBIND11_EXPORT TwoPhaseFlow : public SPHBaseClass<KT_, SET1_>
         bool m_density_reinitialization; //!< True if periodic density resummation is activated
         unsigned int m_densityreinitfreq; //!< Frequency for density reinitialization
 
-        // Particle shifting (δ⁺-SPH, Sun et al. 2017)
-        bool m_particle_shifting;            //!< True if δ⁺-SPH particle shifting is activated
+        // Particle shifting (\f$\delta^+\f$-SPH, Sun et al. 2017)
+        bool m_particle_shifting;            //!< True if \f$\delta^+\f$-SPH particle shifting is activated
         Scalar m_shift_A;                    //!< Shifting amplitude A (default 0.2)
         Scalar m_shift_R;                    //!< Enhancement coefficient R (default 0.2)
         unsigned int m_shift_n;              //!< Enhancement exponent n (default 4)
@@ -614,10 +614,10 @@ class PYBIND11_EXPORT TwoPhaseFlow : public SPHBaseClass<KT_, SET1_>
         */
         void compute_particle_concentration_gradient(uint64_t timestep);
 
-        /*! Compute and apply δ⁺-SPH particle position shifts (Sun et al. 2017).
+        /*! Compute and apply \f$\delta^+\f$-SPH particle position shifts (Sun et al. 2017).
          * \pre compute_colorgradients() + update_ghost_aux123() must precede this call
          *      (aux3 must hold up-to-date fluid-fluid interface normals).
-         * \post Fluid particle positions updated by δr_i.
+         * \post Fluid particle positions updated by \f$\delta r_i\f$.
          * \post For DENSITYCONTINUITY: h_density corrected by ALE remapping term.
          */
         void compute_particle_shift(uint64_t timestep);

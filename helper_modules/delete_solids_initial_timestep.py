@@ -69,11 +69,11 @@ def delete_solids(sim, device, kernel, dt, mu, DX, rho0):
     dt : float
         Time-step size used for the single preliminary run step [s].
     mu : float
-        Dynamic viscosity of the fluid [Pa·s].
+        Dynamic viscosity of the fluid [:math:`\mathrm{Pa \cdot s}`].
     DX : float
         Initial particle spacing [m].
     rho0 : float
-        Reference fluid density [kg/m³].
+        Reference fluid density [:math:`\mathrm{kg/m^3}`].
 
     Returns
     -------

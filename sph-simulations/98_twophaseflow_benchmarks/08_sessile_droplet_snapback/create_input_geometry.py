@@ -26,38 +26,38 @@ Sessile Droplet Shear + Snap-back — initial geometry creation.
 BENCHMARK DESCRIPTION
 ---------------------
 A cube of fluid 'W' (droplet phase) is placed in contact with the bottom
-solid wall, immersed in the ambient fluid 'N'.  Surface tension (σ) and
-the prescribed contact angle (θ = 90°) morph the cube into a sessile
+solid wall, immersed in the ambient fluid 'N'.  Surface tension ($\sigma$) and
+the prescribed contact angle ($\theta = 90°$) morph the cube into a sessile
 spherical-cap droplet during the relaxation phase of the simulation.
 
 After equilibration the upper solid wall is moved at velocity U_wall
 (applied at runtime in run_sessile_droplet_snapback.py) to drive Couette-like
 shear flow that deforms the sessile droplet.  Contact-angle hysteresis
-(θ_rec=75°, θ_adv=105°) pins the contact line so that the droplet recovers
+($\theta\_rec=75°$, $\theta\_adv=105°$) pins the contact line so that the droplet recovers
 elastically when the shear is removed in the third (snap-back) phase.
 
 Domain:
-  x : 4·lref    periodic  (room for elongation under shear)
-  y : 2·lref     solid walls  (bottom stationary, top moving in shear phase)
-  z : 2·lref     periodic
+  x : $4 \cdot lref$    periodic  (room for elongation under shear)
+  y : $2 \cdot lref$     solid walls  (bottom stationary, top moving in shear phase)
+  z : $2 \cdot lref$     periodic
 
 Droplet cube:
-  side length  a = (2π/3)^(1/3)·lref  ≈ 1.28·lref  (volume-conserving for hemisphere)
+  side length  $a = (2\pi/3)^{1/3} \cdot lref \approx 1.28 \cdot lref$  (volume-conserving for hemisphere)
   centred at   x = 0, z = 0
-  bottom face  at y = −lref  (in contact with the bottom solid wall)
+  bottom face  at $y = -lref$  (in contact with the bottom solid wall)
 
 Solid walls:
   n_solid = 3 layers at bottom and top  (Adami 2012 no-slip BC)
   All solid velocities are zero in the init file.
   The top wall velocity is set at runtime before the shear phase.
 
-Expected sessile droplet shape (θ = 90°, hemisphere):
+Expected sessile droplet shape ($\theta = 90°$, hemisphere):
   R_sessile = H_flu/2 = lref  (by construction)
 
 Key dimensionless numbers (default parameters):
-  Bond number  Bo = ρ g R² / σ   ≈ 1.0    (gravity and surface tension comparable)
-  Capillary    Ca = μ U_wall / σ  = 0.001  (surface-tension dominated)
-  Reynolds     Re = ρ U_wall lref / μ       = 10
+  Bond number  $Bo = \rho g R^2 / \sigma \approx 1.0$    (gravity and surface tension comparable)
+  Capillary    $Ca = \mu U\_wall / \sigma = 0.001$  (surface-tension dominated)
+  Reynolds     $Re = \rho U\_wall\, lref / \mu = 10$
 
 Usage:
     python3 create_input_geometry.py <num_length>
@@ -89,7 +89,7 @@ kernel  = 'WendlandC4'
 slength = hoomd.sph.kernel.OptimalH[kernel] * dx   # smoothing length     [m]
 
 # ─── Box geometry ────────────────────────────────────────────────────────────
-# Fluid region : 4·lref (x) × 2·lref (y) × 2·lref (z)
+# Fluid region : $4 \cdot l_\mathrm{ref}$ (x) $\times$ $2 \cdot l_\mathrm{ref}$ (y) $\times$ $2 \cdot l_\mathrm{ref}$ (z)
 # Solid layers : n_solid rows at bottom and top in y.
 # x, z         : periodic.   y : bounded by solid walls.
 nx     = 4 * num_length            # wider in x for shear-driven elongation

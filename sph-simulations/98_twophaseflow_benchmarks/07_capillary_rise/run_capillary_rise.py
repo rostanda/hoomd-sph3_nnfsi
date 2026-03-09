@@ -29,21 +29,21 @@ A wetting liquid ('W') fills the lower region of a 3-D square-box domain that
 contains a vertical round capillary tube (solid ring 'S').  Gas ('N') fills
 the remaining space above the initial flat liquid–gas interface.
 
-Gravity acts in the −y direction.  Surface tension σ and the prescribed
-contact angle θ (via model.omega) drive capillary rise (θ < 90°) or
-capillary depression (θ > 90°) of the meniscus inside the tube.
+Gravity acts in the $-y$ direction.  Surface tension $\sigma$ and the prescribed
+contact angle $\theta$ (via model.omega) drive capillary rise ($\theta < 90°$) or
+capillary depression ($\theta > 90°$) of the meniscus inside the tube.
 
 VALIDATION — Jurin's law
-  h_Jurin = 2 σ cos(θ) / (ρ₁ g R_cap)
+  $h_\mathrm{Jurin} = 2 \sigma \cos(\theta) / (\rho_1 g R_\mathrm{cap})$
 
 The measured quantity is:
-  h_meas = y_meniscus_inside − y_reservoir_surface_outside
-         ≈ h_Jurin  at steady state (independent of reservoir size)
+  h_meas = y_meniscus_inside $-$ y_reservoir_surface_outside
+         $\approx$ h_Jurin  at steady state (independent of reservoir size)
 
 PHYSICAL PARAMETERS
   Read from capillary_rise_params.txt for the selected case_id.
-  Defaults: σ=0.01 N/m, ρ₁=1000 kg/m³, ρ₂=100 kg/m³,
-            μ₁=0.1 Pa·s, μ₂=0.001 Pa·s, g=9.81 m/s².
+  Defaults: $\sigma$=0.01 N/m, $\rho_1$=1000 kg/m$^3$, $\rho_2$=100 kg/m$^3$,
+            $\mu_1$=0.1 $\mathrm{Pa \cdot s}$, $\mu_2$=0.001 $\mathrm{Pa \cdot s}$, g=9.81 m/s$^2$.
 
 Usage:
     mpirun -np 4 python3 run_capillary_rise.py <num_length> <init_gsd> [case_id] [steps]
@@ -136,7 +136,7 @@ R_outer    = R_cap + n_wall * dx
 # Analytical Jurin height
 h_Jurin = 2.0 * sigma * np.cos(theta_rad) / (rho01 * abs(gy) * R_inner)
 
-# Reference velocity: capillary velocity scale = σ / (ρ₁ R)
+# Reference velocity: capillary velocity scale = $\sigma / (\rho_1 R)$
 # (upper bound on initial meniscus speed)
 U_cap  = sigma / (rho01 * R_cap)          # capillary velocity scale  [m/s]
 U_ref  = max(U_cap, 1e-8)                 # ensure nonzero refvel

@@ -70,36 +70,36 @@ maintainer: dkrach, david.krach@mib.uni-stuttgart.de
     Extends SinglePhaseFlowTV with:
 
     1. Free-surface detection via the Shepard kernel-completeness ratio
-           λ_i = V_i·W₀(h) + Σ_{j≠i} V_j·W(r_{ij},h)
-       Particles with λ_i < fs_threshold are flagged as free-surface particles.
-       Their outward unit normal is n̂_i = −∇λ_i / |∇λ_i|.
+           \f$\lambda_i = V_i W_0(h) + \sum_{j \neq i} V_j W(r_{ij}, h)\f$
+       Particles with \f$\lambda_i <\f$ fs_threshold are flagged as free-surface particles.
+       Their outward unit normal is \f$\hat{n}_i = -\nabla\lambda_i / |\nabla\lambda_i|\f$.
        Storage: aux2 (normals, temporarily), aux4.x (lambda), aux4.y (curvature).
 
     2. Contact-angle enforcement (Huber et al. 2016) at the triple line:
        near solid walls the free-surface normal is blended with the wall normal:
-           n̂_corrected = sin(θ_eq)·t̂_w + cos(θ_eq)·n̂_w
-       where n̂_w is the wall inward normal and t̂_w the tangential component
+           \f$\hat{n}_\mathrm{corrected} = \sin(\theta_\mathrm{eq})\,\hat{t}_w + \cos(\theta_\mathrm{eq})\,\hat{n}_w\f$
+       where \f$\hat{n}_w\f$ is the wall inward normal and \f$\hat{t}_w\f$ the tangential component
        of the gas-side free-surface normal.
 
     3. Curvature estimation:
-           κ_i = (1/V_i) Σ_j V_j (n̂_j − n̂_i)·∇W_{ij}
+           \f$\kappa_i = (1/V_i) \sum_j V_j (\hat{n}_j - \hat{n}_i) \cdot \nabla W_{ij}\f$
        Only computed for surface particles; stored in aux4.y.
 
     4. Free-surface pressure clamping:
-       Prevents unphysical tensile pressure at the surface (P ← max(0, P)).
+       Prevents unphysical tensile pressure at the surface (\f$P \leftarrow \max(0, P)\f$).
 
     5. Continuum surface force (CSF) in forcecomputation:
-           F_{σ,i} = −σ · κ_i · n̂_i · (m_i/ρ_i)
+           \f$F_{\sigma,i} = -\sigma \cdot \kappa_i \cdot \hat{n}_i \cdot (m_i/\rho_i)\f$
        The minus sign follows from CSF conventions: for a convex surface
-       (κ > 0, n̂ outward), the surface tension pulls inward.
+       (\f$\kappa > 0\f$, \f$\hat{n}\f$ outward), the surface tension pulls inward.
 
     Aux-array usage summary
     -----------------------
     aux1 : fictitious solid velocity (inherited, Adami 2012)
-    aux2 : free-surface outward normal (detect_freesurface → compute_curvature),
+    aux2 : free-surface outward normal (detect_freesurface \f$\rightarrow\f$ compute_curvature),
            then overwritten by BPC in forcecomputation (as in TV, for KickDriftKickTV)
     aux3 : transport velocity (inherited from TV)
-    aux4 : .x = λ (kernel completeness), .y = κ (curvature), .z unused
+    aux4 : .x = \f$\lambda\f$ (kernel completeness), .y = \f$\kappa\f$ (curvature), .z unused
 
     References
     ----------
@@ -149,17 +149,17 @@ class PYBIND11_EXPORT SinglePhaseFlowFS : public SinglePhaseFlowTV<KT_, SET_>
 
         /*! Set free-surface parameters.
          *
-         * \param sigma          Surface tension coefficient σ [N/m].  Set to 0
+         * \param sigma          Surface tension coefficient \f$\sigma\f$ [N/m].  Set to 0
          *                       to disable surface tension while keeping
          *                       free-surface detection active.
-         * \param fs_threshold   Kernel-completeness threshold λ ∈ (0,1).
-         *                       Particles with λ < fs_threshold are treated as
+         * \param fs_threshold   Kernel-completeness threshold \f$\lambda \in (0,1)\f$.
+         *                       Particles with \f$\lambda <\f$ fs_threshold are treated as
          *                       free-surface particles (typical value: 0.75).
-         * \param contact_angle  Equilibrium contact angle θ [rad] measured
+         * \param contact_angle  Equilibrium contact angle \f$\theta\f$ [rad] measured
          *                       inside the liquid from the solid wall.
-         *                       π/2 = neutral wetting (no correction applied),
+         *                       \f$\pi/2\f$ = neutral wetting (no correction applied),
          *                       0   = complete wetting,
-         *                       π   = complete non-wetting.
+         *                       \f$\pi\f$   = complete non-wetting.
          */
         void setFSParams(Scalar sigma, Scalar fs_threshold, Scalar contact_angle);
 
@@ -201,19 +201,19 @@ class PYBIND11_EXPORT SinglePhaseFlowFS : public SinglePhaseFlowTV<KT_, SET_>
     #endif
 
         // ── Free-surface parameters ───────────────────────────────────────────
-        Scalar m_sigma;          //!< Surface tension coefficient σ [N/m]
-        Scalar m_fs_threshold;   //!< λ threshold for surface detection
+        Scalar m_sigma;          //!< Surface tension coefficient \f$\sigma\f$ [N/m]
+        Scalar m_fs_threshold;   //!< \f$\lambda\f$ threshold for surface detection
         Scalar m_contact_angle;  //!< Equilibrium contact angle [rad]
 
         // ── Step 1: detect free surface ───────────────────────────────────────
-        /*! Compute kernel-completeness λ_i and outward free-surface normals n̂_i.
+        /*! Compute kernel-completeness \f$\lambda_i\f$ and outward free-surface normals \f$\hat{n}_i\f$.
          *
          *  Writes:
-         *    aux4.x ← λ_i  (Shepard sum including self contribution)
-         *    aux2   ← n̂_i  (unit outward normal; {0,0,0} for bulk particles)
+         *    aux4.x \f$\leftarrow \lambda_i\f$  (Shepard sum including self contribution)
+         *    aux2   \f$\leftarrow \hat{n}_i\f$  (unit outward normal; {0,0,0} for bulk particles)
          *
-         *  When the particle has solid neighbours and |θ − π/2| > 0.01 rad,
-         *  the contact-angle correction is applied to n̂_i.
+         *  When the particle has solid neighbours and \f$|\theta - \pi/2| > 0.01\f$ rad,
+         *  the contact-angle correction is applied to \f$\hat{n}_i\f$.
          *
          *  \pre  Density and smoothing lengths are up to date.
          *  \post aux2 and aux4.x are ready for compute_curvature().
@@ -221,13 +221,13 @@ class PYBIND11_EXPORT SinglePhaseFlowFS : public SinglePhaseFlowTV<KT_, SET_>
         void detect_freesurface(uint64_t timestep);
 
         // ── Step 2: compute curvature ─────────────────────────────────────────
-        /*! Compute mean curvature κ_i = (1/V_i) Σ_j V_j (n̂_j − n̂_i)·∇W_{ij}.
+        /*! Compute mean curvature \f$\kappa_i = (1/V_i) \sum_j V_j (\hat{n}_j - \hat{n}_i) \cdot \nabla W_{ij}\f$.
          *
-         *  Only executed for surface particles (λ_i < m_fs_threshold).
+         *  Only executed for surface particles (\f$\lambda_i <\f$ m_fs_threshold).
          *  Writes:
-         *    aux4.y ← κ_i
+         *    aux4.y \f$\leftarrow \kappa_i\f$
          *
-         *  \pre  detect_freesurface() has been called (aux2 holds n̂_i).
+         *  \pre  detect_freesurface() has been called (aux2 holds \f$\hat{n}_i\f$).
          *        In MPI runs, update_ghost_aux24() must be called first so that
          *        ghost-particle normals are available.
          *  \post aux4.y is ready for forcecomputation().
@@ -235,11 +235,11 @@ class PYBIND11_EXPORT SinglePhaseFlowFS : public SinglePhaseFlowTV<KT_, SET_>
         void compute_curvature(uint64_t timestep);
 
         // ── Step 3: free-surface pressure clamping ────────────────────────────
-        /*! Clamp pressure of free-surface particles to P ≥ 0.
+        /*! Clamp pressure of free-surface particles to \f$P \geq 0\f$.
          *
          *  Prevents unphysical tensile pressures that arise from the kernel
          *  truncation near the surface.  Applied only to particles with
-         *  λ_i < m_fs_threshold.
+         *  \f$\lambda_i <\f$ m_fs_threshold.
          */
         void apply_freesurface_pressure(uint64_t timestep);
 
@@ -250,7 +250,7 @@ class PYBIND11_EXPORT SinglePhaseFlowFS : public SinglePhaseFlowTV<KT_, SET_>
          *  is saved from aux2 (written by detect_freesurface), then aux2 is
          *  zeroed for BPC accumulation exactly as in SinglePhaseFlowTV.
          *  After the neighbour loop the CSF surface tension force is added:
-         *      F_{σ,i} += −σ · κ_i · n̂_i · (m_i/ρ_i)
+         *      \f$F_{\sigma,i} \mathrel{+}= -\sigma \cdot \kappa_i \cdot \hat{n}_i \cdot (m_i/\rho_i)\f$
          *
          *  \pre  detect_freesurface(), compute_curvature(), and
          *        apply_freesurface_pressure() have been called.
@@ -258,7 +258,7 @@ class PYBIND11_EXPORT SinglePhaseFlowFS : public SinglePhaseFlowTV<KT_, SET_>
         void forcecomputation(uint64_t timestep);
 
     #ifdef ENABLE_MPI
-        /*! Sync aux2 (fs normals) and aux4 (λ + κ) to ghost particles.
+        /*! Sync aux2 (fs normals) and aux4 (\f$\lambda\f$ + \f$\kappa\f$) to ghost particles.
          *
          *  Called between detect_freesurface() and compute_curvature() so that
          *  neighbour normals from other MPI ranks are available in the curvature

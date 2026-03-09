@@ -87,7 +87,17 @@ class _SmoothingKernel(_HOOMDBaseObject):
 
 
 class WendlandC2(_SmoothingKernel):
-    R""" Wendland C2 Kernel
+    R"""Wendland :math:`C^2` smoothing kernel.
+
+    .. math::
+
+        W(q) = \frac{\alpha_d}{h^d}
+               \left(1 - \frac{q}{2}\right)^4 (1 + 2q),
+        \quad q = r_{ij}/h,\; q \in [0, 2]
+
+    where :math:`\alpha_d` is the normalisation constant in :math:`d` spatial
+    dimensions and :math:`h` is the smoothing length.  The support radius
+    is :math:`r_\mathrm{cut} = \kappa h` with :math:`\kappa = 2`.
     """
     def __init__(self):
         # hoomd.util.print_status_line();
@@ -107,7 +117,17 @@ class WendlandC2(_SmoothingKernel):
         return self.kappa
 
 class WendlandC4(_SmoothingKernel):
-    R""" Wendland C4 Kernel
+    R"""Wendland :math:`C^4` smoothing kernel.
+
+    .. math::
+
+        W(q) = \frac{\alpha_d}{h^d}
+               \left(1 - \frac{q}{2}\right)^6
+               \left(1 + 3q + \frac{35}{12}q^2\right),
+        \quad q = r_{ij}/h,\; q \in [0, 2]
+
+    The support radius is :math:`r_\mathrm{cut} = \kappa h` with
+    :math:`\kappa = 2`.
     """
     def __init__(self):
         # hoomd.util.print_status_line();
@@ -127,7 +147,17 @@ class WendlandC4(_SmoothingKernel):
         return self.kappa
         
 class WendlandC6(_SmoothingKernel):
-    R""" Wendland C6 Kernel
+    R"""Wendland :math:`C^6` smoothing kernel.
+
+    .. math::
+
+        W(q) = \frac{\alpha_d}{h^d}
+               \left(1 - \frac{q}{2}\right)^8
+               \left(1 + 4q + \frac{25}{4}q^2 + 4q^3\right),
+        \quad q = r_{ij}/h,\; q \in [0, 2]
+
+    The support radius is :math:`r_\mathrm{cut} = \kappa h` with
+    :math:`\kappa = 2`.
     """
     def __init__(self):
         # hoomd.util.print_status_line();
@@ -147,7 +177,20 @@ class WendlandC6(_SmoothingKernel):
         return self.kappa
                
 class Quintic(_SmoothingKernel):
-    R""" Quintic Kernel
+    R"""Quintic (Morris) smoothing kernel.
+
+    .. math::
+
+        W(q) = \frac{\alpha_d}{h^d}
+               \begin{cases}
+               (3-q)^5 - 6(2-q)^5 + 15(1-q)^5, & 0 \leq q < 1 \\
+               (3-q)^5 - 6(2-q)^5,              & 1 \leq q < 2 \\
+               (3-q)^5,                          & 2 \leq q < 3 \\
+               0,                                & q \geq 3
+               \end{cases}
+
+    where :math:`q = r_{ij}/h`.  The support radius is
+    :math:`r_\mathrm{cut} = \kappa h` with :math:`\kappa = 3`.
     """
     def __init__(self):
         # Initialize base class
@@ -166,7 +209,19 @@ class Quintic(_SmoothingKernel):
         return self.kappa
         
 class CubicSpline(_SmoothingKernel):
-    R""" Cubic Spline Kernel
+    R"""Cubic spline (M4) smoothing kernel.
+
+    .. math::
+
+        W(q) = \frac{\alpha_d}{h^d}
+               \begin{cases}
+               \frac{2}{3} - q^2 + \frac{1}{2}q^3, & 0 \leq q < 1 \\
+               \frac{1}{6}(2 - q)^3,                & 1 \leq q < 2 \\
+               0,                                    & q \geq 2
+               \end{cases}
+
+    where :math:`q = r_{ij}/h`.  The support radius is
+    :math:`r_\mathrm{cut} = \kappa h` with :math:`\kappa = 2`.
     """
     def __init__(self):
         # Initialize base class

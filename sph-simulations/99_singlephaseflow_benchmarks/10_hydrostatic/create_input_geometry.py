@@ -23,7 +23,7 @@ maintainer: dkrach, david.krach@mib.uni-stuttgart.de
 
 Create initial GSD file for the hydrostatic pressure benchmark.
 
-Geometry: fluid column of height lref between two solid plates at y = ±lref/2.
+Geometry: fluid column of height lref between two solid plates at $y = \pm l_\mathrm{ref}/2$.
   - Fluid (type 'F', typeid 0): |y| < lref/2
   - Solid (type 'S', typeid 1): |y| >= lref/2
 

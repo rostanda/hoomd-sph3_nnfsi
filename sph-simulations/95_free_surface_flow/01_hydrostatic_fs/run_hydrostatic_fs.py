@@ -26,7 +26,7 @@ Hydrostatic pressure column with free surface — SinglePhaseFlowFS benchmark.
 BENCHMARK DESCRIPTION
 ---------------------
 A fluid column of height $l_\mathrm{ref}$ is in hydrostatic equilibrium under gravity
-($g_y = -9.81$ m/s²).  The bottom is a solid plate (Adami 2012 boundary);
+($g_y = -9.81\,\mathrm{m/s^2}$).  The bottom is a solid plate (Adami 2012 boundary);
 the top is a *free surface* — no solid plate is present.
 
 This benchmark tests four things:

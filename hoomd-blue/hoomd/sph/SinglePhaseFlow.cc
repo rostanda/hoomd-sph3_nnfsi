@@ -224,7 +224,6 @@ void SinglePhaseFlow<KT_, SET_>::update_ghost_density_pressure(uint64_t timestep
         flags[comm_flag::tag] = 0;
         flags[comm_flag::position] = 0;
         flags[comm_flag::velocity] = 0;
-        // flags[comm_flag::dpe] = 1;
         flags[comm_flag::density] = 1;
         flags[comm_flag::pressure] = 1;
         flags[comm_flag::energy] = 0;
@@ -255,7 +254,6 @@ void SinglePhaseFlow<KT_, SET_>::update_ghost_density(uint64_t timestep)
         flags[comm_flag::tag] = 0;
         flags[comm_flag::position] = 0;
         flags[comm_flag::velocity] = 0;
-        // flags[comm_flag::dpe] = 1;
         flags[comm_flag::density] = 1;
         flags[comm_flag::pressure] = 0;
         flags[comm_flag::energy] = 0;
@@ -285,7 +283,6 @@ void SinglePhaseFlow<KT_, SET_>::update_ghost_aux1(uint64_t timestep)
         flags[comm_flag::tag] = 0;
         flags[comm_flag::position] = 0;
         flags[comm_flag::velocity] = 0;
-        // flags[comm_flag::dpe] = 1;
         flags[comm_flag::density] = 1;
         flags[comm_flag::pressure] = 1;
         flags[comm_flag::energy] = 0;
@@ -1197,11 +1194,7 @@ void SinglePhaseFlow<KT_, SET_>::forcecomputation(uint64_t timestep)
                         }
 
                     // Compute density rate of change
-                    // std::cout << "Compute density rate of change: rhoi " << rhoi << " Vj " << Vj << " dot(dv,dwdr_r*dx) " << dot(dv,dwdr_r*dx) << std::endl;
                     h_ratedpe.data[i].x += rhoi*Vj*dot(dv,dwdr_r*dx);
-                    // std::cout << "Compute density rate of change: h_ratedpe.data[i].x " << h_ratedpe.data[i].x << std::endl;
-
-                    //h_ratedpe.data[i].x += mj*dot(dv,dwdr_r*dx);
 
                     // Add density diffusion if requested
                     // Molteni and Colagrossi, Computer Physics Communications 180 (2009) 861–872
@@ -1211,7 +1204,7 @@ void SinglePhaseFlow<KT_, SET_>::forcecomputation(uint64_t timestep)
 
                 } // Closing Neighbor Loop
 
-            // Compute dp/dt = (dp/dρ) * dρ/dt via the chain rule so the integrator
+            // Compute $\mathrm{d}p/\mathrm{d}t = (\mathrm{d}p/\mathrm{d}\rho) \cdot \mathrm{d}\rho/\mathrm{d}t$ via the chain rule so the integrator
             // can time-march pressure consistently with density (DENSITYCONTINUITY only).
             if ( m_density_method == DENSITYCONTINUITY )
                 h_ratedpe.data[i].y = this->m_eos->dPressuredDensity(rhoi) * h_ratedpe.data[i].x;
@@ -1466,8 +1459,8 @@ void SinglePhaseFlow<KT_, SET_>::computeForces(uint64_t timestep)
         }
     else // DENSITYCONTINUITY
         {
-        // Density is time-integrated via the continuity equation (dρ/dt computed in
-        // forcecomputation). Pressure is propagated by dp/dt = (dp/dρ)·(dρ/dt), so the
+        // Density is time-integrated via the continuity equation ($\mathrm{d}\rho/\mathrm{d}t$ computed in
+        // forcecomputation). Pressure is propagated by $\mathrm{d}p/\mathrm{d}t = (\mathrm{d}p/\mathrm{d}\rho) \cdot (\mathrm{d}\rho/\mathrm{d}t)$, so the
         // integrator keeps pressure consistent with density without recomputing from EOS
         // every step. Only the very first call needs an EOS-based initialization.
         if ( !m_pressure_initialized )

@@ -517,19 +517,24 @@ class SinglePhaseFlowGDGD(SPHModel):
     concentration) that drives buoyancy via one of two models:
 
     * **VRD** (``boussinesq=False``, default):
-      Per-particle rest density $\rho_{0,i} = \rho_0 (1 - \beta (T_i - T_\mathrm{ref}))$.
+      Per-particle rest density
+      :math:`\rho_{0,i} = \rho_0 (1 - \beta (T_i - T_\mathrm{ref}))`.
       Buoyancy emerges implicitly from the pressure gradient.
       For SUMMATION density method, VRD pressures are computed on-the-fly
-      in the pair loop.  For CONTINUITY, the VRD $\partial P/\partial\rho$ derivative is used
-      in the $\dot{p}$ chain rule.
+      in the pair loop.  For CONTINUITY, the VRD
+      :math:`\partial P/\partial\rho` derivative is used
+      in the :math:`\dot{p}` chain rule.
 
     * **Boussinesq** (``boussinesq=True``):
-      Standard EOS with global $\rho_0$; explicit per-particle buoyancy correction
-      $\Delta F_b = m \, g \, (-\beta (T_i - T_\mathrm{ref}))$ is added to the momentum equation.
+      Standard EOS with global :math:`\rho_0`; explicit per-particle buoyancy
+      correction
+      :math:`\Delta F_b = m \, g \, (-\beta (T_i - T_\mathrm{ref}))`
+      is added to the momentum equation.
 
-    The scalar $T$ is stored in ``aux4.x``.  Its rate of change $\dot{T}$ is
-    accumulated into ``ratedpe.z`` (by the scalar diffusion operator) and
-    time-marched by the integrator in the same half-step scheme as density.
+    The scalar :math:`T` is stored in ``aux4.x``.  Its rate of change
+    :math:`\dot{T}` is accumulated into ``ratedpe.z`` (by the scalar
+    diffusion operator) and time-marched by the integrator in the same
+    half-step scheme as density.
 
     Wall boundary temperatures are set by assigning ``aux4.x`` directly to
     solid particles (e.g. via ``sim.state.cpu_local_snapshot``).
@@ -551,12 +556,15 @@ class SinglePhaseFlowGDGD(SPHModel):
     viscositymethod : str
         ``'HARMONICAVERAGE'`` (only option currently).
     kappa_s : float
-        Scalar diffusivity [m²/s] (thermal diffusivity α = λ/(ρ·cₚ) or
-        mass diffusivity D).  Default 0.
+        Scalar diffusivity [:math:`\mathrm{m^2/s}`] (thermal diffusivity
+        :math:`\alpha = \lambda/(\rho \cdot c_p)` or mass diffusivity
+        :math:`D`).  Default 0.
     beta_s : float
-        Expansion coefficient [1/K] (thermal β or solutal βc).  Default 0.
+        Expansion coefficient [:math:`\mathrm{1/K}`] (thermal
+        :math:`\beta` or solutal :math:`\beta_c`).  Default 0.
     scalar_ref : float
-        Reference scalar value T_ref (or c_ref).  Default 0.
+        Reference scalar value :math:`T_\mathrm{ref}` (or
+        :math:`c_\mathrm{ref}`).  Default 0.
     boussinesq : bool
         If True, Boussinesq approximation; if False, Variable Reference
         Density (VRD).  Default False.
@@ -761,11 +769,11 @@ class SinglePhaseFlowGDGD(SPHModel):
         Parameters
         ----------
         kappa_s : float
-            Scalar diffusivity [m²/s].
+            Scalar diffusivity [:math:`\mathrm{m^2/s}`].
         beta_s : float
-            Expansion coefficient [1/K].
+            Expansion coefficient [:math:`\mathrm{1/K}`].
         scalar_ref : float
-            Reference scalar value T_ref.
+            Reference scalar value :math:`T_\mathrm{ref}`.
         boussinesq : bool
             If True, Boussinesq approximation.  If False (default), VRD.
         """
@@ -1281,22 +1289,38 @@ class SinglePhaseFlowFS(SPHModel):
     Extends the transport-velocity (TV) formulation (Adami et al. 2013) with:
 
     1. **Free-surface detection** via the Shepard kernel-completeness ratio
-       λ_i = V_i·W₀(h) + Σ_{j≠i} V_j·W(r_ij, h).
-       Particles with λ_i < ``fs_threshold`` are flagged as free-surface
-       particles; their outward unit normal is n̂_i = −∇λ_i / |∇λ_i|.
+
+       .. math::
+
+           \lambda_i = V_i W_0(h) + \sum_{j \neq i} V_j W(r_{ij}, h).
+
+       Particles with :math:`\lambda_i < ` ``fs_threshold`` are flagged as
+       free-surface particles; their outward unit normal is
+       :math:`\hat{n}_i = -\nabla\lambda_i / |\nabla\lambda_i|`.
 
     2. **Contact-angle enforcement** (Huber et al. 2016): near solid walls the
        free-surface normal is blended with the wall normal so that the liquid
-       meets the wall at the prescribed equilibrium contact angle ``contact_angle``.
+       meets the wall at the prescribed equilibrium contact angle
+       ``contact_angle``.
 
     3. **Curvature estimation**:
-       κ_i = (1/V_i) Σ_j V_j (n̂_j − n̂_i)·∇W_ij
+
+       .. math::
+
+           \kappa_i = \frac{1}{V_i} \sum_j V_j (\hat{n}_j - \hat{n}_i)
+                      \cdot \nabla W_{ij}
+
        Only computed for surface particles.
 
-    4. **Free-surface pressure clamping**: P ← max(0, P) for surface particles.
+    4. **Free-surface pressure clamping**:
+       :math:`P \leftarrow \max(0, P)` for surface particles.
 
     5. **CSF surface tension force**:
-       F_{σ,i} = −σ · κ_i · n̂_i · (m_i/ρ_i).
+
+       .. math::
+
+           F_{\sigma,i} = -\sigma \, \kappa_i \, \hat{n}_i \,
+                          \frac{m_i}{\rho_i}.
 
     Parameters
     ----------
@@ -1315,16 +1339,18 @@ class SinglePhaseFlowFS(SPHModel):
     viscositymethod : str
         ``'HARMONICAVERAGE'`` (only option currently).
     sigma : float
-        Surface tension coefficient σ [N/m].  Set to 0 to disable surface
-        tension while keeping free-surface detection active.  Default 0.
+        Surface tension coefficient :math:`\sigma` [N/m].  Set to 0 to
+        disable surface tension while keeping free-surface detection
+        active.  Default 0.
     fs_threshold : float
-        Kernel-completeness threshold λ ∈ (0,1).  Particles with
-        λ < ``fs_threshold`` are treated as free-surface particles.
-        Typical value: 0.75.  Default 0.75.
+        Kernel-completeness threshold :math:`\lambda \in (0, 1)`.
+        Particles with :math:`\lambda < ` ``fs_threshold`` are treated as
+        free-surface particles.  Typical value: 0.75.  Default 0.75.
     contact_angle : float
-        Equilibrium contact angle θ [rad] measured inside the liquid from
-        the solid wall.  π/2 = neutral wetting (no correction),
-        0 = complete wetting, π = complete non-wetting.  Default π/2.
+        Equilibrium contact angle :math:`\theta` [rad] measured inside the
+        liquid from the solid wall.  :math:`\pi/2` = neutral wetting (no
+        correction), :math:`0` = complete wetting,
+        :math:`\pi` = complete non-wetting.  Default :math:`\pi/2`.
     """
 
     DENSITYMETHODS = {"SUMMATION": _sph.PhaseFlowDensityMethod.DENSITYSUMMATION,
@@ -1523,16 +1549,17 @@ class SinglePhaseFlowFS(SPHModel):
         Parameters
         ----------
         sigma : float
-            Surface tension coefficient σ [N/m].  Set to 0 to disable surface
-            tension while keeping free-surface detection active.
+            Surface tension coefficient :math:`\sigma` [N/m].  Set to 0 to
+            disable surface tension while keeping free-surface detection active.
         fs_threshold : float
-            Kernel-completeness threshold λ ∈ (0,1).  Particles with
-            λ < ``fs_threshold`` are treated as free-surface particles.
-            Typical value: 0.75.
+            Kernel-completeness threshold :math:`\lambda \in (0, 1)`.
+            Particles with :math:`\lambda < ` ``fs_threshold`` are treated as
+            free-surface particles.  Typical value: 0.75.
         contact_angle : float
-            Equilibrium contact angle θ [rad] measured inside the liquid from
-            the solid wall.  π/2 = neutral wetting (no correction applied),
-            0 = complete wetting, π = complete non-wetting.
+            Equilibrium contact angle :math:`\theta` [rad] measured inside the
+            liquid from the solid wall.  :math:`\pi/2` = neutral wetting (no
+            correction applied), :math:`0` = complete wetting,
+            :math:`\pi` = complete non-wetting.
         """
         self.fs_params_set = True
         self._cpp_obj.setFSParams(float(sigma), float(fs_threshold),
@@ -2159,25 +2186,42 @@ class TwoPhaseFlowTV(TwoPhaseFlow):
     Extends TwoPhaseFlow with two additional momentum terms:
 
     1. Artificial-stress correction (Adami 2013, Eq. 11):
-         F_i^AS += (1/2) Σ_j (Vi²+Vj²) (A_i+A_j)·∇W_ij
-         A_k = ρ_k v_k ⊗ (tv_k − v_k)
-       Counteracts the tensile instability (particle clustering) by penalising
-       deviations of the transport velocity from the physical velocity.
+
+       .. math::
+
+           F_i^{AS} \mathrel{+}= \frac{1}{2} \sum_j (V_i^2 + V_j^2)
+                    (A_i + A_j) \cdot \nabla W_{ij}
+
+           A_k = \rho_k \, \mathbf{v}_k \otimes (\tilde{\mathbf{v}}_k
+                 - \mathbf{v}_k)
+
+       Counteracts the tensile instability (particle clustering) by
+       penalising deviations of the transport velocity from the physical
+       velocity.
 
     2. Background-pressure contribution (BPC, written to aux2):
-         bpc_i = −Σ_j (Vi²+Vj²) P_bg/m_i · (∂W/∂r)/r · r_ij
-       P_bg = eos.TransportVelocityPressure (set via eos.set_params(..., tvp=P_bg)).
-       KickDriftKickTV reads bpc_i on the next half-step to advance particle
-       positions along the smooth transport velocity field.
+
+       .. math::
+
+           bpc_i = -\sum_j (V_i^2 + V_j^2) \frac{P_\mathrm{bg}}{m_i}
+                   \frac{\partial W}{\partial r} \frac{1}{r} \, r_{ij}
+
+       :math:`P_\mathrm{bg}` = ``eos.TransportVelocityPressure`` (set via
+       ``eos.set_params(..., tvp=P_bg)``).  KickDriftKickTV reads
+       :math:`bpc_i` on the next half-step to advance particle positions
+       along the smooth transport velocity field.
 
     All TwoPhaseFlow options remain available (CIP, Riemann dissipation,
     density diffusion, surface tension, Fickian shifting).
 
-    IMPORTANT: Use KickDriftKickTV as the integration method — NOT VelocityVerletBasic.
-    The EOS transport velocity pressure must be set:
+    IMPORTANT: Use KickDriftKickTV as the integration method — NOT
+    VelocityVerletBasic.  The EOS transport velocity pressure must be set::
+
         eos1.set_params(rho01, backpressure, tvp=P_bg1)
         eos2.set_params(rho02, backpressure, tvp=P_bg2)
-    Typical choice: P_bg = backpressure_coefficient * rho0 * c^2.
+
+    Typical choice:
+    :math:`P_\mathrm{bg} = \text{backpressure\_coefficient} \cdot \rho_0 c^2`.
 
     References:
         Adami, Hu & Adams (2013) J. Comput. Phys. 241, 292–307
@@ -2241,7 +2285,7 @@ class TwoPhaseFlowTV(TwoPhaseFlow):
         Mutually exclusive with activateArtificialViscosity.
 
         Args:
-            beta: Scaling coefficient β_R (default 1.0).
+            beta: Scaling coefficient :math:`\\beta_R` (default 1.0).
         """
         self.riemann_beta = float(beta)
         self._cpp_obj.activateRiemannDissipation(self.riemann_beta)

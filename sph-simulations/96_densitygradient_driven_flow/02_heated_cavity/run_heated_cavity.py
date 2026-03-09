@@ -101,7 +101,7 @@ sim.create_state_from_gsd(filename=filename, domain_decomposition=(None, None, 1
 L          = 1.0         # cavity side length                     [m]
 dx         = L / num_length
 rho0       = 1.0         # rest density                           [kg/m³]
-viscosity  = 0.001       # dynamic viscosity  (= ν since ρ₀=1)   [Pa·s]
+viscosity  = 0.001       # dynamic viscosity  (= ν since $\rho_0 = 1$)   [Pa·s]
 kappa_s    = 0.001       # thermal diffusivity (Pr = 1)           [m²/s]
 g          = 1.0         # gravitational acceleration             [m/s²]
 beta_s     = 0.001       # thermal expansion coefficient          [1/K]

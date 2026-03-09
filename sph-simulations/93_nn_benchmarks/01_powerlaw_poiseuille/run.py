@@ -25,17 +25,17 @@ Power-Law flow — Non-Newtonian benchmark.
 
 BENCHMARK DESCRIPTION
 ---------------------
-Two sub-cases with the Power-Law constitutive model  μ_eff = K · |γ̇|^(n−1):
+Two sub-cases with the Power-Law constitutive model  $\mu_\mathrm{eff} = K \cdot |\dot{\gamma}|^{n-1}$:
 
-  Case A — Plane Poiseuille, n=1, K=0.001 Pa·s  (Newtonian regression)
-    Analytical: v(y) = (ρ f_x / K)^(1/n) · n/(n+1) · ((H/2)^(1+1/n) − |y|^(1+1/n))
-    For n=1, K=μ this reduces to the standard Newtonian result.
+  Case A — Plane Poiseuille, n=1, K=0.001 $\mathrm{Pa \cdot s}$  (Newtonian regression)
+    Analytical: v(y) = $(\rho f_x / K)^{1/n} \cdot n/(n+1) \cdot ((H/2)^{1+1/n} - |y|^{1+1/n})$
+    For n=1, K=$\mu$ this reduces to the standard Newtonian result.
 
-  Case B — Plane Couette, n=2, K=0.001 Pa·s²  (shear-thickening, uniform γ̇)
-    In Couette flow the shear rate is constant: γ̇ = U_wall / H.
-    μ_eff = K · γ̇^(n−1) = K · (U_wall/H) = 0.01 Pa·s throughout.
-    Analytical: v(y) = U_wall · (y + H/2) / H  (linear, same shape as Newtonian).
-    The key check is that the profile is linear and L₂ < 5 %.
+  Case B — Plane Couette, n=2, K=0.001 $\mathrm{Pa \cdot s}^2$  (shear-thickening, uniform $\dot{\gamma}$)
+    In Couette flow the shear rate is constant: $\dot{\gamma} = U_\mathrm{wall} / H$.
+    $\mu_\mathrm{eff} = K \cdot \dot{\gamma}^{n-1} = K \cdot (U_\mathrm{wall}/H) = 0.01\,\mathrm{Pa \cdot s}$ throughout.
+    Analytical: v(y) = U_wall $\cdot$ (y + H/2) / H  (linear, same shape as Newtonian).
+    The key check is that the profile is linear and $L_2 < 5\,\%$.
 
 Usage:
     python3 run.py [num_length [steps]]
@@ -136,7 +136,7 @@ def v_couette_linear(y, U_wall, H):
 # ─── Case runner ─────────────────────────────────────────────────────────────
 def run_powerlaw(label, gsd_file, K, n, mu_rep, v_ref, fx_val, U_wall,
                  va_fn, mu_min=0.0):
-    """Run one Power-Law case and return L₂ error."""
+    """Run one Power-Law case and return $L_2$ error."""
     print(f'\n{"═"*60}')
     print(f'  Case: {label}  K={K}, n={n}')
     print(f'{"═"*60}')
@@ -246,7 +246,7 @@ L2_A = run_powerlaw(
 U_wall_B = 0.01   # [m/s]
 K_B      = 0.001  # Pa·s²  (n=2)
 n_B      = 2.0
-# Uniform shear rate: γ̇ = U_wall/H  →  μ_eff = K*(U_wall/H)^(n-1) = 0.01 Pa·s
+# Uniform shear rate: $\dot{\gamma} = U_\mathrm{wall}/H$  →  $\mu_\mathrm{eff} = K \cdot (U_\mathrm{wall}/H)^{n-1} = 0.01\,\mathrm{Pa \cdot s}$
 gamma_B  = U_wall_B / H
 mu_eff_B = K_B * gamma_B**(n_B - 1.0)
 gsd_B = f'couette_{num_length}_init.gsd'

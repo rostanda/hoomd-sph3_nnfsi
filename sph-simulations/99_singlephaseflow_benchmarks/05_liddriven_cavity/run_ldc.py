@@ -25,7 +25,7 @@ Lid-driven cavity — WCSPH run script.
 
 BENCHMARK DESCRIPTION
 ---------------------
-A square cavity (lref × lref × small depth) with solid walls on all four sides.
+A square cavity ($l_\mathrm{ref} \times l_\mathrm{ref} \times$ small depth) with solid walls on all four sides.
 The top wall moves at U_lid = 1.0 m/s in the x-direction.  The other three
 walls are stationary.
 

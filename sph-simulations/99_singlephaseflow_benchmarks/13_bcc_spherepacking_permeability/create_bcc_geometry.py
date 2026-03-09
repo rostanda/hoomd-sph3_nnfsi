@@ -21,26 +21,26 @@ WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIME
 
 maintainer: dkrach, david.krach@mib.uni-stuttgart.de
 
-BCC sphere packing — 100×100×100 voxel cube, geometry generator.
+BCC sphere packing — $100 \times 100 \times 100$ voxel cube, geometry generator.
 
 GEOMETRY DESCRIPTION
 --------------------
 Body-centred cubic (BCC) lattice:
-  · 4×4×4 = 64 unit cells, lattice constant  a = 25 voxels
-  · 2 atoms per unit cell (corner + body centre) → 128 spheres total
-  · Sphere radius  R = 10 voxels  (R/a = 0.40, below touching sqrt(3)/4 ≈ 0.433)
-  · Packing has a percolating pore network in all three directions
-  · All domain boundaries are periodic
+  $\cdot$ $4 \times 4 \times 4$ = 64 unit cells, lattice constant  a = 25 voxels
+  $\cdot$ 2 atoms per unit cell (corner + body centre) → 128 spheres total
+  $\cdot$ Sphere radius  R = 10 voxels  (R/a = 0.40, below touching $\sqrt{3}/4 \approx 0.433$)
+  $\cdot$ Packing has a percolating pore network in all three directions
+  $\cdot$ All domain boundaries are periodic
 
 Computed porosity (voxel count):
-  φ = 1 − 128 · (4π/3) · R³ / (NX · NY · NZ)  ≈  0.464
+  $\phi = 1 - 128 \cdot (4\pi/3) \cdot R^3 / (NX \cdot NY \cdot NZ) \approx 0.464$
 
 Physical defaults  (edit the constants below if needed):
-  vsize = 0.001 m → domain 100 mm³, sphere diameter d = 20 mm
-  rho0  = 1000 kg/m³,  viscosity = 0.001 Pa·s  (water at 20 °C)
+  vsize = 0.001 m → domain 100 mm$^3$, sphere diameter d = 20 mm
+  rho0  = 1000 kg/m$^3$,  viscosity = 0.001 Pa$\cdot$s  (water at 20 °C)
 
 Kozeny–Carman permeability estimate:
-  k_KC = d² φ³ / [180 (1−φ)²]  ≈  7.7 × 10⁻⁷ m²
+  $k_{KC} = d^2 \phi^3 / [180 (1-\phi)^2] \approx 7.7 \times 10^{-7}\ \mathrm{m}^2$
 
 Usage:
     python3 create_bcc_geometry.py [vsize_m]

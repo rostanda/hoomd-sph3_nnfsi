@@ -23,7 +23,7 @@ maintainer: dkrach, david.krach@mib.uni-stuttgart.de
 
 Create initial GSD file for the Couette flow benchmark.
 
-Geometry: two infinite parallel plates at y = ±lref/2.
+Geometry: two infinite parallel plates at $y = \pm l_\mathrm{ref}/2$.
   - Fluid (type 'F', typeid 0): |y| < lref/2
   - Solid (type 'S', typeid 1): |y| >= lref/2
     - Top wall (y > lref/2): initial velocity vx = lidvel  (moves in x)

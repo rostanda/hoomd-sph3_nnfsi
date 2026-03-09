@@ -26,27 +26,27 @@ BCC sphere packing — permeability & inertia-onset run script.
 BENCHMARK DESCRIPTION
 ---------------------
 Body-force-driven flow through a periodic BCC sphere packing
-(100×100×100 voxels, 4×4×4 unit cells, a = 25 vox, R = 10 vox, φ ≈ 0.464).
+(100$\times$100$\times$100 voxels, 4$\times$4$\times$4 unit cells, a = 25 vox, R = 10 vox, $\varphi \approx 0.464$).
 
 By sweeping the body force fx over many orders of magnitude (see run_all_re.sh),
 the full Darcy–Forchheimer curve is sampled:
 
-  Darcy regime      (Re_grain << 1)   : k = const = k_Darcy
-  Onset of inertia  (Re_grain ≈ 1–10) : k begins to decrease
-  Forchheimer regime (Re_grain > 10)  : k decreases as 1/(1 + β k Re_grain / μ)
+  Darcy regime      ($Re_\mathrm{grain} \ll 1$)   : k = const = $k_\mathrm{Darcy}$
+  Onset of inertia  ($Re_\mathrm{grain} \approx 1$–10) : k begins to decrease
+  Forchheimer regime ($Re_\mathrm{grain} > 10$)  : k decreases as $1/(1 + \beta k\, Re_\mathrm{grain} / \mu)$
 
 KEY QUANTITIES LOGGED
 ---------------------
-  Re_grain = ρ φ <u> d / μ       (grain-scale Reynolds number)
-               where <u> = abs_velocity (mean fluid speed) and d = 2R
-  k        = μ φ <u> / (ρ fx)    (apparent Darcy permeability, m²)
-  k_norm   = k / k_KC             (normalised by Kozeny–Carman estimate)
-               k_norm ≈ 1 in Darcy regime; < 1 in Forchheimer regime
+  $Re_\mathrm{grain} = \rho \varphi \langle u \rangle d / \mu$       (grain-scale Reynolds number)
+               where $\langle u \rangle$ = abs_velocity (mean fluid speed) and d = 2R
+  $k        = \mu \varphi \langle u \rangle / (\rho f_x)$    (apparent Darcy permeability, m$^2$)
+  $k_\mathrm{norm}   = k / k_\mathrm{KC}$             (normalised by Kozeny–Carman estimate)
+               $k_\mathrm{norm} \approx 1$ in Darcy regime; $< 1$ in Forchheimer regime
 
 SPEED OF SOUND / CFL
 ---------------------
 The reference velocity for the CFL estimate is taken from the Kozeny–Carman
-Darcy prediction: U_ref = k_KC ρ fx / μ.  In the Forchheimer regime this
+Darcy prediction: $U_\mathrm{ref} = k_\mathrm{KC} \rho f_x / \mu$.  In the Forchheimer regime this
 overestimates the actual velocity (actual Re is lower than the linear Darcy
 prediction), so the resulting c_s and dt are conservative.
 
@@ -59,7 +59,7 @@ Note on `damp`:
 Usage:
     python3 run_bcc_permeability.py <init_gsd> <fx> [steps] [damp]
       init_gsd : path to bcc100_init.gsd
-      fx       : body force in x-direction [m/s²]  (positive → +x)
+      fx       : body force in x-direction [m/s$^2$]  (positive $\to$ +x)
       steps    : simulation steps  (default: 50001)
       damp     : body-force ramp-up time in steps  (default: 5000)
 """
@@ -135,14 +135,14 @@ d_grain = 2 * R_VOX * vsize   # grain diameter                            [m]
 # Kozeny–Carman permeability estimate (Darcy-regime reference)
 k_KC = d_grain**2 * phi**3 / (180.0 * (1.0 - phi)**2)
 
-# Ergun inertia coefficient (Forchheimer β): β = 1.75 (1−φ) / (d φ³)
+# Ergun inertia coefficient (Forchheimer $\beta$): $\beta = 1.75(1-\phi)/(d\phi^3)$
 beta_ergun = 1.75 * (1.0 - phi) / (d_grain * phi**3)
 
 # Reference velocity for CFL / c_s estimation.
 # In the Darcy regime use the KC Darcy velocity.  In the Forchheimer regime the
 # Darcy estimate can overestimate the actual velocity by orders of magnitude,
 # giving an unnecessarily small dt.  Cap with the inertia-limited velocity
-#   U_D_inertia = sqrt(ρ fx / (β ρ)) = sqrt(fx / β)
+#   $U_\mathrm{D,inertia} = \sqrt{\rho f_x / (\beta \rho)} = \sqrt{f_x / \beta}$
 # which is the superficial velocity when the quadratic Forchheimer term
 # balances the body force.  The smaller of the two estimates is more accurate.
 U_D_KC      = k_KC * rho0 * fx / viscosity          # Darcy prediction [m/s]
@@ -248,12 +248,12 @@ logger.add(spf_properties,
            quantities=['abs_velocity', 'num_particles', 'fluid_vel_x_sum',
                        'mean_density', 'e_kin_fluid'])
 
-# Grain-scale Reynolds number: Re = ρ φ <u> d / μ
+# Grain-scale Reynolds number: $Re = \rho \phi \langle u \rangle d / \mu$
 logger[('custom', 'Re_grain')] = (
     lambda: rho0 * phi * spf_properties.abs_velocity * d_grain / viscosity,
     'scalar')
 
-# Apparent Darcy permeability: k = μ φ <u> / (ρ fx)  [m²]
+# Apparent Darcy permeability: $k = \mu \phi \langle u \rangle / (\rho f_x)$  [$\mathrm{m}^2$]
 logger[('custom', 'k_m2')] = (
     lambda: viscosity * phi * spf_properties.abs_velocity / (rho0 * fx),
     'scalar')
@@ -311,8 +311,8 @@ if device.communicator.rank == 0:
         k_ss  = float(np.mean(k_vals))
         kn_ss = float(np.mean(kn_vals))
 
-        # Forchheimer coefficient estimate: β = (k_KC/k - 1) / (ρ U_D d / μ)
-        U_D_ss = k_ss * rho0 * fx / viscosity   # check: U_D = k ρ f / μ
+        # Forchheimer coefficient estimate: $\beta = (k_\mathrm{KC}/k - 1) / (\rho U_D d / \mu)$
+        U_D_ss = k_ss * rho0 * fx / viscosity   # check: $U_D = k \rho f / \mu$
         beta_F = (k_KC / k_ss - 1.0) * viscosity / (rho0 * U_D_ss * d_grain) \
                   if re_ss > 0.1 else float('nan')
 

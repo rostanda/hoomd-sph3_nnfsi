@@ -464,7 +464,7 @@ void SinglePhaseFlowTV<KT_, SET_>::forcecomputation(uint64_t timestep)
 
                 } // Closing Neighbor Loop
 
-            // Compute dp/dt = (dp/dρ) * dρ/dt via the chain rule so the integrator
+            // Compute $\mathrm{d}p/\mathrm{d}t = (\mathrm{d}p/\mathrm{d}\rho) \cdot \mathrm{d}\rho/\mathrm{d}t$ via the chain rule so the integrator
             // can time-march pressure consistently with density (DENSITYCONTINUITY only).
             if ( this->m_density_method == DENSITYCONTINUITY )
                 h_ratedpe.data[i].y = this->m_eos->dPressuredDensity(rhoi) * h_ratedpe.data[i].x;
@@ -540,8 +540,8 @@ void SinglePhaseFlowTV<KT_, SET_>::computeForces(uint64_t timestep)
         }
     else // DENSITYCONTINUITY
         {
-        // Density is time-integrated via the continuity equation (dρ/dt computed in
-        // forcecomputation). Pressure is propagated by dp/dt = (dp/dρ)·(dρ/dt), so the
+        // Density is time-integrated via the continuity equation ($\mathrm{d}\rho/\mathrm{d}t$ computed in
+        // forcecomputation). Pressure is propagated by $\mathrm{d}p/\mathrm{d}t = (\mathrm{d}p/\mathrm{d}\rho) \cdot (\mathrm{d}\rho/\mathrm{d}t)$, so the
         // integrator keeps pressure consistent with density without recomputing from EOS
         // every step. Only the very first call needs an EOS-based initialization.
         if ( !this->m_pressure_initialized )

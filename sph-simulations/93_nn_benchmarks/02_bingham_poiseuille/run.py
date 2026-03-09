@@ -25,33 +25,33 @@ Bingham plane Poiseuille flow — Non-Newtonian benchmark.
 
 BENCHMARK DESCRIPTION
 ---------------------
-Body-force-driven flow between two parallel plates at y = ±H/2.
+Body-force-driven flow between two parallel plates at $y = \pm H/2$.
 The fluid is a Bingham plastic regularised with the Papanastasiou method:
 
-    μ_eff = μ_p + τ_y · (1 − e^(−m|γ̇|)) / |γ̇|
+    $\mu_\mathrm{eff} = \mu_p + \tau_y \cdot (1 - e^{-m|\dot{\gamma}|}) / |\dot{\gamma}|$
 
 Exact Bingham analytical solution (for comparison):
 
-  Plug zone (|y| ≤ y_p = τ_y / (ρ f_x)):
+  Plug zone ($|y| \leq y_p = \tau_y / (\rho f_x)$):
       v(y) = v_plug
 
-  Flowing zone (y_p < |y| ≤ H/2):
-      v(y) = ρ f_x / (2 μ_p) · ((H/2)² − y²) − τ_y / μ_p · (H/2 − |y|)
+  Flowing zone ($y_p < |y| \leq H/2$):
+      $v(y) = \rho f_x / (2 \mu_p) \cdot ((H/2)^2 - y^2) - \tau_y / \mu_p \cdot (H/2 - |y|)$
 
   v_plug = v(y_p)
 
 Note: the Papanastasiou regularisation introduces a smoothed transition near
-y_p, so a small L₂ discrepancy relative to the exact Bingham solution is expected
+y_p, so a small $L_2$ discrepancy relative to the exact Bingham solution is expected
 near the yield surface.  The benchmark checks that
-  (a) the flowing-zone profile matches well (L₂ < 5 %),
+  (a) the flowing-zone profile matches well ($L_2 < 5\,\%$),
   (b) the plug velocity is within 5 % of the exact value,
-  (c) τ_y = 0 case reduces to Newtonian (L₂ < 5 %).
+  (c) $\tau_y = 0$ case reduces to Newtonian ($L_2 < 5\,\%$).
 
 Parameters:
-  μ_p   = 0.001 Pa·s   (plastic viscosity)
-  τ_y   = 0.004 Pa     (yield stress → Bingham number Bi ≈ 0.32)
+  $\mu_p$   = 0.001 $\mathrm{Pa \cdot s}$   (plastic viscosity)
+  $\tau_y$   = 0.004 Pa     (yield stress $\to$ Bingham number Bi $\approx$ 0.32)
   m_reg = 1.0 s        (Papanastasiou regularisation)
-  ρ f_x H/2 = 0.05 Pa  (wall stress)  →  y_p / (H/2) = 0.08
+  $\rho f_x H/2$ = 0.05 Pa  (wall stress)  $\to$  $y_p / (H/2) = 0.08$
 
 Usage:
     python3 run.py [num_length [steps]]
@@ -159,7 +159,7 @@ def run_case(label, use_bingham, tauy_val=tau_y, m_val=m_reg, mu_min=0.0):
     dumpname = f'bingham_{num_length}_{label}_run.gsd'
 
     # Maximum effective viscosity (at zero shear rate, Papanastasiou limit)
-    # μ_eff(0) = μ_p + τ_y * m
+    # $\mu_\mathrm{eff}(0) = \mu_p + \tau_y \cdot m$
     mu_max = mu_p + tauy_val * m_val if use_bingham else mu_p
     v_ref  = max(v_plug_exact if use_bingham else rho0*fx/(2*mu_p)*(H/2)**2, 1e-8)
 
@@ -181,7 +181,7 @@ def run_case(label, use_bingham, tauy_val=tau_y, m_val=m_reg, mu_min=0.0):
         fluidgroup_filter=filterfluid, solidgroup_filter=filtersolid,
         densitymethod='SUMMATION')
 
-    model.mu                  = mu_max   # used for CFL; equals μ_p for Newtonian
+    model.mu                  = mu_max   # used for CFL; equals $\mu_p$ for Newtonian
     model.gx                  = fx
     model.damp                = 1000
     model.artificialviscosity = True
@@ -258,7 +258,7 @@ def run_case(label, use_bingham, tauy_val=tau_y, m_val=m_reg, mu_min=0.0):
     return L2_err
 
 
-# ─── Case A: Newtonian regression (τ_y = 0) ──────────────────────────────────
+# ─── Case A: Newtonian regression ($\tau_y = 0$) ──────────────────────────────────
 L2_A = run_case('nreg', use_bingham=False)
 
 # ─── Case B: Bingham plastic ─────────────────────────────────────────────────

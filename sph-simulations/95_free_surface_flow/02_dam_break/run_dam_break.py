@@ -26,7 +26,7 @@ maintainer: dkrach, david.krach@mib.uni-stuttgart.de
 BENCHMARK DESCRIPTION
 ---------------------
 A rectangular water column (width $a = l_\mathrm{ref}$, height $H_0 = 2a$) collapses
-under gravity ($g_y = -9.81$ m/s²) into an empty channel of total length
+under gravity ($g_y = -9.81\,\mathrm{m/s^2}$) into an empty channel of total length
 $L = 4a$.  Solid walls bound the floor and channel ends; the top and the
 right side of the initial column are free surfaces.
 

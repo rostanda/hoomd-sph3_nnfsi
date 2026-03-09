@@ -25,21 +25,21 @@ Static droplet — initial geometry creation.
 
 BENCHMARK DESCRIPTION
 ---------------------
-A spherical droplet of radius R = 0.25 × lref (phase 'B') is placed at rest in
+A spherical droplet of radius $R = 0.25 \times lref$ (phase 'B') is placed at rest in
 a periodic box filled with an equal-density outer fluid (phase 'A').  There are
 no solid walls and no gravity.
 
 After the simulation equilibrates, the pressure inside the droplet exceeds the
 pressure outside by the Young–Laplace pressure:
 
-    ΔP_theory = 2σ / R     [3-D sphere, N/m → Pa]
+    $\Delta P\_theory = 2\sigma / R$     [3-D sphere, N/m → Pa]
 
-with default parameters (σ = 0.01 N/m, R = 0.25 × 0.001 m):
-    ΔP_theory = 2 × 0.01 / 2.5e-4 = 80 Pa
+with default parameters ($\sigma$ = 0.01 N/m, $R = 0.25 \times 0.001$ m):
+    $\Delta P\_theory = 2 \times 0.01 / 2.5 \times 10^{-4}$ = 80 Pa
 
 Spurious velocities (parasitic currents) arise from numerical discretisation of
 the surface tension gradient.  Their magnitude should be checked against the
-capillary velocity scale  U_cap = σ / μ  (here 10 m/s) and should be well below
+capillary velocity scale  $U\_cap = \sigma / \mu$  (here 10 m/s) and should be well below
 1 % of U_cap for a good solver.  The TV variant (run_static_droplet_TV.py)
 generally achieves an order-of-magnitude lower spurious currents.
 
@@ -75,7 +75,7 @@ slength  = hoomd.sph.kernel.OptimalH[kernel] * dx   # smoothing length [m]
 rcut     = hoomd.sph.kernel.Kappa[kernel] * slength  # cutoff radius   [m]
 
 # ─── Box geometry (full periodic, no walls) ──────────────────────────────────
-# The box is lref × lref × lref (4R on each side).
+# The box is $l_\mathrm{ref} \times l_\mathrm{ref} \times l_\mathrm{ref}$ (4R on each side).
 # Particles are placed on a regular lattice that spans the full box.
 nx, ny, nz = num_length, num_length, num_length
 lx = nx * dx

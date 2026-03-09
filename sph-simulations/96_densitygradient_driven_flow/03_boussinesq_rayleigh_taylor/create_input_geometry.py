@@ -25,24 +25,24 @@ Create initial GSD file for the Boussinesq Rayleigh–Taylor instability benchma
 
 GEOMETRY
 --------
-Tall cavity of width lref × height 4*lref enclosed by solid walls at top and bottom.
+Tall cavity of width $lref \times height\ 4 \cdot lref$ enclosed by solid walls at top and bottom.
   - Fluid (type 'F', typeid 0): |y| < 2*lref
   - Solid (type 'S', typeid 1): |y| >= 2*lref  (wall layers, n_solid thick)
 
 The domain is periodic in x (one perturbation wavelength) and z (thin quasi-2D slice).
 Temperature assignment (T stored in aux4.x) is done in the run script:
-  - Upper fluid (y > δ·cos(2π·x/lref)): T = 0   (cold, heavy → sinks)
-  - Lower fluid (y ≤ δ·cos(2π·x/lref)): T = 1   (hot,  light → rises)
-  - δ = 0.1·lref is the initial perturbation amplitude.
+  - Upper fluid ($y > \delta \cdot \cos(2\pi \cdot x/lref)$): T = 0   (cold, heavy → sinks)
+  - Lower fluid ($y \leq \delta \cdot \cos(2\pi \cdot x/lref)$): T = 1   (hot,  light → rises)
+  - $\delta = 0.1 \cdot lref$ is the initial perturbation amplitude.
 
 Physical parameters (set in run script):
     lref      = 0.001 m    perturbation wavelength = cavity width
-    rho0      = 1000 kg/m³ rest density
+    rho0      = 1000 kg/m$^3$ rest density
     beta_s    = 0.5        Boussinesq thermal expansion coefficient
-    gy        = -9.81 m/s² gravity
-    At_eff    = beta_s * ΔT / 2 = 0.25  (effective Atwood number)
+    gy        = -9.81 m/s$^2$ gravity
+    At_eff    = $\beta_s \cdot \Delta T / 2$ = 0.25  (effective Atwood number)
 
-Linear RT growth rate:  γ = sqrt(At_eff · |gy| · 2π/lref)
+Linear RT growth rate:  $\gamma = \sqrt{At\_eff \cdot |gy| \cdot 2\pi/lref}$
 
 Usage:
     python3 create_input_geometry.py <num_length>
@@ -96,7 +96,7 @@ slengths   = np.full(n_particles, slength, dtype=np.float32)
 densities  = np.full(n_particles, rho0,    dtype=np.float32)
 
 # ─── Type assignment: fluid inside |y| < 2*lref, solid outside ───────────────
-# With half-integer offsets, no particle lands exactly at ±2*lref.
+# With half-integer offsets, no particle lands exactly at $\pm 2 \cdot l_\mathrm{ref}$.
 # Bottom solid: y[k] = -ly/2 + (k+0.5)*dx  →  y[n_solid-1] = -2*lref - dx/2  (< -2*lref)
 # Bottom fluid: y[n_solid]                  = -2*lref + dx/2                  (> -2*lref)
 y_pos    = positions[:, 1]

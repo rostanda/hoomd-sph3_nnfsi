@@ -124,7 +124,7 @@ SinglePhaseFlowFS<KT_, SET_>::SinglePhaseFlowFS(
     // FS-specific defaults (safe: no surface tension, neutral wetting).
     m_sigma         = Scalar(0.0);
     m_fs_threshold  = Scalar(0.75);
-    m_contact_angle = Scalar(M_PI_2);   // 90° = neutral wetting
+    m_contact_angle = Scalar(M_PI_2);   // $90^\circ$ = neutral wetting
 
 #ifdef ENABLE_MPI
     if (this->m_sysdef->isDomainDecomposed())
@@ -213,7 +213,7 @@ void SinglePhaseFlowFS<KT_, SET_>::detect_freesurface(uint64_t timestep)
 
     const Scalar cos_ca = std::cos(m_contact_angle);
     const Scalar sin_ca = std::sin(m_contact_angle);
-    // Contact-angle correction is only applied when the angle deviates from 90°.
+    // Contact-angle correction is only applied when the angle deviates from $90^\circ$.
     const bool apply_ca = (std::fabs(m_contact_angle - Scalar(M_PI_2)) > Scalar(0.01));
 
     const Scalar eps_sq = Scalar(1e-12);
@@ -324,7 +324,7 @@ void SinglePhaseFlowFS<KT_, SET_>::detect_freesurface(uint64_t timestep)
             // Store lambda (already includes self contribution V_i * W_0).
             h_aux4.data[i].x = lambda;
             h_aux4.data[i].y = Scalar(0);  // kappa filled later by compute_curvature
-            h_aux4.data[i].z = Scalar(0);  // |∇λ| filled below for surface particles
+            h_aux4.data[i].z = Scalar(0);  // $|\nabla\lambda|$ filled below for surface particles
 
             // Determine outward free-surface normal.
             Scalar gnorm_sq = dot(grad_lambda, grad_lambda);
@@ -332,8 +332,8 @@ void SinglePhaseFlowFS<KT_, SET_>::detect_freesurface(uint64_t timestep)
             if (lambda < m_fs_threshold && gnorm_sq > eps_sq)
                 {
                 Scalar gnorm = sqrt(gnorm_sq);
-                // Store |∇λ| for the CSF surface tension force (see forcecomputation).
-                // The correct force per particle is F = -σ κ |∇λ| Vᵢ n̂, so we need
+                // Store $|\nabla\lambda|$ for the CSF surface tension force (see forcecomputation).
+                // The correct force per particle is $F = -\sigma \kappa |\nabla\lambda| V_i \hat{n}$, so we need
                 // gnorm here to supply the missing surface-delta-function magnitude.
                 h_aux4.data[i].z = gnorm;
 
@@ -350,7 +350,7 @@ void SinglePhaseFlowFS<KT_, SET_>::detect_freesurface(uint64_t timestep)
                     if (nw_sq > eps_sq)
                         {
                         Scalar nw_norm = sqrt(nw_sq);
-                        // n_wall_acc = Σ Vⱼ ∇Wᵢⱼ for solid neighbours, which points
+                        // n_wall_acc = $\sum V_j \nabla W_{ij}$ for solid neighbours, which points
                         // FROM fluid INTO solid (e.g. downward for a floor wall).
                         // Negate to get the wall outward normal pointing INTO the fluid.
                         Scalar3 n_w;
@@ -466,14 +466,14 @@ void SinglePhaseFlowFS<KT_, SET_>::compute_curvature(uint64_t timestep)
             Scalar hi   = this->m_const_slength ? this->m_ch : h_h.data[i];
 
             // Accumulators for the split curvature formula:
-            //   kappa_nj = Σ_j V_j  n_j · ∇W_ij   (n_j contribution)
-            //   grad_lam = Σ_j V_j      ∇W_ij       (n_i coefficient ≡ local fluid ∇λ)
+            //   kappa_nj = $\sum_j V_j n_j \cdot \nabla W_{ij}$   (n_j contribution)
+            //   grad_lam = $\sum_j V_j \nabla W_{ij}$       (n_i coefficient $\equiv$ local fluid $\nabla\lambda$)
             //
-            // This separation lets us choose n̂_i AFTER the loop. For
+            // This separation lets us choose $\hat{n}_i$ AFTER the loop. For
             // contact-line particles (solid neighbour detected) we substitute
-            // the uncorrected normal  −grad_lam/|grad_lam|  so that the
+            // the uncorrected normal  $-\mathrm{grad\_lam}/|\mathrm{grad\_lam}|$  so that the
             // contact-angle-prescribed normal stored in h_fs_n does not
-            // artificially inflate κ.  For non-contact-line particles the
+            // artificially inflate $\kappa$.  For non-contact-line particles the
             // stored n_i already equals the uncorrected normal, so the result
             // is identical to the original formula.
             Scalar  kappa_nj  = Scalar(0);
@@ -535,19 +535,19 @@ void SinglePhaseFlowFS<KT_, SET_>::compute_curvature(uint64_t timestep)
                 grad_lam.z  += Vj * gradW.z;
                 }
 
-            // Contact-line particles (solid neighbour detected): set κ = 0.
+            // Contact-line particles (solid neighbour detected): set $\kappa = 0$.
             //
-            // The contact-angle-corrected n̂_i stored in h_fs_n IS still used
+            // The contact-angle-corrected $\hat{n}_i$ stored in h_fs_n IS still used
             // by neighbouring free-surface particles when they evaluate their own
-            // κ (via the n_j term in Σ V_j (n_j − n_i)·∇W).  This preserves
+            // $\kappa$ (via the n_j term in $\sum V_j (n_j - n_i) \cdot \nabla W$).  This preserves
             // the Huber (2016) CA-enforcement mechanism through those neighbours
             // without imposing a huge direct force on the contact-line particle
             // itself (which would arise because the incomplete fluid neighbourhood
-            // at the contact line makes |∇λ| very large, inflating the −n̂_i·∇λ
-            // contribution to κ by orders of magnitude).
+            // at the contact line makes $|\nabla\lambda|$ very large, inflating the $-\hat{n}_i \cdot \nabla\lambda$
+            // contribution to $\kappa$ by orders of magnitude).
             //
             // A separate Young's-equation wetting force
-            //   F_Y = σ (cos θ_eq − cos θ_actual) |∇λ| V_i t̂_wall
+            //   $F_Y = \sigma (\cos\theta_\mathrm{eq} - \cos\theta_\mathrm{actual}) |\nabla\lambda| V_i \hat{t}_\mathrm{wall}$
             // is added in forcecomputation() to supply the missing contact-line
             // restoring force without the curvature explosion.
             if (has_solid)
@@ -556,8 +556,8 @@ void SinglePhaseFlowFS<KT_, SET_>::compute_curvature(uint64_t timestep)
                 continue;
                 }
 
-            // κ_i = (Σ V_j n_j·∇W  −  n̂_i · Σ V_j ∇W) / V_i
-            //      = Σ V_j (n_j − n̂_i)·∇W / V_i
+            // $\kappa_i = (\sum V_j n_j \cdot \nabla W  -  \hat{n}_i \cdot \sum V_j \nabla W) / V_i$
+            //      = $\sum V_j (n_j - \hat{n}_i) \cdot \nabla W / V_i$
             Scalar kappa = kappa_nj - dot(n_i, grad_lam);
 
             // Divide by V_i to get the divergence.
@@ -746,7 +746,7 @@ void SinglePhaseFlowFS<KT_, SET_>::forcecomputation(uint64_t timestep)
                 Scalar  mj = h_velocity.data[k].w;
 
                 // Skip solid particles marked for removal (mass set to -999 by
-                // mark_solid_particles_toremove). Their Vj = mj/rhoj ≈ -0.999 would
+                // mark_solid_particles_toremove). Their Vj = mj/rhoj $\approx$ -0.999 would
                 // inflate vijsqr by ~10^19 and generate enormous spurious forces.
                 if (mj < Scalar(0)) continue;
 
@@ -796,7 +796,7 @@ void SinglePhaseFlowFS<KT_, SET_>::forcecomputation(uint64_t timestep)
                 Scalar dwdr   = this->m_skernel->dwijdr(meanh, r);
                 Scalar dwdr_r = dwdr / (r + epssqr);
 
-                // Accumulate ∇λ (fluid) and wall-normal (solid) for Young's wetting force.
+                // Accumulate $\nabla\lambda$ (fluid) and wall-normal (solid) for Young's wetting force.
                 if (!issolid)
                     {
                     grad_lam_fy.x += Vj * dwdr_r * dx.x;
@@ -816,13 +816,13 @@ void SinglePhaseFlowFS<KT_, SET_>::forcecomputation(uint64_t timestep)
                 // Direction-dependent floor (Bug 9/10 fix):
                 // - Solid BELOW fluid (dx.y > 0): clip Adami pressure to the background
                 //   pressure (~180 Pa).  Contact-line particles have P < 0 (low-density
-                //   free surface) so their natural Adami average is negative → the wall
+                //   free surface) so their natural Adami average is negative -> the wall
                 //   would attract them into the floor.  The 200 Pa floor ensures the solid
                 //   always repels at least as hard as the bulk fluid above pushes down
                 //   (~180 Pa background), preventing slow contact-line drift into the floor.
-                //   Bulk particles (temp0 ≈ 180 Pa): largely unaffected (only a ≤20 Pa bump).
+                //   Bulk particles (temp0 ~= 180 Pa): largely unaffected (only a $\leq 20$ Pa bump).
                 // - Solid ABOVE fluid (dx.y < 0, fluid has penetrated floor): leave natural
-                //   Adami pressure active — for deep penetration it is strongly negative →
+                //   Adami pressure active -- for deep penetration it is strongly negative ->
                 //   provides upward restoration.  (The old Bug-9 fix applied the floor
                 //   unconditionally here too, which pushed penetrated particles further INTO
                 //   the solid — this is now avoided.)
@@ -909,15 +909,15 @@ void SinglePhaseFlowFS<KT_, SET_>::forcecomputation(uint64_t timestep)
 
             // ── Young's-equation wetting force ───────────────────────────────
             // Applied at contact-line free-surface particles (has_solid && is_surface).
-            // The Huber (2016) CA-enforcement through κ of neighbouring particles
+            // The Huber (2016) CA-enforcement through $\kappa$ of neighbouring particles
             // is disabled when all droplet-edge particles are within rcut of the
             // wall (has_solid=true), so we add a direct Young's force instead:
-            //   F_Y = σ (cos θ_eq + cos_act) V_i^{1/3} t̂
-            // where cos_act = dot(n̂_nat, n̂_w) = −cos θ_actual (geometry: outward
-            // normal has cos component = −cos θ against the wall normal), so the
-            // force vanishes when cos_act = −cos θ_eq, i.e. θ_actual = θ_eq.
-            // V_i^{1/3} ≈ dx is the contact-line arc length per particle and
-            // t̂ = normalise(n̂_nat − cos_act · n̂_w) is the wall-tangential direction.
+            //   $F_Y = \sigma (\cos\theta_\mathrm{eq} + \mathrm{cos\_act}) V_i^{1/3} \hat{t}$
+            // where cos_act = $\mathrm{dot}(\hat{n}_\mathrm{nat}, \hat{n}_w) = -\cos\theta_\mathrm{actual}$ (geometry: outward
+            // normal has cos component = $-\cos\theta$ against the wall normal), so the
+            // force vanishes when cos_act = $-\cos\theta_\mathrm{eq}$, i.e. $\theta_\mathrm{actual} = \theta_\mathrm{eq}$.
+            // $V_i^{1/3} \approx \mathrm{d}x$ is the contact-line arc length per particle and
+            // $\hat{t} = \mathrm{normalise}(\hat{n}_\mathrm{nat} - \mathrm{cos\_act} \cdot \hat{n}_w)$ is the wall-tangential direction.
             if (has_solid_fy && is_surface && m_sigma > Scalar(0)
                 && std::fabs(m_contact_angle - Scalar(M_PI_2)) > Scalar(0.01))
                 {
@@ -926,25 +926,25 @@ void SinglePhaseFlowFS<KT_, SET_>::forcecomputation(uint64_t timestep)
                 Scalar nw_sq = dot(n_wall_acc_fy, n_wall_acc_fy);
                 if (gl_sq > fy_eps && nw_sq > fy_eps)
                     {
-                    // Natural (uncorrected) outward normal: −∇λ_fluid / |∇λ_fluid|
+                    // Natural (uncorrected) outward normal: $-\nabla\lambda_\mathrm{fluid} / |\nabla\lambda_\mathrm{fluid}|$
                     Scalar gl_norm = sqrt(gl_sq);
                     Scalar3 n_nat;
                     n_nat.x = -grad_lam_fy.x / gl_norm;
                     n_nat.y = -grad_lam_fy.y / gl_norm;
                     n_nat.z = -grad_lam_fy.z / gl_norm;
 
-                    // Wall outward normal (pointing into fluid): −normalise(Σ_solid Vⱼ ∇W)
+                    // Wall outward normal (pointing into fluid): $-\mathrm{normalise}(\sum_\mathrm{solid} V_j \nabla W)$
                     Scalar nw_norm = sqrt(nw_sq);
                     Scalar3 n_w;
                     n_w.x = -n_wall_acc_fy.x / nw_norm;
                     n_w.y = -n_wall_acc_fy.y / nw_norm;
                     n_w.z = -n_wall_acc_fy.z / nw_norm;
 
-                    // Snap n̂_w to the nearest axis unit vector.
-                    // For a flat floor the dominant component should be ±y, but
+                    // Snap $\hat{n}_w$ to the nearest axis unit vector.
+                    // For a flat floor the dominant component should be $\pm y$, but
                     // asymmetric solid-neighbour coverage (contact line off the grid)
-                    // gives n̂_w a spurious x/z-component. That x/z tilt propagates
-                    // into t̂, giving it a small wall-normal component that drives
+                    // gives $\hat{n}_w$ a spurious x/z-component. That x/z tilt propagates
+                    // into $\hat{t}$, giving it a small wall-normal component that drives
                     // floor penetration. Using the exact axis direction eliminates
                     // this without hardcoding a specific wall orientation.
                     Scalar ax = std::fabs(n_w.x);
@@ -961,7 +961,7 @@ void SinglePhaseFlowFS<KT_, SET_>::forcecomputation(uint64_t timestep)
                     // Actual contact-angle cosine (using snapped wall normal).
                     Scalar cos_theta_act = dot(n_nat, n_w_ax);
 
-                    // Wall-tangential spreading direction t̂ (lies exactly in wall plane).
+                    // Wall-tangential spreading direction $\hat{t}$ (lies exactly in wall plane).
                     Scalar3 n_t;
                     n_t.x = n_nat.x - cos_theta_act * n_w_ax.x;
                     n_t.y = n_nat.y - cos_theta_act * n_w_ax.y;
@@ -974,12 +974,12 @@ void SinglePhaseFlowFS<KT_, SET_>::forcecomputation(uint64_t timestep)
                         n_t.y /= nt_norm;
                         n_t.z /= nt_norm;
 
-                        // Contact-line arc length per particle ≈ V_i^{1/3} (= dx for cubic grid).
+                        // Contact-line arc length per particle $\approx V_i^{1/3}$ (= dx for cubic grid).
                         Scalar Vi_cbrt = std::cbrt(Vi);
 
-                        // cos_theta_act = dot(n̂_nat, n̂_w) = −cos θ_actual (by geometry).
-                        // Equilibrium: cos_theta_act = −cos_ca → force = 0.
-                        // F_Y > 0 (spreading) when θ_actual > θ_eq; < 0 (retraction) otherwise.
+                        // cos_theta_act = $\mathrm{dot}(\hat{n}_\mathrm{nat}, \hat{n}_w) = -\cos\theta_\mathrm{actual}$ (by geometry).
+                        // Equilibrium: cos_theta_act = $-\cos\theta_\mathrm{ca}$ -> force = 0.
+                        // F_Y > 0 (spreading) when $\theta_\mathrm{actual} > \theta_\mathrm{eq}$; < 0 (retraction) otherwise.
                         Scalar F_Y_mag = m_sigma * (cos_ca + cos_theta_act) * Vi_cbrt;
                         h_force.data[i].x += F_Y_mag * n_t.x;
                         h_force.data[i].y += F_Y_mag * n_t.y;
@@ -990,11 +990,11 @@ void SinglePhaseFlowFS<KT_, SET_>::forcecomputation(uint64_t timestep)
 
             // ── CSF surface tension force ─────────────────────────────────────
             // Correct CSF force per particle (Hu & Adams 2006):
-            //   F_{σ,i} = −σ · κ · |∇λ| · Vᵢ · n̂_i
-            // where κ = kappa_i * Vᵢ  and  |∇λ| = gnorm_i.
-            // In terms of stored kappa_i = κ/Vᵢ and Vᵢ = mᵢ/ρᵢ:
-            //   F = −σ · kappa_i · (mᵢ/ρᵢ)² · gnorm_i · n̂_i
-            // Units: [N/m] · [m⁻⁴] · [m⁶] · [m⁻¹] = N ✓
+            //   $F_{\sigma,i} = -\sigma \cdot \kappa \cdot |\nabla\lambda| \cdot V_i \cdot \hat{n}_i$
+            // where $\kappa$ = kappa_i * $V_i$  and  $|\nabla\lambda|$ = gnorm_i.
+            // In terms of stored kappa_i = $\kappa/V_i$ and $V_i = m_i/\rho_i$:
+            //   $F = -\sigma \cdot \mathrm{kappa\_i} \cdot (m_i/\rho_i)^2 \cdot \mathrm{gnorm\_i} \cdot \hat{n}_i$
+            // Units: [N/m] $\cdot$ [m$^{-4}$] $\cdot$ [m$^6$] $\cdot$ [m$^{-1}$] = N
             if (is_surface && m_sigma > Scalar(0))
                 {
                 Scalar gnorm_i = h_aux4.data[i].z;
@@ -1172,7 +1172,7 @@ void export_SinglePhaseFlowFS(pybind11::module& m, std::string name)
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Explicit template instantiations (5 kernels × 2 EOS = 10 variants)
+// Explicit template instantiations (5 kernels x 2 EOS = 10 variants)
 // ─────────────────────────────────────────────────────────────────────────────
 
 template class PYBIND11_EXPORT SinglePhaseFlowFS<wendlandc2, linear>;

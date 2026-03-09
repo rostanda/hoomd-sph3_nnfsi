@@ -31,26 +31,26 @@ The channel height (fluid region) is H = lref.  Three solid particle layers
 are added above and below the fluid region for the Adami 2012 no-slip BC.
 
 Fluid layer assignment (y coordinate, measured from box centre):
-  'W'  lower half  y ∈ (−H/2, 0)     μ₁ = 0.004 Pa·s   (more viscous)
-  'N'  upper half  y ∈ (0,  H/2)     μ₂ = 0.001 Pa·s   (less viscous)
+  'W'  lower half  $y \in (-H/2,\ 0)$     $\mu_1$ = 0.004 Pa$\cdot$s   (more viscous)
+  'N'  upper half  $y \in (0,\ H/2)$     $\mu_2$ = 0.001 Pa$\cdot$s   (less viscous)
 
 Solid walls:
-  'S'  y < −H/2    velocity = (0, 0, 0)       bottom wall, stationary
-  'S'  y >  H/2    velocity = (U_wall, 0, 0)  top wall, moving
+  'S'  $y < -H/2$    velocity = (0, 0, 0)       bottom wall, stationary
+  'S'  $y >  H/2$    velocity = (U_wall, 0, 0)  top wall, moving
 
 ANALYTICAL SOLUTION
 -------------------
-With layer interface at y = 0, bottom wall at y = −H/2, top wall at y = H/2:
+With layer interface at y = 0, bottom wall at $y = -H/2$, top wall at $y = H/2$:
 
-  Interface velocity   v_i = U_wall × μ₂ / (μ₁ + μ₂)
+  Interface velocity   $v_i = U\_wall \times \mu_2 / (\mu_1 + \mu_2)$
 
-  Lower layer  v₁(y) = v_i × (y + H/2) / (H/2)   for y ∈ [−H/2, 0]
-  Upper layer  v₂(y) = v_i + (U_wall − v_i) × y / (H/2)  for y ∈ [0, H/2]
+  Lower layer  $v_1(y) = v_i \times (y + H/2) / (H/2)$   for $y \in [-H/2,\ 0]$
+  Upper layer  $v_2(y) = v_i + (U\_wall - v_i) \times y / (H/2)$  for $y \in [0,\ H/2]$
 
-Default parameters (μ₁=0.004, μ₂=0.001):
-  v_i = U_wall × 0.001 / 0.005 = 0.2 × U_wall
-  Lower shear rate = 0.4 × U_wall / H
-  Upper shear rate = 1.6 × U_wall / H
+Default parameters ($\mu_1$=0.004, $\mu_2$=0.001):
+  $v_i = U\_wall \times 0.001 / 0.005 = 0.2 \times U\_wall$
+  Lower shear rate $= 0.4 \times U\_wall / H$
+  Upper shear rate $= 1.6 \times U\_wall / H$
 
 Usage:
     python3 create_input_geometry.py <num_length>
@@ -81,7 +81,7 @@ kernel  = 'WendlandC4'
 slength = hoomd.sph.kernel.OptimalH[kernel] * dx   # smoothing length  [m]
 
 # ─── Box geometry ────────────────────────────────────────────────────────────
-# Fluid region: lref × lref × lref.
+# Fluid region: $l_\mathrm{ref} \times l_\mathrm{ref} \times l_\mathrm{ref}$.
 # Wall region:  n_solid layers on each side in y → total ny adds 2*n_solid.
 # Periodic in x and z; solid walls provide the y boundaries.
 nx = num_length

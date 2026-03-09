@@ -230,7 +230,7 @@ if device.communicator.rank == 0:
     heavy = (tid == 0)   # 'W' — heavy fluid
 
     # Bubble tip: highest y among light-fluid particles in centre column
-    # (x ≈ 0 where the sinusoidal perturbation peaks upward for light fluid)
+    # ($x \approx 0$ where the sinusoidal perturbation peaks upward for light fluid)
     centre_x = np.abs(pos[:, 0]) < lref / 4
     if np.any(light & centre_x):
         y_bubble = float(np.max(pos[light & centre_x, 1]))
@@ -238,7 +238,7 @@ if device.communicator.rank == 0:
         y_bubble = float(np.max(pos[light, 1]))
 
     # Spike tip: lowest y among heavy-fluid particles in edge column
-    # (x ≈ ±lref/2 where the heavy fluid penetrates downward)
+    # ($x \approx \pm l_\mathrm{ref}/2$ where the heavy fluid penetrates downward)
     edge_x = np.abs(pos[:, 0]) > lref / 4
     if np.any(heavy & edge_x):
         y_spike = float(np.min(pos[heavy & edge_x, 1]))
