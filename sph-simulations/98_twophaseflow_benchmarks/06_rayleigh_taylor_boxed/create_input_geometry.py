@@ -26,20 +26,20 @@ Rayleigh–Taylor instability (boxed) — initial geometry creation.
 
 BENCHMARK DESCRIPTION
 ---------------------
-A heavy fluid (phase 'W', ρ₁ = 1500 kg/m³) sits on top of a light fluid
-(phase 'N', ρ₂ = 500 kg/m³) in a rectangular domain.  Gravity acts downward
-(−y).  The interface is perturbed sinusoidally in x:
+A heavy fluid (phase 'W', $\rho_1$ = 1500 kg/m$^3$) sits on top of a light fluid
+(phase 'N', $\rho_2$ = 500 kg/m$^3$) in a rectangular domain.  Gravity acts downward
+($-y$).  The interface is perturbed sinusoidally in x:
 
-    y_interface(x) = δ × cos(2π x / lref)
+    $y\_interface(x) = \delta \times \cos(2\pi x / lref)$
 
-with amplitude δ = 0.01 × lref.  This seeds the dominant mode and the
+with amplitude $\delta$ = 0.01 $\times$ lref.  This seeds the dominant mode and the
 interface subsequently develops into a single RT plume.
 
-Domain: lref × 4·lref × lref  (solid walls in x and y; periodic in z).
-Atwood number: At = (ρ₁ − ρ₂) / (ρ₁ + ρ₂) = 0.5
+Domain: $lref \times 4 \cdot lref \times lref$  (solid walls in x and y; periodic in z).
+Atwood number: $At = (\rho_1 - \rho_2) / (\rho_1 + \rho_2) = 0.5$
 
 Linear growth rate (inviscid):
-    γ = sqrt(At × g × k) = sqrt(0.5 × 9.81 × 2π / lref) ≈ 176 s⁻¹
+    $\gamma = \sqrt{At \times g \times k} = \sqrt{0.5 \times 9.81 \times 2\pi / lref} \approx 176\ \mathrm{s}^{-1}$
 
 The nonlinear bubble/spike evolution is compared against the periodic-x
 variant (05_rayleigh_taylor) to study confinement effects.
@@ -75,7 +75,7 @@ kernel  = 'WendlandC4'
 slength = hoomd.sph.kernel.OptimalH[kernel] * dx
 
 # ─── Box geometry ────────────────────────────────────────────────────────────
-# Fluid region: lref (x) × 4·lref (y) × lref (z).
+# Fluid region: $l_\mathrm{ref}$ (x) $\times$ $4 \cdot l_\mathrm{ref}$ (y) $\times$ $l_\mathrm{ref}$ (z).
 # Solid walls on all four sides (left/right in x, top/bottom in y); z is periodic.
 nx_flu = num_length
 ny_flu = 4 * num_length
@@ -85,7 +85,7 @@ nx = nx_flu + 2 * n_solid
 ny = ny_flu + 2 * n_solid
 
 lx_flu = nx_flu * dx               # fluid width  = lref                [m]
-H_flu  = ny_flu * dx               # fluid height = 4 × lref            [m]
+H_flu  = ny_flu * dx               # fluid height = $4 \times l_\mathrm{ref}$            [m]
 
 lx = nx * dx
 ly = ny * dx
@@ -109,7 +109,7 @@ densities  = np.full(n_particles, rho01, dtype=np.float32)
 x_pos = positions[:, 0]
 y_pos = positions[:, 1]
 
-# Perturbed interface: y_int(x) = delta * cos(2π x / lref)
+# Perturbed interface: $y_\mathrm{int}(x) = \delta \cdot \cos(2\pi x / l_\mathrm{ref})$
 y_int = delta * np.cos(2.0 * np.pi * x_pos / lref)
 
 # Light fluid ('N', index 1): y < y_int  (below the perturbed interface)

@@ -82,13 +82,13 @@ TwoPhaseFlowTV<KT_, SET1_, SET2_>::~TwoPhaseFlowTV()
  *  terms, this function adds:
  *
  *  (a) Artificial-stress force  (Adami et al. 2013, Eq. 11):
- *        F_i^AS += (1/2) Σ_j (Vi²+Vj²) (A_i + A_j)·∇W_ij
- *        A_k = ρ_k v_k ⊗ (tv_k − v_k)   (rank-2 tensor)
+ *        \f$F_i^\mathrm{AS} += \frac{1}{2} \sum_j (V_i^2+V_j^2) (A_i + A_j) \cdot \nabla W_{ij}\f$
+ *        \f$A_k = \rho_k \mathbf{v}_k \otimes (\mathbf{tv}_k - \mathbf{v}_k)\f$   (rank-2 tensor)
  *      Penalises deviation of the transport velocity from the physical velocity.
  *      Counters the tensile instability (particle clustering in tension regions).
  *
  *  (b) Background-pressure contribution (BPC, written to aux2):
- *        bpc_i += −Σ_j (Vi²+Vj²) P_bg / m_i · (∂W/∂r)/r · r_ij
+ *        \f$\mathrm{bpc}_i += -\sum_j (V_i^2+V_j^2) P_\mathrm{bg} / m_i \cdot (\partial W/\partial r)/r \cdot \mathbf{r}_{ij}\f$
  *      P_bg = EOS::getTransportVelocityPressure() (uniform positive constant).
  *      KickDriftKickTV reads bpc_i on the next half-step to advect particles
  *      with the transport velocity instead of the physical velocity.
@@ -206,7 +206,7 @@ void TwoPhaseFlowTV<KT_, SET1_, SET2_>::forcecomputation(uint64_t timestep)
         Scalar P_tv_i = i_isfluid1 ? this->m_eos1->getTransportVelocityPressure()
                                    : this->m_eos2->getTransportVelocityPressure();
 
-        // Artificial stress tensor A_i = rho_i * v_i ⊗ (tv_i - v_i)
+        // Artificial stress tensor $A_i = \rho_i \mathbf{v}_i \otimes (\mathbf{tv}_i - \mathbf{v}_i)$
         Scalar A11i = rhoi * vi.x * (tvi.x - vi.x);
         Scalar A12i = rhoi * vi.x * (tvi.y - vi.y);
         Scalar A13i = rhoi * vi.x * (tvi.z - vi.z);
@@ -306,18 +306,18 @@ void TwoPhaseFlowTV<KT_, SET1_, SET2_>::forcecomputation(uint64_t timestep)
 
             // ── Inter-particle pressure force ────────────────────────────────────
             // Symmetric volume formulation (Adami et al. 2013):
-            //   F_i^p = −Σ_j (Vi² + Vj²) · p̄_ij · (∂W/∂r / r) · r_ij
+            //   $F_i^p = -\sum_j (V_i^2 + V_j^2) \cdot \bar{p}_{ij} \cdot (\partial W/\partial r / r) \cdot \mathbf{r}_{ij}$
             //
-            // DENSITYSUMMATION — density-weighted average pressure:
-            //   p̄_ij = (ρ_j·p_i + ρ_i·p_j) / (ρ_i + ρ_j)
+            // DENSITYSUMMATION -- density-weighted average pressure:
+            //   $\bar{p}_{ij} = (\rho_j p_i + \rho_i p_j) / (\rho_i + \rho_j)$
             //
             //   With consistent interface pressure (CIP, Hu & Adams 2009), cross-phase
             //   pairs use rest-density weighting + hydrostatic correction:
-            //     p̄_ij = (ρ₀ⱼ·p_i + ρ₀ᵢ·p_j + ρ₀ᵢ ρ₀ⱼ (g·r_ij)) / (ρ₀ᵢ + ρ₀ⱼ)
+            //     $\bar{p}_{ij} = (\rho_{0j} p_i + \rho_{0i} p_j + \rho_{0i} \rho_{0j} (\mathbf{g} \cdot \mathbf{r}_{ij})) / (\rho_{0i} + \rho_{0j})$
             //   Suppresses parasitic currents at large-density-ratio interfaces.
             //
-            // DENSITYCONTINUITY — mass-flux-consistent form:
-            //   prefactor = m_i m_j;   p̄_ij = (p_i + p_j) / (ρ_i ρ_j)
+            // DENSITYCONTINUITY -- mass-flux-consistent form:
+            //   prefactor = m_i m_j;   $\bar{p}_{ij} = (p_i + p_j) / (\rho_i \rho_j)$
             Scalar prefactor = 0.0;
             if ( this->m_density_method == DENSITYSUMMATION )
                 {
@@ -339,14 +339,14 @@ void TwoPhaseFlowTV<KT_, SET1_, SET2_>::forcecomputation(uint64_t timestep)
             // Exactly one branch is active at a time (else-if).
             //
             // [A] Monaghan artificial viscosity (Monaghan 1992):
-            //     Π_ij = (−α c_max μ_ij + β μ_ij²) / ρ̄_ij
-            //     μ_ij = h̄ (v_ij · r_ij) / (r_ij² + η²)
+            //     $\Pi_{ij} = (-\alpha c_\mathrm{max} \mu_{ij} + \beta \mu_{ij}^2) / \bar{\rho}_{ij}$
+            //     $\mu_{ij} = \bar{h} (\mathbf{v}_{ij} \cdot \mathbf{r}_{ij}) / (r_{ij}^2 + \eta^2)$
             //   Activated via activateArtificialViscosity(alpha, beta).
             //
             // [B] Riemann-based dissipation (Zhang, Hu & Adams 2017):
-            //     Z*_ij = Z_i Z_j / (Z_i + Z_j),  Z = ρ c   [harmonic mean impedance]
-            //     u_ij  = (v_ij · r_ij) / (|r_ij| + η)       [signed radial velocity]
-            //     avc   = −β_R · Z*_ij · u_ij⁻ / ρ̄_ij        (only if v_ij·r_ij < 0)
+            //     $Z^*_{ij} = Z_i Z_j / (Z_i + Z_j)$,  $Z = \rho c$   [harmonic mean impedance]
+            //     $u_{ij}  = (\mathbf{v}_{ij} \cdot \mathbf{r}_{ij}) / (|\mathbf{r}_{ij}| + \eta)$       [signed radial velocity]
+            //     $\mathrm{avc} = -\beta_R \cdot Z^*_{ij} \cdot u_{ij}^- / \bar{\rho}_{ij}$        (only if $\mathbf{v}_{ij} \cdot \mathbf{r}_{ij} < 0$)
             //   Activated via activateRiemannDissipation(beta).
             Scalar avc = 0.0;
             // [A] Monaghan AV — Monaghan (1992) Annu. Rev. Astron. Astrophys. 30, 543–574
@@ -429,8 +429,8 @@ void TwoPhaseFlowTV<KT_, SET1_, SET2_>::forcecomputation(uint64_t timestep)
                                            h_velocity.data[k].z);
 
                 // Artificial-stress tensor for particle k:
-                //   A_k = ρ_k v_k ⊗ (tv_k − v_k)   [rank-2 outer product]
-                // A is non-zero only where tv ≠ v, i.e. at locations with
+                //   $A_k = \rho_k \mathbf{v}_k \otimes (\mathbf{tv}_k - \mathbf{v}_k)$   [rank-2 outer product]
+                // A is non-zero only where tv != v, i.e. at locations with
                 // local velocity divergence that drives particle clustering.
                 Scalar A11k = rhoj * vk.x * (tvk.x - vk.x);
                 Scalar A12k = rhoj * vk.x * (tvk.y - vk.y);
@@ -445,9 +445,9 @@ void TwoPhaseFlowTV<KT_, SET1_, SET2_>::forcecomputation(uint64_t timestep)
                 Scalar vijsqr = Vi*Vi + Vj*Vj;
 
                 // Artificial-stress force (Adami, Hu & Adams 2013, Eq. 11):
-                //   F_i^AS += (1/2) Σ_j (Vi²+Vj²) (A_i + A_j)·∇W_ij
-                // (A_i+A_j) is contracted with ∇W_ij = (∂W/∂r / r) · r_ij.
-                // Factor 1/2 absorbed into tv_temp = 0.5*(Vi²+Vj²)*(∂W/∂r / r).
+                //   $F_i^\mathrm{AS} += \frac{1}{2} \sum_j (V_i^2+V_j^2) (A_i + A_j) \cdot \nabla W_{ij}$
+                // $(A_i+A_j)$ is contracted with $\nabla W_{ij} = (\partial W/\partial r / r) \cdot \mathbf{r}_{ij}$.
+                // Factor 1/2 absorbed into tv_temp = $0.5(V_i^2+V_j^2)(\partial W/\partial r / r)$.
                 // The force opposes particle clustering in tension regions
                 // (tensile instability), restoring a uniform particle distribution.
                 Scalar tv_temp = Scalar(0.5) * vijsqr * dwdr_r;
@@ -459,9 +459,9 @@ void TwoPhaseFlowTV<KT_, SET1_, SET2_>::forcecomputation(uint64_t timestep)
                 h_force.data[i].z += tv_temp * A3ij;
 
                 // Background-pressure contribution (BPC), accumulated in aux2:
-                //   bpc_i += −Σ_j (Vi²+Vj²) P_bg / m_i · (∂W/∂r / r) · r_ij
+                //   $\mathrm{bpc}_i += -\sum_j (V_i^2+V_j^2) P_\mathrm{bg} / m_i \cdot (\partial W/\partial r / r) \cdot \mathbf{r}_{ij}$
                 // P_bg = EOS::getTransportVelocityPressure() is a positive constant
-                // (typically ~ ρ₀ c²) that keeps all particle pressures positive so
+                // (typically $\sim \rho_0 c^2$) that keeps all particle pressures positive so
                 // particles can be advected along the smooth transport velocity field.
                 // KickDriftKickTV reads aux2 on the next half-step to compute the
                 // TV advection increment; it must be zeroed before this call (done
@@ -491,9 +491,9 @@ void TwoPhaseFlowTV<KT_, SET1_, SET2_>::forcecomputation(uint64_t timestep)
                 // Molteni–Colagrossi density diffusion (fluid–fluid pairs only).
                 // Ref: Molteni & Colagrossi (2009) Comput. Phys. Commun. 180, 861–872.
                 //
-                // Drive term is (ρ_i/ρ₀ᵢ − ρ_j/ρ₀ⱼ) — rest-density normalised.
-                // The original term (ρ_i/ρ_j − 1) is non-zero at equilibrium when
-                // ρ₀₁ ≠ ρ₀₂ (different-phase rest densities), generating unphysical
+                // Drive term is $(\rho_i/\rho_{0i} - \rho_j/\rho_{0j})$ -- rest-density normalised.
+                // The original term $(\rho_i/\rho_j - 1)$ is non-zero at equilibrium when
+                // $\rho_{01} \neq \rho_{02}$ (different-phase rest densities), generating unphysical
                 // density drift across the interface in stratified-flow setups.
                 // The normalised form equals zero at equilibrium for both phases.
                 if ( !j_issolid && this->m_density_diffusion )
@@ -502,7 +502,7 @@ void TwoPhaseFlowTV<KT_, SET1_, SET2_>::forcecomputation(uint64_t timestep)
 
             } // Closing Neighbour Loop
 
-        // dp/dt = (dp/dρ) * dρ/dt via chain rule (DENSITYCONTINUITY only)
+        // $\mathrm{d}p/\mathrm{d}t = (\mathrm{d}p/\mathrm{d}\rho) \cdot \mathrm{d}\rho/\mathrm{d}t$ via chain rule (DENSITYCONTINUITY only)
         if ( this->m_density_method == DENSITYCONTINUITY )
             {
             Scalar dpdrho_i = i_isfluid1 ? this->m_eos1->dPressuredDensity(rhoi)
@@ -628,7 +628,7 @@ void TwoPhaseFlowTV<KT_, SET1_, SET2_>::computeForces(uint64_t timestep)
     this->update_ghost_aux123(timestep);
 #endif
 
-    // δ⁺-SPH particle shifting (Sun et al. 2017).
+    // $\delta^+$-SPH particle shifting (Sun et al. 2017).
     // Uses aux3 (fluid-fluid normals) which are correctly in place here.
     if ( this->m_particle_shifting )
         {
@@ -637,7 +637,7 @@ void TwoPhaseFlowTV<KT_, SET1_, SET2_>::computeForces(uint64_t timestep)
         this->m_nlist->compute(timestep);
         }
 
-    // Compute surface force from normals in aux2/aux3 → aux4
+    // Compute surface force from normals in aux2/aux3 -> aux4
     this->compute_surfaceforce(timestep);
 
 #ifdef ENABLE_MPI

@@ -89,11 +89,11 @@ lref          = 0.001              # reference length                [m]
 R_drop        = 0.4 * lref        # initial semicircle radius       [m]
 dx            = R_drop / num_length
 rho0          = 1000.0             # rest density                    [kg/m³]
-# Viscosity chosen to give Oh = μ/sqrt(ρσR) ≈ 1.0 (critically damped) so the
+# Viscosity chosen to give $Oh = \mu/\sqrt{\rho \sigma R} \approx 1.0$ (critically damped) so the
 # contact line converges monotonically without growing oscillations.
-# Oh = μ/sqrt(ρσR) = μ/sqrt(1000×0.072×0.0004) = μ/0.1697 = 1.0 → μ = 0.1697 Pa·s
-# Oh≈0.3 (μ=0.051) caused underdamped parametric instability: growing oscillation
-# amplitude over O(10⁴) steps. Oh≈1 damps in ~2.3 viscous times (30001 steps).
+# $Oh = \mu/\sqrt{\rho \sigma R} = \mu/\sqrt{1000 \times 0.072 \times 0.0004} = \mu/0.1697 = 1.0$ → $\mu = 0.1697\,\mathrm{Pa \cdot s}$
+# Oh≈0.3 ($\mu$=0.051) caused underdamped parametric instability: growing oscillation
+# amplitude over $O(10^4)$ steps. Oh≈1 damps in ~2.3 viscous times (30001 steps).
 viscosity     = 0.170              # dynamic viscosity                [Pa·s]  (Oh≈1.0)
 sigma         = 0.072              # surface tension coeff.           [N/m]
 drho          = 0.01

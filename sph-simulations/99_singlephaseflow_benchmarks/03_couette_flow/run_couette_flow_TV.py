@@ -172,7 +172,7 @@ if device.communicator.rank == 0:
 sim.run(steps, write_at_start=True)
 gsd_writer.flush()
 
-# ─── Post-processing: L₂ error vs linear Couette profile ─────────────────────
+# ─── Post-processing: $L_2$ error vs linear Couette profile ──────────────────
 if device.communicator.rank == 0:
     with gsd.hoomd.open(dumpname, 'r') as traj:
         snap = traj[-1]

@@ -21,15 +21,15 @@ WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIME
 
 maintainer: dkrach, david.krach@mib.uni-stuttgart.de
 
-H₂ Bubble in Brine Under Shear — initial geometry creation.
+H$_2$ Bubble in Brine Under Shear — initial geometry creation.
 
 BENCHMARK DESCRIPTION
 ---------------------
-A cube of fluid 'W' (H₂ bubble phase) is placed in contact with the TOP solid
-wall (caprock), immersed in the ambient fluid 'N' (brine).  Surface tension (σ)
-and the prescribed contact angle (θ = 40°, hydrophobic caprock) morph the cube
-into a sessile spherical-cap bubble during the relaxation phase.  H₂ is
-buoyant (ρ_H2 = 100 kg/m³ ≪ ρ_brine = 1000 kg/m³) so it presses against the
+A cube of fluid 'W' (H$_2$ bubble phase) is placed in contact with the TOP solid
+wall (caprock), immersed in the ambient fluid 'N' (brine).  Surface tension ($\sigma$)
+and the prescribed contact angle ($\theta = 40°$, hydrophobic caprock) morph the cube
+into a sessile spherical-cap bubble during the relaxation phase.  H$_2$ is
+buoyant ($\rho_{H2}$ = 100 kg/m$^3$ $\ll$ $\rho_{brine}$ = 1000 kg/m$^3$) so it presses against the
 caprock under gravity.
 
 After equilibration the bottom solid wall is moved at velocity U_wall in the
@@ -37,18 +37,18 @@ x direction (Couette-like driving) to drive flow past the bubble.  Contact-angle
 hysteresis pins the contact line.  Three phases: relax → shear → snap-back.
 
 Underground Hydrogen Storage (UHS) context:
-  Hydrogen at ~130 bar subsurface conditions has ρ_H2 ≈ 100 kg/m³.
-  The density ratio ρ_H2 / ρ_brine ≈ 1:10 is characteristic of UHS pore-scale.
+  Hydrogen at ~130 bar subsurface conditions has $\rho_{H2} \approx$ 100 kg/m$^3$.
+  The density ratio $\rho_{H2} / \rho_{brine} \approx$ 1:10 is characteristic of UHS pore-scale.
 
 Domain:
-  x : 4·lref    periodic  (room for elongation under shear)
-  y : 2·lref     solid walls  (top = caprock stationary, bottom moves in shear)
-  z : 2·lref     periodic
+  x : $4 \cdot lref$    periodic  (room for elongation under shear)
+  y : $2 \cdot lref$     solid walls  (top = caprock stationary, bottom moves in shear)
+  z : $2 \cdot lref$     periodic
 
-H₂ bubble cube:
-  side length  a = (2π/3)^(1/3)·lref  ≈ 1.28·lref  (volume-conserving for hemisphere)
+H$_2$ bubble cube:
+  side length  $a = (2\pi/3)^{1/3} \cdot lref \approx 1.28 \cdot lref$  (volume-conserving for hemisphere)
   centred at   x = 0, z = 0
-  top face     at y = +H_flu/2  (in contact with the top caprock wall)
+  top face     at $y = +H\_flu/2$  (in contact with the top caprock wall)
 
 Solid walls:
   n_solid = 3 layers at bottom (moving in shear phase) and top (stationary caprock)
@@ -56,9 +56,9 @@ Solid walls:
   The bottom wall velocity is set at runtime before the shear phase.
 
 Key dimensionless numbers (default parameters):
-  Bond number  Bo = Δρ g R² / σ  ≈ 0.88   (buoyancy presses bubble on caprock)
-  Capillary    Ca = μ_brine U_wall / σ = 0.001  (surface-tension dominated)
-  Reynolds     Re = ρ_brine U_wall lref / μ_brine = 10
+  Bond number  $Bo = \Delta\rho\, g R^2 / \sigma \approx 0.88$   (buoyancy presses bubble on caprock)
+  Capillary    $Ca = \mu_{brine} U\_wall / \sigma = 0.001$  (surface-tension dominated)
+  Reynolds     $Re = \rho_{brine} U\_wall\, lref / \mu_{brine} = 10$
 
 Usage:
     python3 create_input_geometry.py <num_length>
@@ -90,7 +90,7 @@ kernel  = 'WendlandC4'
 slength = hoomd.sph.kernel.OptimalH[kernel] * dx   # smoothing length      [m]
 
 # ─── Box geometry ────────────────────────────────────────────────────────────
-# Fluid region : 4·lref (x) × 2·lref (y) × 2·lref (z)
+# Fluid region : $4 \cdot l_\mathrm{ref}$ (x) $\times$ $2 \cdot l_\mathrm{ref}$ (y) $\times$ $2 \cdot l_\mathrm{ref}$ (z)
 # Solid layers : n_solid rows at bottom and top in y.
 # x, z         : periodic.   y : bounded by solid walls.
 nx     = 4 * num_length            # wider in x for shear-driven elongation

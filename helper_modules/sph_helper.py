@@ -38,7 +38,7 @@ This module provides helper functions used across SPH run scripts:
     the neighbor-list cutoff can be determined).
   - Computing and adaptively updating the speed-of-sound parameter c0 for
     both single-phase (SPF) and two-phase (TPF) flow models, enforcing the
-    weak-compressibility condition Ma = u_ref/c0 <= 0.01.
+    weak-compressibility condition :math:`\mathrm{Ma} = u_\mathrm{ref}/c_0 \leq 0.01`.
 """
 
 # --- HEADER -------------------------------------------------
@@ -91,18 +91,18 @@ def set_max_sl(sim, device, model):
 def get_c0_bf(lref, bforce, cfactor):
     """Estimate the reference speed of sound from a body-force scale.
 
-    Uses the relation c0 = cfactor * sqrt(bforce * lref), which ensures that
-    pressure fluctuations driven by gravity/body-force remain small compared
-    to the background pressure.
+    Uses the relation :math:`c_0 = \text{cfactor} \cdot \sqrt{g \cdot l_\mathrm{ref}}`,
+    which ensures that pressure fluctuations driven by gravity/body-force remain
+    small compared to the background pressure.
 
     Parameters
     ----------
     lref : float
         Reference length scale (e.g. channel half-width) [m].
     bforce : float
-        Body-force magnitude (e.g. gravitational acceleration g) [m/s²].
+        Body-force magnitude (e.g. gravitational acceleration g) [:math:`\mathrm{m/s^2}`].
     cfactor : float
-        Multiplier, typically 10, so that Ma <= 0.1 (then clamped to 0.01).
+        Multiplier, typically 10, so that :math:`\mathrm{Ma} \leq 0.1` (then clamped to 0.01).
 
     Returns
     -------
@@ -115,15 +115,16 @@ def get_c0_bf(lref, bforce, cfactor):
 def get_c0_umax(uref, cfactor):
     """Estimate the reference speed of sound from a velocity scale.
 
-    Uses the relation c0 = cfactor * uref, which enforces weak
-    compressibility: Ma = uref / c0 = 1 / cfactor.
+    Uses the relation :math:`c_0 = \text{cfactor} \cdot u_\mathrm{ref}`, which
+    enforces weak compressibility:
+    :math:`\mathrm{Ma} = u_\mathrm{ref} / c_0 = 1 / \text{cfactor}`.
 
     Parameters
     ----------
     uref : float
         Reference (maximum) flow velocity [m/s].
     cfactor : float
-        Multiplier, typically 10, yielding Ma = 0.1 (then clamped to 0.01).
+        Multiplier, typically 10, yielding :math:`\mathrm{Ma} = 0.1` (then clamped to 0.01).
 
     Returns
     -------
@@ -136,8 +137,9 @@ def get_c0_umax(uref, cfactor):
 def update_min_c0(device, model, c, mode='uref', lref=0.0, uref=0.0, bforce=0.0, cfactor=10.0):
     """Adaptively increase the speed of sound for a single-phase SPH model.
 
-    Computes a target c0 from the flow scales, clamps it to satisfy
-    Ma = uref/c0 <= 0.01, and calls ``model.set_speedofsound(c0)`` only if
+    Computes a target :math:`c_0` from the flow scales, clamps it to satisfy
+    :math:`\mathrm{Ma} = u_\mathrm{ref}/c_0 \leq 0.01`, and calls
+    ``model.set_speedofsound(c0)`` only if
     the new value exceeds the current value ``c``.  Does nothing if the model
     is already fast enough.
 
@@ -160,7 +162,7 @@ def update_min_c0(device, model, c, mode='uref', lref=0.0, uref=0.0, bforce=0.0,
     uref : float, optional
         Reference velocity [m/s].  Required for all modes.
     bforce : float, optional
-        Body-force magnitude [m/s²].  Required for ``'bforce'`` and ``'both'``.
+        Body-force magnitude [:math:`\mathrm{m/s^2}`].  Required for ``'bforce'`` and ``'both'``.
     cfactor : float, optional
         Speed-of-sound multiplier, default 10.
 
@@ -231,7 +233,7 @@ def update_min_c0_tpf(device, model, c1, c2, mode='plain', lref=0.0, uref=0.0, b
     uref : float, optional
         Reference velocity [m/s].  Used only for the printed Mach number.
     bforce : float, optional
-        Body-force magnitude [m/s²].  Reserved for future modes.
+        Body-force magnitude [:math:`\mathrm{m/s^2}`].  Reserved for future modes.
     cfactor : float, optional
         Speed-of-sound multiplier, default 10.
 

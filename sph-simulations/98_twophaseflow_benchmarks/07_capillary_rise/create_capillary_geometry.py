@@ -29,7 +29,7 @@ cases in capillary_rise_params.txt.
 
 GEOMETRY
 --------
-  Outer domain : lx × ly × lz   (x, z periodic;  y bounded by solid walls)
+  Outer domain : $lx \times ly \times lz$   (x, z periodic;  y bounded by solid walls)
   Tube         : inner radius R_cap,  wall thickness n_wall * dx
                  centred at (0, 0) in x-z,  spanning the full fluid height
   Initial fluid: liquid 'W' fills from y_fluid_bot to y_fluid_bot + h_res
@@ -53,22 +53,22 @@ PHYSICAL DEFAULTS  (edit constants below)
   lx = lz = 4 R_cap  (square reservoir, periodic)
   ly_fluid = 12 R_cap  (fluid column height)
   h_res   = 3 R_cap  (initial liquid height above bottom wall)
-  rho01   = 1000 kg/m³ (liquid)
-  rho02   = 100  kg/m³ (gas)
+  rho01   = 1000 kg/m$^3$ (liquid)
+  rho02   = 100  kg/m$^3$ (gas)
 
 CAPILLARY RISE (Jurin's law)
-  h_rise = 2 σ cos(θ) / (ρ₁ g R_cap)
-  with σ=0.01 N/m, g=9.81 m/s², ρ₁=1000 kg/m³, R_cap=1 mm:
-    θ=30° → h_rise ≈ 1.77 mm   (rise)
-    θ=60° → h_rise ≈ 1.02 mm   (rise)
-    θ=90° → h_rise = 0          (no rise)
-    θ=120°→ h_rise ≈ -1.02 mm  (depression)
+  $h\_rise = 2 \sigma \cos(\theta) / (\rho_1 g R\_cap)$
+  with $\sigma$=0.01 N/m, g=9.81 m/s$^2$, $\rho_1$=1000 kg/m$^3$, R_cap=1 mm:
+    $\theta$=30° $\rightarrow$ h_rise $\approx$ 1.77 mm   (rise)
+    $\theta$=60° $\rightarrow$ h_rise $\approx$ 1.02 mm   (rise)
+    $\theta$=90° $\rightarrow$ h_rise = 0          (no rise)
+    $\theta$=120° $\rightarrow$ h_rise $\approx$ -1.02 mm  (depression)
 
 FINITE-RESERVOIR CORRECTION
   The measured height difference (meniscus above current reservoir surface)
   equals h_Jurin directly, because the Jurin formula uses the net head.
   If measuring from the INITIAL flat interface, apply the correction:
-    h_rise_from_init = h_Jurin × A_res / (A_tube + A_res)
+    $h\_rise\_from\_init = h\_Jurin \times A\_res / (A\_tube + A\_res)$
 
 Usage:
     python3 create_capillary_geometry.py [num_length]

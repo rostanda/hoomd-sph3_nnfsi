@@ -76,18 +76,18 @@ namespace sph
 
     /*! Compute effective dynamic viscosity for non-Newtonian rheology models.
      *
-     *  \param mu_base   Base Newtonian dynamic viscosity [Pa·s] (used for NEWTONIAN only)
+     *  \param mu_base   Base Newtonian dynamic viscosity [Pa\f$\cdot\f$s] (used for NEWTONIAN only)
      *  \param gamma_dot Shear-rate estimate |v_ij|/r_ij  [1/s], >= 0
      *  \param model     Active NonNewtonianModel
-     *  \param K         Power-law / H-B consistency index [Pa·s^n]; or plastic viscosity mu_p for BINGHAM
+     *  \param K         Power-law / H-B consistency index [Pa\f$\cdot\f$s\f$^n\f$]; or plastic viscosity mu_p for BINGHAM
      *  \param n         Power-law / Carreau / H-B exponent
-     *  \param mu0       Carreau zero-shear viscosity      [Pa·s]
-     *  \param muinf     Carreau infinite-shear viscosity  [Pa·s]
+     *  \param mu0       Carreau zero-shear viscosity      [Pa\f$\cdot\f$s]
+     *  \param muinf     Carreau infinite-shear viscosity  [Pa\f$\cdot\f$s]
      *  \param lambda_NN Carreau relaxation time           [s]
      *  \param tauy      Yield stress (BINGHAM / H-B)      [Pa]
      *  \param m_reg     Papanastasiou regularization param [s]
-     *  \param mu_min    Lower viscosity clamp             [Pa·s]
-     *  \returns         Effective dynamic viscosity [Pa·s]
+     *  \param mu_min    Lower viscosity clamp             [Pa\f$\cdot\f$s]
+     *  \returns         Effective dynamic viscosity [Pa\f$\cdot\f$s]
      */
     inline Scalar computeNNViscosity(
         Scalar mu_base,

@@ -25,22 +25,22 @@ Rising bubble — initial geometry creation.
 
 BENCHMARK DESCRIPTION
 ---------------------
-A spherical bubble of phase 'N' (gas, ρ₂ = 100 kg/m³) is placed at rest at
+A spherical bubble of phase 'N' (gas, $\rho_2$ = 100 kg/m$^3$) is placed at rest at
 the bottom quarter of a tall rectangular domain filled with liquid 'W'
-(ρ₁ = 1000 kg/m³).  Gravity acts in the −y direction.  Solid walls bound the
+($\rho_1$ = 1000 kg/m$^3$).  Gravity acts in the $-y$ direction.  Solid walls bound the
 domain in y; x and z are periodic.
 
-Domain: lref × 2·lref × lref  (width × height × depth)
-Bubble: radius R = 0.2 × lref, centre at y = −lref/2
+Domain: $lref \times 2 \cdot lref \times lref$  (width $\times$ height $\times$ depth)
+Bubble: radius R = 0.2 $\times$ lref, centre at $y = -lref/2$
 
 Key dimensionless numbers (default parameters):
-  Eötvös   Eo = (ρ₁ − ρ₂) g D² / σ
-             = 900 × 9.81 × (0.4e-3)² / 0.05 ≈ 28.2
-  Morton   Mo = g μ₁⁴ (ρ₁ − ρ₂) / (ρ₁² σ³)
-             ≈ 1.27e-8
-  Reynolds Re = ρ₁ U_T D / μ₁   (U_T estimated from Hadamard–Rybczynski)
+  Eötvös   $Eo = (\rho_1 - \rho_2) g D^2 / \sigma$
+             $= 900 \times 9.81 \times (0.4 \times 10^{-3})^2 / 0.05 \approx 28.2$
+  Morton   $Mo = g \mu_1^4 (\rho_1 - \rho_2) / (\rho_1^2 \sigma^3)$
+             $\approx 1.27 \times 10^{-8}$
+  Reynolds $Re = \rho_1 U_T D / \mu_1$   (U_T estimated from Hadamard–Rybczynski)
 
-Solid walls bound y = ±lref.  Three particle layers are used for each wall.
+Solid walls bound $y = \pm l_\mathrm{ref}$.  Three particle layers are used for each wall.
 
 Usage:
     python3 create_input_geometry.py <num_length>
@@ -73,7 +73,7 @@ kernel  = 'WendlandC4'
 slength = hoomd.sph.kernel.OptimalH[kernel] * dx
 
 # ─── Box geometry ────────────────────────────────────────────────────────────
-# Fluid region: lref (x) × 2·lref (y) × lref (z)
+# Fluid region: $l_\mathrm{ref}$ (x) $\times$ $2 \cdot l_\mathrm{ref}$ (y) $\times$ $l_\mathrm{ref}$ (z)
 # Solid layers: n_solid rows added top and bottom in y.
 nx     = num_length
 ny_flu = 2 * num_length            # fluid rows in y

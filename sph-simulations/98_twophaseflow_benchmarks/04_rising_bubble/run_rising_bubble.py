@@ -25,8 +25,8 @@ Rising bubble — WCSPH run script.
 
 BENCHMARK DESCRIPTION
 ---------------------
-A light spherical gas bubble ($\rho_2 = 100$ kg/m³) rises through a heavier liquid
-($\rho_1 = 1000$ kg/m³) under gravity.  Surface tension ($\sigma = 0.05$ N/m) keeps the
+A light spherical gas bubble ($\rho_2 = 100\,\mathrm{kg/m^3}$) rises through a heavier liquid
+($\rho_1 = 1000\,\mathrm{kg/m^3}$) under gravity.  Surface tension ($\sigma = 0.05$ N/m) keeps the
 bubble coherent.  Solid walls bound y; x and z are periodic.
 
 Key parameters:
@@ -83,7 +83,7 @@ rho02      = 100.0        # rest density gas    'N'           [kg/m³]
 viscosity1 = 0.01         # dynamic viscosity liquid          [Pa·s]
 viscosity2 = 0.001        # dynamic viscosity gas             [Pa·s]
 sigma      = 5e-5         # surface tension                   [N/m]
-                          # σ = 5e-5 N/m gives Eo = 28.2 with D = 0.4 mm, g = 9.81 m/s²
+                          # $\sigma = 5 \times 10^{-5}$ N/m gives Eo = 28.2 with D = 0.4 mm, g = 9.81 m/s²
                           # (the previous value of 0.05 N/m gave Eo = 0.028, so buoyancy
                           #  was overwhelmed by CSF parasitic currents and the bubble did
                           #  not rise)
@@ -91,7 +91,7 @@ gy         = -9.81        # gravitational acceleration        [m/s²]
 backpress  = 0.01         # background pressure coeff         [–]
 drho       = 0.01         # allowed density variation         [–]
 # Steps to reach terminal velocity:
-#   τ_relax = ρ₂ 2R² / (9 μ₁) ≈ 89 µs → 5τ ≈ 444 µs ≈ 700 steps (high-res).
+#   $\tau_\mathrm{relax} = \rho_2 \cdot 2R^2 / (9 \mu_1) \approx 89\,\mu\mathrm{s}$ → $5\tau \approx 444\,\mu\mathrm{s} \approx 700$ steps (high-res).
 #   For a clean U_T measurement the last third of the run must be at steady rise;
 #   50 001 steps → ~31.6 ms physical time (high-res, dx=25 µm) → bubble rises
 #   ≈ 0.18 mm ≈ 0.45 D, which gives a well-resolved terminal-velocity window.

@@ -24,22 +24,22 @@ maintainer: dkrach, david.krach@mib.uni-stuttgart.de
 Create initial GSD for the sessile-droplet contact-angle benchmark.
 
 A 2-D liquid droplet (periodic in x, thin slab in z) is initialised as a
-semicircle (θ_init = 90°) resting on a flat solid wall.  Surface tension
+semicircle ($\theta_\mathrm{init} = 90°$) resting on a flat solid wall.  Surface tension
 and contact-angle enforcement (SinglePhaseFlowFS) drive it toward the
-prescribed equilibrium contact angle θ_eq.
+prescribed equilibrium contact angle $\theta_\mathrm{eq}$.
 
 Geometry:
   - Flat solid wall: y < y_floor  (n_s layers of solid particles)
-  - Fluid droplet:   x² + (y - y_floor)² < R_drop²,  y > y_floor
-    (semicircular initial shape; θ_init = 90°)
+  - Fluid droplet:   $x^2 + (y - y\_floor)^2 < R\_drop^2$,  y > y_floor
+    (semicircular initial shape; $\theta_\mathrm{init} = 90°$)
   - Vacuum above and around the droplet (no particles placed)
-  - Domain in x is periodic; width = 4·R_drop so the droplet is isolated.
+  - Domain in x is periodic; width = $4 \cdot R\_drop$ so the droplet is isolated.
 
-Volume conservation: the semicircle area π·R²/2 is conserved as the
-droplet relaxes.  The equilibrium cap radius and height for angle θ_eq:
-    A_cap = R_cap² (θ_eq − sin θ_eq cos θ_eq)  =  π R_drop² / 2
-    r_base = R_cap sin θ_eq,   h_cap = R_cap (1 − cos θ_eq)
-    contact angle from final shape:  θ = 2 atan(h / r_base)
+Volume conservation: the semicircle area $\pi \cdot R^2/2$ is conserved as the
+droplet relaxes.  The equilibrium cap radius and height for angle $\theta_\mathrm{eq}$:
+    $A\_cap = R\_cap^2 (\theta_\mathrm{eq} - \sin\theta_\mathrm{eq}\cos\theta_\mathrm{eq}) = \pi R\_drop^2 / 2$
+    $r\_base = R\_cap \sin\theta_\mathrm{eq}$,   $h\_cap = R\_cap (1 - \cos\theta_\mathrm{eq})$
+    contact angle from final shape:  $\theta = 2 \arctan(h / r\_base)$
 
 Usage:
     python3 create_input_geometry.py <num_length>
@@ -100,7 +100,7 @@ y_floor = -Ly / 2 + Ly_solid   # solid/fluid interface
 
 solid_mask = y_all < (y_floor + 0.1 * dx)
 
-# Fluid: semicircle x² + (y - y_floor)² < R_drop², y > y_floor
+# Fluid: semicircle $x^2 + (y - y_\mathrm{floor})^2 < R_\mathrm{drop}^2$, $y > y_\mathrm{floor}$
 r_sq       = x_all**2 + (y_all - y_floor)**2
 fluid_mask = (~solid_mask) & (r_sq < (R_drop - 0.1 * dx)**2)
 

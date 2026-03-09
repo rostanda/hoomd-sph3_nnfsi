@@ -25,7 +25,7 @@ Create initial GSD file for Stokes' second problem (oscillating plate).
 
 Geometry: fluid layer of height H = lref above an oscillating solid plate at
 y = -H/2.  The top boundary is a stationary solid plate at y = +H/2
-(chosen so that H >> delta, where delta = sqrt(2*nu/omega) is the Stokes
+(chosen so that $H \gg \delta$, where $\delta = \sqrt{2\nu/\omega}$ is the Stokes
 layer thickness — the upper plate should have negligible influence).
 
   - Fluid (type 'F', typeid 0): |y| < H/2

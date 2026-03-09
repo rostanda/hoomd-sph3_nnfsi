@@ -121,8 +121,8 @@ struct StateEquation
          */
         HOSTDEVICE Scalar Pressure(const Scalar rho);
 
-        /*! Derivative of pressure with respect to density: dp/dρ
-         *  Used to propagate dρ/dt → dp/dt via the chain rule.
+        /*! Derivative of pressure with respect to density: \f$\mathrm{d}p/\mathrm{d}\rho\f$
+         *  Used to propagate \f$\mathrm{d}\rho/\mathrm{d}t \rightarrow \mathrm{d}p/\mathrm{d}t\f$ via the chain rule.
          * \param rho Density
          */
         HOSTDEVICE Scalar dPressuredDensity(const Scalar rho);
@@ -142,9 +142,9 @@ struct StateEquation
          */
         HOSTDEVICE Scalar PressureVRD(const Scalar rho, const Scalar rho0_local);
 
-        /*! Derivative dp/dρ for the VRD equation of state.
+        /*! Derivative \f$\mathrm{d}p/\mathrm{d}\rho\f$ for the VRD equation of state.
          *  Used in the DENSITYCONTINUITY chain rule:
-         *      dp/dt = (dp/dρ)|_{rho0_local} * dρ/dt
+         *      \f$\mathrm{d}p/\mathrm{d}t = (\mathrm{d}p/\mathrm{d}\rho)|_{\rho_{0,\mathrm{local}}} \cdot \mathrm{d}\rho/\mathrm{d}t\f$
          *
          * \param rho        Local density of the particle
          * \param rho0_local Per-particle rest density

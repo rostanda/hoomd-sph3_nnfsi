@@ -165,7 +165,7 @@ dt, dt_cond = model.compute_dt(
     H=maximum_smoothing_length, MU=viscosity, RHO0=rho0)
 
 tau_diff   = H**2 / kappa_s       # $\tau_\mathrm{diff} = H^2/\kappa_s$ [s]
-steps_diff = int(tau_diff / dt)   # steps per τ_diff
+steps_diff = int(tau_diff / dt)   # steps per $\tau_\mathrm{diff}$
 
 if device.communicator.rank == 0:
     print(f'Timestep: {dt:.3e} s  ({dt_cond})')
@@ -239,7 +239,7 @@ if device.communicator.rank == 0:
 sim.run(steps, write_at_start=True)
 gsd_writer.flush()
 
-# ─── Post-processing: L₂ errors vs analytical steady-state profiles ──────────
+# ─── Post-processing: $L_2$ errors vs analytical steady-state profiles ──────────
 if device.communicator.rank == 0:
     with gsd.hoomd.open(dumpname, 'r') as traj:
         snap = traj[-1]

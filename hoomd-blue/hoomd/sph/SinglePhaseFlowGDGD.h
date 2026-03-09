@@ -70,23 +70,23 @@ maintainer: dkrach, david.krach@mib.uni-stuttgart.de
 
     1. Variable Reference Density (VRD) — buoyancy emerges implicitly from
        pressure gradients driven by per-particle rest densities:
-           ρ₀_i = ρ₀_ref · (1 − β · (T_i − T_ref))
+           \f$\rho_{0,i} = \rho_{0,\mathrm{ref}} \cdot (1 - \beta \cdot (T_i - T_\mathrm{ref}))\f$
        For DENSITYSUMMATION, VRD pressures are computed on-the-fly in the pair
-       loop.  For DENSITYCONTINUITY, the VRD derivative ∂P/∂ρ|_{ρ₀_i} is used
-       in the dp/dt chain rule.
+       loop.  For DENSITYCONTINUITY, the VRD derivative \f$\partial P/\partial\rho|_{\rho_{0,i}}\f$ is used
+       in the \f$\mathrm{d}p/\mathrm{d}t\f$ chain rule.
 
-    2. Boussinesq approximation — EOS uses the global ρ₀; per-particle
+    2. Boussinesq approximation — EOS uses the global \f$\rho_0\f$; per-particle
        buoyancy is applied as an explicit body force correction:
-           ΔF_b = m_i · g · (−β · (T_i − T_ref))
-       so the total body force per particle is m_i · g · (1 − β·(T_i − T_ref)).
+           \f$\Delta F_b = m_i \cdot g \cdot (-\beta \cdot (T_i - T_\mathrm{ref}))\f$
+       so the total body force per particle is \f$m_i \cdot g \cdot (1 - \beta \cdot (T_i - T_\mathrm{ref}))\f$.
 
     In both modes a scalar diffusion term
-        dT_i/dt += (κ_s / V_i) · (V_i² + V_j²) · (T_i − T_j) · dW/dr / r
+        \f$\mathrm{d}T_i/\mathrm{d}t \mathrel{+}= (\kappa_s / V_i) \cdot (V_i^2 + V_j^2) \cdot (T_i - T_j) \cdot \mathrm{d}W/\mathrm{d}r / r\f$
     is accumulated into h_ratedpe.z and time-marched by the integrator
     (VelocityVerletBasic or KickDriftKickTV) via the h_dpedt.z / h_aux4.x
     storage convention:
         aux4.x  = T (scalar field value)
-        dpedt.z = dT/dt (rate, copied from net_ratedpe.z in integrateStepTwo)
+        dpedt.z = \f$\mathrm{d}T/\mathrm{d}t\f$ (rate, copied from net_ratedpe.z in integrateStepTwo)
 */
 
 #ifdef __HIPCC__
@@ -130,12 +130,12 @@ class PYBIND11_EXPORT SinglePhaseFlowGDGD : public SinglePhaseFlow<KT_, SET_>
 
         /*! Set GDGD-specific parameters.
          *
-         * \param kappa_s    Scalar diffusivity [m²/s] — thermal conductivity / (ρ·cₚ)
+         * \param kappa_s    Scalar diffusivity [\f$\mathrm{m}^2/\mathrm{s}\f$] — thermal conductivity / (\f$\rho \cdot c_p\f$)
          *                   for heat transfer, or mass diffusivity for species transport.
          * \param beta_s     Thermal / solutal expansion coefficient [1/K or 1/(unit T)].
          * \param scalar_ref Reference scalar value T_ref (or c_ref).
          * \param boussinesq If true, use Boussinesq approximation (explicit buoyancy force
-         *                   correction, global ρ₀ in EOS).  If false, use Variable
+         *                   correction, global \f$\rho_0\f$ in EOS).  If false, use Variable
          *                   Reference Density (buoyancy via per-particle EOS).
          */
         void setGDGDParams(Scalar kappa_s, Scalar beta_s, Scalar scalar_ref, bool boussinesq);
@@ -191,7 +191,7 @@ class PYBIND11_EXPORT SinglePhaseFlowGDGD : public SinglePhaseFlow<KT_, SET_>
 
     protected:
 
-        Scalar m_kappa_s;         //!< Scalar diffusivity [m²/s]
+        Scalar m_kappa_s;         //!< Scalar diffusivity [\f$\mathrm{m}^2/\mathrm{s}\f$]
         Scalar m_beta_s;          //!< Expansion coefficient [1/K or 1/concentration unit]
         Scalar m_scalar_ref;      //!< Reference scalar value (T_ref or c_ref)
         bool   m_boussinesq;      //!< True = Boussinesq; false = Variable Reference Density
@@ -200,18 +200,18 @@ class PYBIND11_EXPORT SinglePhaseFlowGDGD : public SinglePhaseFlow<KT_, SET_>
         /*! Force computation: standard SPH pair forces + scalar diffusion + buoyancy.
          *
          *  Extension of SinglePhaseFlow::forcecomputation() with:
-         *    - Scalar diffusion rate dT/dt accumulated into h_ratedpe.data[i].z
+         *    - Scalar diffusion rate \f$\mathrm{d}T/\mathrm{d}t\f$ accumulated into h_ratedpe.data[i].z
          *      using the Morris-Fox-Zhu (1997) Laplacian SPH operator.
          *    - VRD mode (m_boussinesq == false):
          *        DENSITYSUMMATION  — pair pressures recomputed on-the-fly using
-         *                           PressureVRD(ρ_i, ρ₀_i(T_i)) per particle.
-         *        DENSITYCONTINUITY — dp/dt chain rule uses dPressureVRDdDensity.
+         *                           PressureVRD(\f$\rho_i\f$, \f$\rho_{0,i}(T_i)\f$) per particle.
+         *        DENSITYCONTINUITY — \f$\mathrm{d}p/\mathrm{d}t\f$ chain rule uses dPressureVRDdDensity.
          *    - Boussinesq mode (m_boussinesq == true):
          *        Standard EOS pressures used; per-particle buoyancy correction
-         *        ΔF_b = m_i · g · (−β · (T_i − T_ref)) added to h_force.
+         *        \f$\Delta F_b = m_i \cdot g \cdot (-\beta \cdot (T_i - T_\mathrm{ref}))\f$ added to h_force.
          *
-         *  Scalar T is read from aux4.x; dT/dt is written to h_ratedpe.data[i].z.
-         *  The integrator copies net_ratedpe.z → dpedt.z (step 2) and uses
+         *  Scalar T is read from aux4.x; \f$\mathrm{d}T/\mathrm{d}t\f$ is written to h_ratedpe.data[i].z.
+         *  The integrator copies net_ratedpe.z \f$\rightarrow\f$ dpedt.z (step 2) and uses
          *  dpedt.z to advance aux4.x in both half-steps.
          */
         virtual void forcecomputation(uint64_t timestep);

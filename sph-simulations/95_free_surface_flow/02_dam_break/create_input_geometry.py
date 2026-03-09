@@ -25,15 +25,15 @@ Create initial GSD for the 2-D dam-break benchmark.
 
 Geometry (x = horizontal, y = vertical, z = thin periodic slab):
   - Column width:    a   = lref
-  - Column height:   H₀  = 2 * a
+  - Column height:   $H_0$  = 2 * a
   - Channel length:  L   = 4 * a
   - Solid floor:  y < 0      (part_rcut layers, full channel width)
   - Solid left:   x < 0      (part_rcut layers, full height)
   - Solid right:  x > L      (part_rcut layers, full height)
-  - Fluid:        0 ≤ x ≤ a,  0 ≤ y ≤ H₀   (initial water column)
-  - Vacuum:       x > a  or  y > H₀          (no particles — free to flood)
+  - Fluid:        $0 \leq x \leq a$,  $0 \leq y \leq H_0$   (initial water column)
+  - Vacuum:       $x > a$  or  $y > H_0$          (no particles — free to flood)
 
-Box sized to include solid wall layers and a vacuum buffer above H₀.
+Box sized to include solid wall layers and a vacuum buffer above $H_0$.
 
 Usage:
     python3 create_input_geometry.py <num_length>
@@ -61,7 +61,7 @@ slength    = hoomd.sph.kernel.OptimalH[kernel] * dx
 rcut       = hoomd.sph.kernel.Kappa[kernel] * slength
 
 n_s   = math.ceil(rcut / dx)        # solid wall layers
-n_buf = 2 * n_s                     # vacuum buffer above H₀
+n_buf = 2 * n_s                     # vacuum buffer above $H_0$
 nz    = max(3, math.ceil(2.5 * hoomd.sph.kernel.Kappa[kernel] * rcut / dx))
 
 # ─── Grid in physical coordinates ────────────────────────────────────────────

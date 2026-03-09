@@ -28,32 +28,32 @@ BENCHMARK DESCRIPTION
 Two immiscible fluid layers sheared between a stationary bottom wall
 (y = −H/2) and a top wall moving at U_wall (y = +H/2).  No gravity.
 
-  Layer W (lower, y ∈ [−H/2, 0]): Power Law  K=0.004 Pa·s^n, n varies
-  Layer N (upper, y ∈ [0,   H/2]): Newtonian  μ₂=0.01 Pa·s
+  Layer W (lower, y $\in [-H/2, 0]$): Power Law  K=0.004 $\mathrm{Pa \cdot s}^n$, n varies
+  Layer N (upper, y $\in [0, H/2]$): Newtonian  $\mu_2$=0.01 $\mathrm{Pa \cdot s}$
 
 For steady-state Couette flow the shear stress is uniform across both layers.
 With piecewise linear velocity profile:
 
-    v_W(y) = γ̇_W · (y + H/2)    for y ∈ [−H/2, 0]
-    v_N(y) = v_i + γ̇_N · y      for y ∈ [0, H/2]
+    $v_W(y) = \dot{\gamma}_W \cdot (y + H/2)$    for y $\in [-H/2, 0]$
+    $v_N(y) = v_i + \dot{\gamma}_N \cdot y$      for y $\in [0, H/2]$
 
-where τ is found by solving (numerically for n ≠ 1):
+where $\tau$ is found by solving (numerically for n $\neq$ 1):
 
-    (τ/K)^(1/n) · H/2  +  τ/μ₂ · H/2  =  U_wall
+    $(\tau/K)^{1/n} \cdot H/2  +  \tau/\mu_2 \cdot H/2  =  U_\mathrm{wall}$
 
-and  v_i = (τ/K)^(1/n) · H/2.
+and  $v_i = (\tau/K)^{1/n} \cdot H/2$.
 
 Two sub-cases are run:
   Case A  n=1 (Newtonian regression):
-    v_i = U_wall · μ₂/(K+μ₂) = 0.01 × 0.01/0.014 = 7.14 mm/s
+    $v_i = U_\mathrm{wall} \cdot \mu_2/(K+\mu_2) = 0.01 \times 0.01/0.014 = 7.14$ mm/s
     Verify that activatePowerLaw1(K, n=1) gives the same result as Newtonian.
 
   Case B  n=2 (shear-thickening W layer):
-    μ_eff_W = K · γ̇_W,  which is HIGHER than K → slower W-layer flow
-    v_i < Newtonian v_i  (shear-thickening resists the top wall)
-    Convergence is fast because μ_eff_W >> K → short diffusion time.
+    $\mu_\mathrm{eff,W} = K \cdot \dot{\gamma}_W$,  which is HIGHER than K $\to$ slower W-layer flow
+    $v_i <$ Newtonian $v_i$  (shear-thickening resists the top wall)
+    Convergence is fast because $\mu_\mathrm{eff,W} \gg K$ $\to$ short diffusion time.
 
-Parameters:  K=0.004, μ₂=0.01, H=0.001, U_wall=0.01  (all SI)
+Parameters:  K=0.004, $\mu_2$=0.01, H=0.001, U_wall=0.01  (all SI)
 
 Usage:
     python3 run.py [num_length [steps]]

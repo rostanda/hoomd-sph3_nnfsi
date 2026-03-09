@@ -29,33 +29,33 @@ The simulation runs in two consecutive phases without restart:
 
 Phase 1 — Relaxation
   A cubic patch of fluid 'W' (droplet) sits on the stationary bottom solid
-  wall, surrounded by fluid 'N' (ambient).  Surface tension (σ = 0.01 N/m)
-  and the prescribed contact angle (θ = 90°) reshape the cube into a sessile
+  wall, surrounded by fluid 'N' (ambient).  Surface tension ($\sigma = 0.01\,\mathrm{N/m}$)
+  and the prescribed contact angle ($\theta = 90°$) reshape the cube into a sessile
   hemispherical droplet.  Both solid walls are stationary.  Gravity (gy)
-  acts in the −y direction; with equal densities (ρ₁ = ρ₂) the Bond number
-  Bo ≈ 0.054, so the equilibrium shape remains close to a hemisphere.
+  acts in the $-y$ direction; with equal densities ($\rho_1 = \rho_2$) the Bond number
+  Bo $\approx$ 0.054, so the equilibrium shape remains close to a hemisphere.
 
 Phase 2 — Shear
   After relaxation the top solid wall is set to velocity U_wall in the
   x direction (Couette-like driving).  The resulting shear flow deforms the
   sessile droplet.  The extent of deformation is characterised by the
-  capillary number Ca = μ U_wall / σ = 0.001.
+  capillary number $\mathrm{Ca} = \mu U_\mathrm{wall} / \sigma = 0.001$.
 
 Domain:
-  x : 4·lref    periodic
-  y : 2·lref     solid walls  (Adami 2012 no-slip BC, 3 layers each side)
-  z : 2·lref     periodic
+  x : 4$\cdot$lref    periodic
+  y : 2$\cdot$lref     solid walls  (Adami 2012 no-slip BC, 3 layers each side)
+  z : 2$\cdot$lref     periodic
 
 Key dimensionless numbers:
-  Bond number  Bo = ρ g R² / σ  ≈ 1.0    (gravity and surface tension comparable)
-  Capillary    Ca = μ U_wall / σ = 0.001  (surface-tension dominated)
-  Reynolds     Re = ρ U_wall lref / μ      = 10
+  Bond number  $\mathrm{Bo} = \rho g R^2 / \sigma \approx 1.0$    (gravity and surface tension comparable)
+  Capillary    $\mathrm{Ca} = \mu U_\mathrm{wall} / \sigma = 0.001$  (surface-tension dominated)
+  Reynolds     $\mathrm{Re} = \rho U_\mathrm{wall} l_\mathrm{ref} / \mu = 10$
 
-Step budget (dt ≈ 1.25 µs):
-  Capillary time  τ_cap = μ R / σ  ≈  80 steps
-  Relaxation default (20001 steps) ≈ 250 τ_cap  → well-converged sessile shape
-  Shear strain    1/γ̇ = H/U_wall  ≈ 160 000 steps
-  Shear default  (50001 steps)     ≈ 0.3 shear strains → observable deformation
+Step budget (dt $\approx$ 1.25 $\mu$s):
+  Capillary time  $\tau_\mathrm{cap} = \mu R / \sigma \approx 80$ steps
+  Relaxation default (20001 steps) $\approx$ 250 $\tau_\mathrm{cap}$  $\to$ well-converged sessile shape
+  Shear strain    $1/\dot{\gamma} = H/U_\mathrm{wall} \approx 160\,000$ steps
+  Shear default  (50001 steps)     $\approx$ 0.3 shear strains $\to$ observable deformation
 
 Usage:
     python3 run_sessile_droplet_shear.py <num_length> <init_gsd_file> \\

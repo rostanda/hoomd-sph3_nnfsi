@@ -161,7 +161,7 @@ class PYBIND11_EXPORT SinglePhaseFlow : public SPHBaseClass<KT_, SET_>
             }
 
         /*! Activate Power-law non-Newtonian rheology.
-         *  μ_eff = max(μ_min, K · |γ̇|^(n−1))
+         *  \f$\mu_\mathrm{eff} = \max(\mu_\mathrm{min},\, K \cdot |\dot{\gamma}|^{n-1})\f$
          */
         void activatePowerLaw(Scalar K, Scalar n, Scalar mu_min = Scalar(0))
             {
@@ -172,7 +172,7 @@ class PYBIND11_EXPORT SinglePhaseFlow : public SPHBaseClass<KT_, SET_>
             }
 
         /*! Activate Carreau non-Newtonian rheology.
-         *  μ_eff = μ_∞ + (μ_0 − μ_∞) · (1 + (λ|γ̇|)²)^((n−1)/2)
+         *  \f$\mu_\mathrm{eff} = \mu_\infty + (\mu_0 - \mu_\infty) \cdot (1 + (\lambda|\dot{\gamma}|)^2)^{(n-1)/2}\f$
          */
         void activateCarreau(Scalar mu0, Scalar muinf, Scalar lambda_NN, Scalar n)
             {
@@ -184,7 +184,7 @@ class PYBIND11_EXPORT SinglePhaseFlow : public SPHBaseClass<KT_, SET_>
             }
 
         /*! Activate Bingham plastic rheology (Papanastasiou regularization).
-         *  μ_eff = max(μ_min, μ_p + τ_y · (1 − e^(−m|γ̇|)) / |γ̇|)
+         *  \f$\mu_\mathrm{eff} = \max(\mu_\mathrm{min},\, \mu_p + \tau_y \cdot (1 - e^{-m|\dot{\gamma}|}) / |\dot{\gamma}|)\f$
          */
         void activateBingham(Scalar mu_p, Scalar tauy, Scalar m_reg, Scalar mu_min = Scalar(0))
             {
@@ -196,7 +196,7 @@ class PYBIND11_EXPORT SinglePhaseFlow : public SPHBaseClass<KT_, SET_>
             }
 
         /*! Activate Herschel-Bulkley rheology (Papanastasiou regularization).
-         *  μ_eff = max(μ_min, K · |γ̇|^(n−1) + τ_y · (1 − e^(−m|γ̇|)) / |γ̇|)
+         *  \f$\mu_\mathrm{eff} = \max(\mu_\mathrm{min},\, K \cdot |\dot{\gamma}|^{n-1} + \tau_y \cdot (1 - e^{-m|\dot{\gamma}|}) / |\dot{\gamma}|)\f$
          */
         void activateHerschelBulkley(Scalar K, Scalar n, Scalar tauy, Scalar m_reg, Scalar mu_min = Scalar(0))
             {

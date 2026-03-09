@@ -317,7 +317,7 @@ if device.communicator.rank == 0:
               f'  {amp_theory[i]*1e6:>14.2f}'
               f'  {gamma_lin*frames_t[i]:>6.2f}')
 
-    # L₂ error of amplitude growth in the linear regime (γ·t < 2)
+    # $L_2$ error of amplitude growth in the linear regime ($\gamma \cdot t < 2$)
     lin_mask = (gamma_lin * frames_t) <= 2.0
     if np.sum(lin_mask) > 1:
         amp_sph = 0.5 * (frames_bub[lin_mask] + np.abs(frames_spike[lin_mask]))

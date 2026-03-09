@@ -25,14 +25,14 @@ Create initial GSD file for the differentially heated square cavity benchmark.
 
 GEOMETRY
 --------
-Square cavity of side L × L enclosed by four solid walls.
+Square cavity of side $L \times L$ enclosed by four solid walls.
   - Fluid (type 'F', typeid 0): |x| < L/2  AND  |y| < L/2
   - Solid (type 'S', typeid 1): all remaining particles (wall layers)
 
 Wall temperatures are assigned in the run script from particle position:
   - Left wall  (x < −L/2): hot,  T_hot
   - Right wall (x >  L/2): cold, T_cold
-  - Top/bottom walls (|y| > L/2): T_avg ≈ adiabatic
+  - Top/bottom walls ($|y| > L/2$): $T_\mathrm{avg} \approx$ adiabatic
 
 The domain is periodic in z (thin quasi-2D slice).
 

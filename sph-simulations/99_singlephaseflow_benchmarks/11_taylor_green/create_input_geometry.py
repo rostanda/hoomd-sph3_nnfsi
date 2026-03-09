@@ -26,10 +26,10 @@ Create initial GSD file for the 2-D Taylor–Green vortex benchmark.
 Geometry: fully periodic square domain [0, L]^2 (thin in z).
 All particles are fluid.  Initial velocities follow the Taylor–Green pattern:
 
-    v_x(x, y) = -U0 * cos(2π x/L) * sin(2π y/L)
-    v_y(x, y) =  U0 * sin(2π x/L) * cos(2π y/L)
+    $v_x(x, y) = -U_0 \cos(2\pi x/L) \sin(2\pi y/L)$
+    $v_y(x, y) =  U_0 \sin(2\pi x/L) \cos(2\pi y/L)$
 
-The analytical solution decays as exp(-2 ν k^2 t)  with k = 2π/L.
+The analytical solution decays as $\exp(-2 \nu k^2 t)$  with $k = 2\pi/L$.
 
 Usage:
     python3 create_input_geometry.py <num_length> [U0]

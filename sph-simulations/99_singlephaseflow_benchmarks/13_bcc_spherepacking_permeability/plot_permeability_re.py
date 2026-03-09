@@ -89,7 +89,7 @@ ax2.legend(fontsize=10)
 ax2.grid(True, which="both", alpha=0.3)
 ax2.set_ylim([0, max(knorm_arr) * 1.2])
 
-# colour-code points by convergence quality (Δ/step proxy: k_norm)
+# colour-code points by convergence quality ($\Delta$/step proxy: k_norm)
 # add colourbar showing k_norm as rough "how close to converged"
 sc = ax2.scatter(Re_arr, knorm_arr, c=knorm_arr, cmap="RdYlGn",
                  s=60, zorder=5, vmin=0, vmax=1)

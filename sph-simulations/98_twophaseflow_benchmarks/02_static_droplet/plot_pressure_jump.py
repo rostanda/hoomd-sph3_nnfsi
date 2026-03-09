@@ -11,8 +11,8 @@ Two panels are produced and saved as pressure_jump.png:
             a dashed vertical line marks the nominal droplet radius.
 
   Right – Pressure-jump convergence
-            Mean ΔP = P_in − P_out sampled every <stride> VTU frames,
-            compared to the Young–Laplace theory value  ΔP = 2σ/R.
+            Mean $\Delta P = P_\mathrm{in} - P_\mathrm{out}$ sampled every <stride> VTU frames,
+            compared to the Young–Laplace theory value  $\Delta P = 2\sigma/R$.
 
 Usage:
     python3 plot_pressure_jump.py [run_dir] [stride]
@@ -106,7 +106,7 @@ P_out   = float(np.mean(pres_last[~inside]))
 dP_sim  = P_in - P_out
 rel_err = abs(dP_sim - dP_theory) / dP_theory * 100.0
 
-# ── 2. ΔP convergence over all sampled frames ─────────────────────────────────
+# ── 2. $\Delta P$ convergence over all sampled frames ─────────────────────────────────
 sampled_files = vtu_files[::stride]
 steps_ts  = []
 dP_ts     = []
@@ -158,7 +158,7 @@ ax.set_title(f'Radial profile  (step {step_last:,})\n'
 ax.legend(fontsize=8, markerscale=4)
 ax.grid(True, alpha=0.3)
 
-# --- Right: ΔP vs timestep ---
+# --- Right: $\Delta P$ vs timestep ---
 ax = axes[1]
 ax.plot(steps_ts, dP_ts, color='royalblue', lw=1.5, label='$\\Delta P$ (simulation)')
 ax.axhline(dP_theory, color='k', lw=1.2, ls='--',

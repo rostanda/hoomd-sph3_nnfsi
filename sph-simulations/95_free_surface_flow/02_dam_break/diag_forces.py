@@ -148,7 +148,7 @@ try:
         pos_f  = pos[fluid]
         vel_f  = vel[fluid]
 
-        # After 1 step: v_full ≈ a(0)*dt + a(1)*dt/2 ≈ a_avg * dt
+        # After 1 step: $v_\mathrm{full} \approx a(0) \cdot dt + a(1) \cdot dt/2 \approx a_\mathrm{avg} \cdot dt$
         # Use |v| / dt as proxy for |accel|
         vmag   = np.sqrt(np.sum(vel_f[:, :3]**2, axis=1))
         amag   = vmag / dt

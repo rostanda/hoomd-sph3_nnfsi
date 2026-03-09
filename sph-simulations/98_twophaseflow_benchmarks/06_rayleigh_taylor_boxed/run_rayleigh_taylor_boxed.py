@@ -25,19 +25,19 @@ Rayleigh–Taylor instability (boxed) — WCSPH run script.
 
 BENCHMARK DESCRIPTION
 ---------------------
-A heavy fluid (ρ₁ = 1500 kg/m³) rests above a light fluid (ρ₂ = 500 kg/m³)
+A heavy fluid ($\rho_1 = 1500\,\mathrm{kg/m^3}$) rests above a light fluid ($\rho_2 = 500\,\mathrm{kg/m^3}$)
 in a domain with solid walls in x and y and periodic boundaries in z.
 Gravity acts downward.  The interface is perturbed sinusoidally
-(δ = 0.01 lref) to seed the dominant mode.  Surface tension (σ = 0.01 N/m)
+($\delta = 0.01\,l_\mathrm{ref}$) to seed the dominant mode.  Surface tension ($\sigma = 0.01\,\mathrm{N/m}$)
 stabilises small-scale noise.
 
 Compared to 05_rayleigh_taylor (periodic in x), the lateral solid walls
 confine the flow and suppress cross-domain periodicity artefacts.
 
-Atwood number: At = (ρ₁ − ρ₂) / (ρ₁ + ρ₂) = 0.5
+Atwood number: $\mathrm{At} = (\rho_1 - \rho_2) / (\rho_1 + \rho_2) = 0.5$
 
-Linear growth (inviscid):  γ ≈ 176 s⁻¹
-→ for δ = 10 µm, amplitude reaches lref/10 after t ≈ ln(10)/γ ≈ 13 ms.
+Linear growth (inviscid):  $\gamma \approx 176\,\mathrm{s}^{-1}$
+$\to$ for $\delta = 10\,\mu\mathrm{m}$, amplitude reaches $l_\mathrm{ref}/10$ after $t \approx \ln(10)/\gamma \approx 13\,\mathrm{ms}$.
 
 Usage:
     python3 run_rayleigh_taylor_boxed.py <num_length> <init_gsd_file> [steps]
@@ -230,7 +230,7 @@ if device.communicator.rank == 0:
     heavy = (tid == 0)   # 'W' — heavy fluid
 
     # Bubble tip: highest y among light-fluid particles in centre column
-    # (x ≈ 0 where the sinusoidal perturbation peaks upward for light fluid)
+    # ($x \approx 0$ where the sinusoidal perturbation peaks upward for light fluid)
     centre_x = np.abs(pos[:, 0]) < lref / 4
     if np.any(light & centre_x):
         y_bubble = float(np.max(pos[light & centre_x, 1]))
@@ -238,7 +238,7 @@ if device.communicator.rank == 0:
         y_bubble = float(np.max(pos[light, 1]))
 
     # Spike tip: lowest y among heavy-fluid particles in edge column
-    # (x ≈ ±lref/2 where the heavy fluid penetrates downward)
+    # ($x \approx \pm l_\mathrm{ref}/2$ where the heavy fluid penetrates downward)
     edge_x = np.abs(pos[:, 0]) > lref / 4
     if np.any(heavy & edge_x):
         y_spike = float(np.min(pos[heavy & edge_x, 1]))

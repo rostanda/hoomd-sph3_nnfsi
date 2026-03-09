@@ -68,13 +68,13 @@ maintainer: dkrach, david.krach@mib.uni-stuttgart.de
     Extends TwoPhaseFlow with three additional terms in the momentum equation:
 
     1. Artificial stress  (Adami 2013):
-         A_i = ρ_i v_i ⊗ (tv_i − v_i)
-         Σ_j (Vi²+Vj²) (A_i+A_j) · ∇W_ij  added to the force.
+         \f$A_i = \rho_i v_i \otimes (tv_i - v_i)\f$
+         \f$\sum_j (V_i^2+V_j^2) (A_i+A_j) \cdot \nabla W_{ij}\f$  added to the force.
          Suppresses the tensile instability (particle clustering) by penalising
          deviations of the transport velocity from the physical velocity.
 
     2. Background-pressure contribution (BPC):
-         Σ_j (Vi²+Vj²) P_bg / m_i · ∇W_ij  accumulated in aux2.
+         \f$\sum_j (V_i^2+V_j^2) P_\mathrm{bg} / m_i \cdot \nabla W_{ij}\f$  accumulated in aux2.
          Read by KickDriftKickTV on the next half-step to advect particles with
          the transport velocity rather than the physical velocity.
          P_bg = StateEquation::getTransportVelocityPressure() (set per EOS).
@@ -125,11 +125,11 @@ namespace sph
  *  Extra momentum terms added by this class (fluid–fluid pairs only):
  *
  *    Artificial stress (Adami 2013, Eq. 11):
- *      F_i^AS += (1/2) Σ_j (Vi²+Vj²) (A_i + A_j)·∇W_ij
- *      A_k = ρ_k v_k ⊗ (tv_k − v_k)   [rank-2 tensor, built from outer product]
+ *      \f$F_i^{AS} \mathrel{+}= (1/2) \sum_j (V_i^2+V_j^2) (A_i + A_j) \cdot \nabla W_{ij}\f$
+ *      \f$A_k = \rho_k v_k \otimes (tv_k - v_k)\f$   [rank-2 tensor, built from outer product]
  *
  *    Background pressure contribution (BPC, stored in aux2):
- *      bpc_i += −Σ_j (Vi²+Vj²) P_bg / m_i · (∂W/∂r)/r · r_ij
+ *      \f$\mathrm{bpc}_i \mathrel{+}= -\sum_j (V_i^2+V_j^2) P_\mathrm{bg} / m_i \cdot (\partial W/\partial r)/r \cdot r_{ij}\f$
  *      where P_bg = EOS::getTransportVelocityPressure() (a positive constant
  *      large enough to keep all particle pressures positive).
  *      KickDriftKickTV reads bpc_i on the next integrator half-step to
