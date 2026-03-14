@@ -3,6 +3,7 @@
 [![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](./LICENSE)
 [![Release V1.0](https://img.shields.io/badge/release-V1.0-green)](https://github.com/krachdd/hoomd-sph3/releases/tag/v1.0)
 [![HOOMD-Blue](https://img.shields.io/badge/HOOMD--Blue-5.2.0-orange)](https://hoomd-blue.readthedocs.io/en/latest/)
+
 **Language:** C++, Python
 
 ---
