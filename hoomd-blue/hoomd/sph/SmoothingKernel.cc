@@ -49,9 +49,6 @@ template<SmoothingKernelType KT_>
 SmoothingKernel<KT_>::SmoothingKernel()
     : m_kappa(Scalar(0.0)), m_self_density(Scalar(0.0)), m_alpha(Scalar(0.0))
     {
-    // sanity check
-    assert(this->m_sysdef);
-    assert(this->m_pdata);
     }
 
 template<>

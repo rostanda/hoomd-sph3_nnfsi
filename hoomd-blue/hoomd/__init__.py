@@ -90,13 +90,6 @@ from hoomd import tune
 from hoomd import logging
 from hoomd import custom
 
-# if version.md_built:
-#     from hoomd import md
-# if version.hpmc_built:
-#     from hoomd import hpmc
-# if version.mpcd_built:
-#     from hoomd import mpcd
-
 from hoomd.simulation import Simulation
 from hoomd.state import State
 from hoomd.operations import Operations
@@ -137,11 +130,7 @@ __all__ = [
     "device",
     "error",
     "filter",
-    # "hpmc",
     "logging",
-    # "md",
-    # "mesh",
-    # "mpcd",
     "operation",
     "trigger",
     "tune",

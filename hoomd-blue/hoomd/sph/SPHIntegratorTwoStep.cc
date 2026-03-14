@@ -231,31 +231,7 @@ Scalar SPHIntegratorTwoStep::getTranslationalDOF(std::shared_ptr<ParticleGroup> 
     return total - periodic_dof_removed - getNDOFRemoved(group);
     }
 
-/*! \param group Group over which to count degrees of freedom.
-    SPHIntegratorTwoStep totals up the rotational degrees of freedom that each integration method
-   provide to the group.
-*/
-// Scalar SPHIntegratorTwoStep::getRotationalDOF(std::shared_ptr<ParticleGroup> group)
-//     {
-//     double res = 0;
 
-//     if (m_integrate_rotational_dof)
-//         {
-//         for (auto& method : m_methods)
-//             {
-//             res += method->getRotationalDOF(group);
-//             }
-//         }
-
-//     return res;
-//     }
-
-/*!  \param integrate_rotational_dofs true to integrate orientations, false to not
- */
-// void SPHIntegratorTwoStep::setIntegrateRotationalDOF(bool integrate_rotational_dof)
-//     {
-//     m_integrate_rotational_dof = integrate_rotational_dof;
-//     }
 
 // const bool SPHIntegratorTwoStep::getIntegrateRotationalDOF()
 //     {
@@ -441,10 +417,6 @@ void export_SPHIntegratorTwoStep(pybind11::module& m)
         "SPHIntegratorTwoStep")
         .def(pybind11::init<std::shared_ptr<SystemDefinition>, Scalar>())
         .def_property_readonly("methods", &SPHIntegratorTwoStep::getIntegrationMethods)
-        // .def_property("rigid", &SPHIntegratorTwoStep::getRigid, &SPHIntegratorTwoStep::setRigid)
-        // .def_property("integrate_rotational_dof",
-                      // &SPHIntegratorTwoStep::getIntegrateRotationalDOF,
-                      // &SPHIntegratorTwoStep::setIntegrateRotationalDOF);
         .def_property("half_step_hook",
                       &SPHIntegratorTwoStep::getHalfStepHook,
                       &SPHIntegratorTwoStep::setHalfStepHook)

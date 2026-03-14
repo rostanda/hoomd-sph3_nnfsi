@@ -64,7 +64,6 @@ class PYBIND11_EXPORT SFCPackTuner : public Tuner
     void setGrid(unsigned int grid)
         {
         m_grid = (unsigned int)pow(2.0, ceil(log(double(grid)) / log(2.0)));
-        ;
         }
 
     void setGridPython(pybind11::object grid)

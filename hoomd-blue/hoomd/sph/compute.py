@@ -55,21 +55,11 @@ class SinglePhaseFlowBasicProperties(Compute):
     calculates mechanical properties of those particles. Add a
     `SinglePhaseFlowBasicProperties` instance to a logger to save these quantities to a
     file, see `hoomd.logging.Logger` for more details.
-    
-    --------------------------------------------------------------------------------
-    I keep this info here for later use of rigid bodies
-    Note:
-        For compatibility with `hoomd.md.constrain.Rigid`,
-        `ThermodynamicQuantities` performs all sums
-        :math:`\\sum_{i \\in \\mathrm{filter}}` over free particles and
-        rigid body centers - ignoring constituent particles to avoid double
-        counting.
-    .---------------------------------------------------------------------------------
 
     Examples::
 
-        f = filter.Type('A')
-        compute.ThermodynamicQuantities(filter=f)
+        f = hoomd.filter.Type('A')
+        compute.SinglePhaseFlowBasicProperties(filter=f)
     """
 
     def __init__(self, filter):
@@ -83,7 +73,6 @@ class SinglePhaseFlowBasicProperties(Compute):
             spfbasic_cls = _sph.ComputeSPFBasicPropertiesGPU
         group = self._simulation.state._get_group(self._filter)
         self._cpp_obj = spfbasic_cls(self._simulation.state._cpp_sys_def, group)
-        # super()._attach()
 
     @log(requires_run=True)
     def abs_velocity(self):
@@ -116,19 +105,19 @@ class SinglePhaseFlowBasicProperties(Compute):
 
     @log(requires_run=True)
     def fluid_vel_y_sum(self):
-        """Sum of Fluid Particle velocity in xdir """
+        """Sum of Fluid Particle velocity in y-direction """
         self._cpp_obj.compute(self._simulation.timestep)
         return self._cpp_obj.fluid_vel_y_sum
 
     @log(requires_run=True)
     def fluid_vel_z_sum(self):
-        """Sum of Fluid Particle velocity in xdir """
+        """Sum of Fluid Particle velocity in z-direction """
         self._cpp_obj.compute(self._simulation.timestep)
         return self._cpp_obj.fluid_vel_z_sum
 
     @log(requires_run=True)
     def mean_density(self):
-        """Sum of Fluid Particle velocity in xdir """
+        """Mean density of the fluid particle subset """
         self._cpp_obj.compute(self._simulation.timestep)
         return self._cpp_obj.mean_density
 
@@ -145,21 +134,11 @@ class SolidProperties(Compute):
     calculates mechanical properties of those particles. Add a
     `SolidProperties` instance to a logger to save these quantities to a
     file, see `hoomd.logging.Logger` for more details.
-    
-    --------------------------------------------------------------------------------
-    I keep this info here for later use of rigid bodies
-    Note:
-        For compatibility with `hoomd.md.constrain.Rigid`,
-        `ThermodynamicQuantities` performs all sums
-        :math:`\\sum_{i \\in \\mathrm{filter}}` over free particles and
-        rigid body centers - ignoring constituent particles to avoid double
-        counting.
-    .---------------------------------------------------------------------------------
 
     Examples::
 
-        f = filter.Type('A')
-        compute.ThermodynamicQuantities(filter=f)
+        f = hoomd.filter.Type('A')
+        compute.SolidProperties(filter=f)
     """
 
     def __init__(self, filter):
@@ -173,23 +152,22 @@ class SolidProperties(Compute):
             spfbasic_cls = _sph.ComputeSolidPropertiesGPU
         group = self._simulation.state._get_group(self._filter)
         self._cpp_obj = spfbasic_cls(self._simulation.state._cpp_sys_def, group)
-        # super()._attach()
 
     @log(requires_run=True)
     def total_drag_x(self):
-        """Absolute velocity (norm of the vector) of the subset """
+        """Total drag force on the solid subset in x-direction """
         self._cpp_obj.compute(self._simulation.timestep)
         return self._cpp_obj.total_drag_x
 
     @log(requires_run=True)
     def total_drag_y(self):
-        """Absolute velocity (norm of the vector) of the subset """
+        """Total drag force on the solid subset in y-direction """
         self._cpp_obj.compute(self._simulation.timestep)
         return self._cpp_obj.total_drag_y
 
     @log(requires_run=True)
     def total_drag_z(self):
-        """Absolute velocity (norm of the vector) of the subset """
+        """Total drag force on the solid subset in z-direction """
         self._cpp_obj.compute(self._simulation.timestep)
         return self._cpp_obj.total_drag_z
 

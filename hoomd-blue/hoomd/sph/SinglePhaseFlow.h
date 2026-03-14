@@ -160,6 +160,61 @@ class PYBIND11_EXPORT SinglePhaseFlow : public SPHBaseClass<KT_, SET_>
             m_compute_solid_forces = true;
             }
 
+        /*! Activate Power-law non-Newtonian rheology.
+         *  \f$\mu_\mathrm{eff} = \max(\mu_\mathrm{min},\, K \cdot |\dot{\gamma}|^{n-1})\f$
+         */
+        void activatePowerLaw(Scalar K, Scalar n, Scalar mu_min = Scalar(0))
+            {
+            m_nn_model  = POWERLAW;
+            m_nn_K      = K;
+            m_nn_n      = n;
+            m_nn_mu_min = mu_min;
+            }
+
+        /*! Activate Carreau non-Newtonian rheology.
+         *  \f$\mu_\mathrm{eff} = \mu_\infty + (\mu_0 - \mu_\infty) \cdot (1 + (\lambda|\dot{\gamma}|)^2)^{(n-1)/2}\f$
+         */
+        void activateCarreau(Scalar mu0, Scalar muinf, Scalar lambda_NN, Scalar n)
+            {
+            m_nn_model   = CARREAU;
+            m_nn_mu0     = mu0;
+            m_nn_muinf   = muinf;
+            m_nn_lambda  = lambda_NN;
+            m_nn_n       = n;
+            }
+
+        /*! Activate Bingham plastic rheology (Papanastasiou regularization).
+         *  \f$\mu_\mathrm{eff} = \max(\mu_\mathrm{min},\, \mu_p + \tau_y \cdot (1 - e^{-m|\dot{\gamma}|}) / |\dot{\gamma}|)\f$
+         */
+        void activateBingham(Scalar mu_p, Scalar tauy, Scalar m_reg, Scalar mu_min = Scalar(0))
+            {
+            m_nn_model  = BINGHAM;
+            m_nn_K      = mu_p;   // reuse K slot for plastic viscosity
+            m_nn_tauy   = tauy;
+            m_nn_m      = m_reg;
+            m_nn_mu_min = mu_min;
+            }
+
+        /*! Activate Herschel-Bulkley rheology (Papanastasiou regularization).
+         *  \f$\mu_\mathrm{eff} = \max(\mu_\mathrm{min},\, K \cdot |\dot{\gamma}|^{n-1} + \tau_y \cdot (1 - e^{-m|\dot{\gamma}|}) / |\dot{\gamma}|)\f$
+         */
+        void activateHerschelBulkley(Scalar K, Scalar n, Scalar tauy, Scalar m_reg, Scalar mu_min = Scalar(0))
+            {
+            m_nn_model  = HERSCHELBULKLEY;
+            m_nn_K      = K;
+            m_nn_n      = n;
+            m_nn_tauy   = tauy;
+            m_nn_m      = m_reg;
+            m_nn_mu_min = mu_min;
+            }
+
+        /*! Revert to Newtonian rheology (default state).
+         */
+        void deactivateNonNewtonian()
+            {
+            m_nn_model = NEWTONIAN;
+            }
+
         /*! Turn Monaghan type artificial viscosity option on.
          * \param alpha Volumetric diffusion coefficient for artificial viscosity operator
          * \param beta Shock diffusion coefficient for artificial viscosity operator
@@ -265,8 +320,6 @@ class PYBIND11_EXPORT SinglePhaseFlow : public SPHBaseClass<KT_, SET_>
         // Index for rcut pair info -> nlist
         Index2D m_typpair_idx;        //!< Helper class for indexing per type pair arrays
 
-        // std::shared_ptr<nsearch::NeighborList> m_nlist; //!< the neighborlist to use for the computation
-
         // Model parameters
         Scalar m_ch; //!< Smoothing length to use if constant for all particles
         Scalar m_rcut; //!< Cut-off length to use if constant for all particles
@@ -279,6 +332,17 @@ class PYBIND11_EXPORT SinglePhaseFlow : public SPHBaseClass<KT_, SET_>
         Scalar m_c; //!< Speed of sound (Read from equation of state class)
         Scalar m_kappa; //!< Kernel scaling factor (Read from kernel class)
         Scalar m_mu; //!< Viscosity ( Must be set by user )
+
+        // Non-Newtonian rheology parameters
+        NonNewtonianModel m_nn_model;  //!< Active NN model (default NEWTONIAN)
+        Scalar m_nn_K;                 //!< Power-law/H-B consistency index K, or mu_p for BINGHAM
+        Scalar m_nn_n;                 //!< Power-law/Carreau/H-B exponent n
+        Scalar m_nn_mu0;               //!< Carreau zero-shear viscosity
+        Scalar m_nn_muinf;             //!< Carreau infinite-shear viscosity
+        Scalar m_nn_lambda;            //!< Carreau relaxation time lambda
+        Scalar m_nn_tauy;              //!< Yield stress (BINGHAM / H-B)
+        Scalar m_nn_m;                 //!< Papanastasiou regularization parameter
+        Scalar m_nn_mu_min;            //!< Lower viscosity clamp
         Scalar m_avalpha; //!< Volumetric diffusion coefficient for artificial viscosity operator
         Scalar m_avbeta; //!< Shock diffusion coefficient for artificial viscosity operator
         Scalar m_ddiff; //!< Diffusion coefficient for Molteni type density diffusion
@@ -297,8 +361,9 @@ class PYBIND11_EXPORT SinglePhaseFlow : public SPHBaseClass<KT_, SET_>
         bool m_density_diffusion; //!< Set to true if Molteni type density diffusion is to be used
         bool m_shepard_renormalization; //!< Set to true if Shepard type density reinitialization is to be used
         bool m_params_set; //!< True if parameters are set
-        bool m_solid_removed; //!< True if solid Particles have been marked to remove 
-        bool m_density_reinitialization; //!< True if density is reinitialized 
+        bool m_solid_removed; //!< True if solid Particles have been marked to remove
+        bool m_density_reinitialization; //!< True if density is reinitialized
+        bool m_pressure_initialized; //!< True once pressure has been initialized from EOS (DENSITYCONTINUITY only)
 
 
         // Log parameters

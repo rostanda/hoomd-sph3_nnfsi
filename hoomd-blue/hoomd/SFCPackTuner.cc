@@ -127,7 +127,6 @@ void SFCPackTuner::applySortOrder()
                                access_location::host,
                                access_mode::readwrite);
 
-    // ArrayHandle<Scalar3> h_dpe(m_pdata->getDPEs(), access_location::host, access_mode::readwrite);
     ArrayHandle<Scalar> h_density(m_pdata->getDensities(), access_location::host, access_mode::readwrite);
     ArrayHandle<Scalar> h_pressure(m_pdata->getPressures(), access_location::host, access_mode::readwrite);
     ArrayHandle<Scalar> h_energy(m_pdata->getEnergies(), access_location::host, access_mode::readwrite);
@@ -139,22 +138,10 @@ void SFCPackTuner::applySortOrder()
     ArrayHandle<Scalar3> h_accel(m_pdata->getAccelerations(), access_location::host, access_mode::readwrite);
     ArrayHandle<Scalar3> h_dpedt(m_pdata->getDPEdts(), access_location::host, access_mode::readwrite);
 
-    // ArrayHandle<Scalar> h_charge(m_pdata->getCharges(),
-    //                              access_location::host,
-    //                              access_mode::readwrite);
-    // ArrayHandle<Scalar> h_diameter(m_pdata->getDiameters(),
-    //                                access_location::host,
-    //                                access_mode::readwrite);
     ArrayHandle<int3> h_image(m_pdata->getImages(), access_location::host, access_mode::readwrite);
     ArrayHandle<unsigned int> h_body(m_pdata->getBodies(),
                                      access_location::host,
                                      access_mode::readwrite);
-    // ArrayHandle<Scalar4> h_angmom(m_pdata->getAngularMomentumArray(),
-    //                               access_location::host,
-    //                               access_mode::readwrite);
-    // ArrayHandle<Scalar3> h_inertia(m_pdata->getMomentsOfInertiaArray(),
-    //                                access_location::host,
-    //                                access_mode::readwrite);
     ArrayHandle<unsigned int> h_tag(m_pdata->getTags(),
                                     access_location::host,
                                     access_mode::readwrite);
@@ -183,12 +170,6 @@ void SFCPackTuner::applySortOrder()
         scal3_tmp[i] = h_accel.data[m_sort_order[i]];
     for (unsigned int i = 0; i < m_pdata->getN(); i++)
         h_accel.data[i] = scal3_tmp[i];
-
-    // // sort densities, pressures and energies
-    // for (unsigned int i = 0; i < m_pdata->getN(); i++)
-    //     scal3_tmp[i] = h_dpe.data[m_sort_order[i]];
-    // for (unsigned int i = 0; i < m_pdata->getN(); i++)
-    //     h_dpe.data[i] = scal3_tmp[i];
 
     // sort auxiliary array 1
     for (unsigned int i = 0; i < m_pdata->getN(); i++)
@@ -245,60 +226,17 @@ void SFCPackTuner::applySortOrder()
     for (unsigned int i = 0; i < m_pdata->getN(); i++)
         h_energy.data[i] = scal_tmp[i];
 
-    // Scalar* scal_tmp = new Scalar[m_pdata->getN()];
-    // // sort charge
-    // for (unsigned int i = 0; i < m_pdata->getN(); i++)
-    //     scal_tmp[i] = h_charge.data[m_sort_order[i]];
-    // for (unsigned int i = 0; i < m_pdata->getN(); i++)
-    //     h_charge.data[i] = scal_tmp[i];
+    // sort net force and net ratedpe
+    {
+    ArrayHandle<Scalar4> h_net_force(m_pdata->getNetForce(),
+                                     access_location::host,
+                                     access_mode::readwrite);
 
-    // // sort diameter
-    // for (unsigned int i = 0; i < m_pdata->getN(); i++)
-    //     scal_tmp[i] = h_diameter.data[m_sort_order[i]];
-    // for (unsigned int i = 0; i < m_pdata->getN(); i++)
-    //     h_diameter.data[i] = scal_tmp[i];
-
-    // // sort angular momentum
-    // for (unsigned int i = 0; i < m_pdata->getN(); i++)
-    //     scal4_tmp[i] = h_angmom.data[m_sort_order[i]];
-    // for (unsigned int i = 0; i < m_pdata->getN(); i++)
-    //     h_angmom.data[i] = scal4_tmp[i];
-
-    // // sort moment of inertia
-    // for (unsigned int i = 0; i < m_pdata->getN(); i++)
-    //     scal3_tmp[i] = h_inertia.data[m_sort_order[i]];
-    // for (unsigned int i = 0; i < m_pdata->getN(); i++)
-    //     {
-    //     h_inertia.data[i] = scal3_tmp[i];
-    //     }
-
-        // in case anyone access it from frame to frame, sort the net virial
-        // {
-        // ArrayHandle<Scalar> h_net_virial(m_pdata->getNetVirial(),
-        //                                  access_location::host,
-        //                                  access_mode::readwrite);
-        // size_t virial_pitch = m_pdata->getNetVirial().getPitch();
-
-        // for (unsigned int j = 0; j < 6; j++)
-        //     {
-        //     for (unsigned int i = 0; i < m_pdata->getN(); i++)
-        //         scal_tmp[i] = h_net_virial.data[j * virial_pitch + m_sort_order[i]];
-        //     for (unsigned int i = 0; i < m_pdata->getN(); i++)
-        //         h_net_virial.data[j * virial_pitch + i] = scal_tmp[i];
-        //     }
-        // }
-
-        // sort net force, net torque, and orientation
-        {
-        ArrayHandle<Scalar4> h_net_force(m_pdata->getNetForce(),
-                                         access_location::host,
-                                         access_mode::readwrite);
-
-        for (unsigned int i = 0; i < m_pdata->getN(); i++)
-            scal4_tmp[i] = h_net_force.data[m_sort_order[i]];
-        for (unsigned int i = 0; i < m_pdata->getN(); i++)
-            h_net_force.data[i] = scal4_tmp[i];
-        }
+    for (unsigned int i = 0; i < m_pdata->getN(); i++)
+        scal4_tmp[i] = h_net_force.data[m_sort_order[i]];
+    for (unsigned int i = 0; i < m_pdata->getN(); i++)
+        h_net_force.data[i] = scal4_tmp[i];
+    }
 
         {
         ArrayHandle<Scalar4> h_net_ratedpe(m_pdata->getNetRateDPEArray(), access_location::host, access_mode::readwrite);
@@ -308,28 +246,6 @@ void SFCPackTuner::applySortOrder()
         for (unsigned int i = 0; i < m_pdata->getN(); i++)
             h_net_ratedpe.data[i] = scal4_tmp[i];
         }
-
-        // {
-        // ArrayHandle<Scalar4> h_net_torque(m_pdata->getNetTorqueArray(),
-        //                                   access_location::host,
-        //                                   access_mode::readwrite);
-
-        // for (unsigned int i = 0; i < m_pdata->getN(); i++)
-        //     scal4_tmp[i] = h_net_torque.data[m_sort_order[i]];
-        // for (unsigned int i = 0; i < m_pdata->getN(); i++)
-        //     h_net_torque.data[i] = scal4_tmp[i];
-        // }
-
-        // {
-        // ArrayHandle<Scalar4> h_orientation(m_pdata->getOrientationArray(),
-        //                                    access_location::host,
-        //                                    access_mode::readwrite);
-
-        // for (unsigned int i = 0; i < m_pdata->getN(); i++)
-        //     scal4_tmp[i] = h_orientation.data[m_sort_order[i]];
-        // for (unsigned int i = 0; i < m_pdata->getN(); i++)
-        //     h_orientation.data[i] = scal4_tmp[i];
-        // }
 
     // sort image
     int3* int3_tmp = new int3[m_pdata->getN()];

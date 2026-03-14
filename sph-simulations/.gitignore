@@ -8,5 +8,8 @@
 *.log
 *slurm*.sh
 *wrun*.sh
+*err
+*.log
 
 99_singlephaseflow_benchmarks/.ipynb_checkpoints/*
+**/__pycache__/

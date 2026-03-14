@@ -34,11 +34,15 @@ SPH Models for computing Momentum interaction
 """
 
 from .sphmodel import (SPHModel, SinglePhaseFlow, SinglePhaseFlowTV,
-                        TwoPhaseFlow)
+                        SinglePhaseFlowGDGD, SinglePhaseFlowFS,
+                        TwoPhaseFlow, TwoPhaseFlowTV)
 
 __all__ = [
     "SPHModel",
     "SinglePhaseFlow",
     "SinglePhaseFlowTV",
-    "TwoPhaseFlow"
+    "SinglePhaseFlowGDGD",
+    "SinglePhaseFlowFS",
+    "TwoPhaseFlow",
+    "TwoPhaseFlowTV",
 ]

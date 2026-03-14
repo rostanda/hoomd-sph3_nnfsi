@@ -31,11 +31,7 @@ void SnapshotSystemData<Real>::replicate(unsigned int nx, unsigned int ny, unsig
     // replicate snapshots
     particle_data.replicate(nx, ny, nz, old_box, *global_box);
     bond_data.replicate(n, old_n);
-    // angle_data.replicate(n, old_n);
-    // dihedral_data.replicate(n, old_n);
-    // improper_data.replicate(n, old_n);
     constraint_data.replicate(n, old_n);
-    // pair_data.replicate(n, old_n);
 #ifdef BUILD_MPCD
     mpcd_data.replicate(nx, ny, nz, old_box, *global_box);
 #endif
@@ -100,11 +96,7 @@ void SnapshotSystemData<Real>::broadcast(unsigned int root,
         {
         particle_data.bcast(root, communicator);
         bond_data.bcast(root, communicator);
-        // angle_data.bcast(root, communicator);
-        // dihedral_data.bcast(root, communicator);
-        // improper_data.bcast(root, communicator);
         constraint_data.bcast(root, communicator);
-        // pair_data.bcast(root, communicator);
 #ifdef BUILD_MPCD
         mpcd_data.bcast(root, communicator, mpi_config);
 #endif
@@ -126,11 +118,7 @@ void SnapshotSystemData<Real>::broadcast_all(unsigned int root,
         {
         particle_data.bcast(root, hoomd_world);
         bond_data.bcast(root, hoomd_world);
-        // angle_data.bcast(root, hoomd_world);
-        // dihedral_data.bcast(root, hoomd_world);
-        // improper_data.bcast(root, hoomd_world);
         constraint_data.bcast(root, hoomd_world);
-        // pair_data.bcast(root, hoomd_world);
 #ifdef BUILD_MPCD
         mpcd_data.bcast(root, hoomd_world, mpi_config);
 #endif
@@ -154,11 +142,7 @@ void export_SnapshotSystemData(pybind11::module& m)
         .def_readwrite("_global_box", &SnapshotSystemData<float>::global_box)
         .def_readonly("particles", &SnapshotSystemData<float>::particle_data)
         .def_readonly("bonds", &SnapshotSystemData<float>::bond_data)
-        // .def_readonly("angles", &SnapshotSystemData<float>::angle_data)
-        // .def_readonly("dihedrals", &SnapshotSystemData<float>::dihedral_data)
-        // .def_readonly("impropers", &SnapshotSystemData<float>::improper_data)
         .def_readonly("constraints", &SnapshotSystemData<float>::constraint_data)
-        // .def_readonly("pairs", &SnapshotSystemData<float>::pair_data)
 #ifdef BUILD_MPCD
         .def_readonly("mpcd", &SnapshotSystemData<float>::mpcd_data)
 #endif
@@ -176,11 +160,7 @@ void export_SnapshotSystemData(pybind11::module& m)
         .def_readwrite("_global_box", &SnapshotSystemData<double>::global_box)
         .def_readonly("particles", &SnapshotSystemData<double>::particle_data)
         .def_readonly("bonds", &SnapshotSystemData<double>::bond_data)
-        // .def_readonly("angles", &SnapshotSystemData<double>::angle_data)
-        // .def_readonly("dihedrals", &SnapshotSystemData<double>::dihedral_data)
-        // .def_readonly("impropers", &SnapshotSystemData<double>::improper_data)
         .def_readonly("constraints", &SnapshotSystemData<double>::constraint_data)
-        // .def_readonly("pairs", &SnapshotSystemData<double>::pair_data)
 #ifdef BUILD_MPCD
         .def_readonly("mpcd", &SnapshotSystemData<double>::mpcd_data)
 #endif

@@ -65,21 +65,31 @@ class Method(AutotunedObject):
         self._simulation.state.update_group_dof()
 
     def _detach_hook(self):
-        self._simulation.state.update_group_dof()
+        if self._simulation is not None:
+            self._simulation.state.update_group_dof()
 
 
 
 class VelocityVerlet(Method):
-    r"""
+    r"""Velocity-Verlet SPH integration method.
 
     Args:
         filter (hoomd.filter.filter_like): Subset of particles on which to
             apply this method.
+        densitymethod (str): Density computation strategy,
+            ``'SUMMATION'`` or ``'CONTINUITY'``.
 
-    Based on md-`NVE` integrates integrates translational degrees of freedom
-    using Velocity-Verlet.
+    Integrates translational degrees of freedom using the Velocity-Verlet
+    (leapfrog) scheme:
 
-    Examples::
+    .. math::
+
+        \mathbf{v}_i^{n+1/2} &= \mathbf{v}_i^n
+                               + \frac{\Delta t}{2} \mathbf{a}_i^n \\
+        \mathbf{r}_i^{n+1}   &= \mathbf{r}_i^n
+                               + \Delta t\, \mathbf{v}_i^{n+1/2} \\
+        \mathbf{v}_i^{n+1}   &= \mathbf{v}_i^{n+1/2}
+                               + \frac{\Delta t}{2} \mathbf{a}_i^{n+1}
 
     Attributes:
         filter (hoomd.filter.filter_like): Subset of particles on which to
@@ -135,7 +145,7 @@ class VelocityVerlet(Method):
     # @property
     def densitymethod(self):
         # Invert key mapping
-        invD = dict((v,k) for k, v in self.DENSITYMETHODS.iteritems())
+        invD = dict((v,k) for k, v in self.DENSITYMETHODS.items())
         return invD[self._cpp_obj.getDensityMethod()]
 
     # @densitymethod.setter
@@ -149,16 +159,17 @@ class VelocityVerlet(Method):
 
 
 class VelocityVerletBasic(Method):
-    r"""
+    r"""Basic Velocity-Verlet SPH integration method (single-phase only).
 
     Args:
         filter (hoomd.filter.filter_like): Subset of particles on which to
             apply this method.
+        densitymethod (str): Density computation strategy,
+            ``'SUMMATION'`` or ``'CONTINUITY'``.
 
-    Based on md-`NVE` integrates integrates translational degrees of freedom
-    using Velocity-Verlet.
-
-    Examples::
+    Simplified Velocity-Verlet integrator without transport-velocity
+    corrections; equivalent to `VelocityVerlet` but without the TV
+    half-step for the position update.
 
     Attributes:
         filter (hoomd.filter.filter_like): Subset of particles on which to
@@ -214,7 +225,7 @@ class VelocityVerletBasic(Method):
     # @property
     def densitymethod(self):
         # Invert key mapping
-        invD = dict((v,k) for k, v in self.DENSITYMETHODS.iteritems())
+        invD = dict((v,k) for k, v in self.DENSITYMETHODS.items())
         return invD[self._cpp_obj.getDensityMethod()]
 
     # @densitymethod.setter
@@ -226,16 +237,34 @@ class VelocityVerletBasic(Method):
         
 
 class KickDriftKickTV(Method):
-    r"""
+    r"""Kick-Drift-Kick integration method with transport-velocity (TV) correction.
 
     Args:
         filter (hoomd.filter.filter_like): Subset of particles on which to
             apply this method.
+        densitymethod (str): Density computation strategy,
+            ``'SUMMATION'`` or ``'CONTINUITY'``.
+        vlimit (bool): Enable velocity limiter.  Default ``False``.
+        vlimit_val (float): Maximum allowed velocity magnitude.
+        xlimit (bool): Enable position limiter.  Default ``False``.
+        xlimit_val (float): Maximum allowed position displacement per step.
 
-    Based on md-`NVE` integrates integrates translational degrees of freedom
-    using Velocity-Verlet.
+    Implements the transport-velocity formulation of Adami et al. (2013).
+    Particle positions are advanced along the smooth transport velocity
+    :math:`\tilde{\mathbf{v}}_i` rather than the physical velocity
+    :math:`\mathbf{v}_i`:
 
-    Examples::
+    .. math::
+
+        \tilde{\mathbf{v}}_i^{n+1/2} &= \mathbf{v}_i^n
+                                       + \frac{\Delta t}{2}
+                                         \mathbf{a}_i^n \\
+        \mathbf{r}_i^{n+1}           &= \mathbf{r}_i^n
+                                       + \Delta t\,
+                                         \tilde{\mathbf{v}}_i^{n+1/2} \\
+        \mathbf{v}_i^{n+1}           &= \mathbf{v}_i^{n+1/2}
+                                       + \frac{\Delta t}{2}
+                                         \mathbf{a}_i^{n+1}
 
     Attributes:
         filter (hoomd.filter.filter_like): Subset of particles on which to
@@ -303,7 +332,7 @@ class KickDriftKickTV(Method):
     # @property
     def densitymethod(self):
         # Invert key mapping
-        invD = dict((v,k) for k, v in self.DENSITYMETHODS.iteritems())
+        invD = dict((v,k) for k, v in self.DENSITYMETHODS.items())
         return invD[self._cpp_obj.getDensityMethod()]
 
     # @densitymethod.setter
@@ -318,8 +347,8 @@ class KickDriftKickTV(Method):
 
     # @densitymethod.setter
     def setvLimit(self, limit_val):
-        if vlimit_val > 0:
-            self._cpp_obj.setvLimit(vlimit_val)
+        if limit_val > 0:
+            self._cpp_obj.setvLimit(limit_val)
         else:
             raise ValueError("vlimit_val must be positive.")
 

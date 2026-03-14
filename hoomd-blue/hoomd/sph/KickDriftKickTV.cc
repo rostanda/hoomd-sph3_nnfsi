@@ -141,15 +141,6 @@ void KickDriftKickTV::integrateStepOne(uint64_t timestep)
 
     m_exec_conf->msg->notice(9) << "KickDriftKickTV: Integrate Step one" << endl;
 
-    // if (m_densitymethod_set == true){
-    //     if ( m_density_method == DENSITYSUMMATION ){
-    //         std::cout << "Using DENSITYSUMMATION in Verlet" << std::endl;
-    //     }
-    //     else if (m_density_method == DENSITYCONTINUITY ){
-    //         std::cout << "Using DENSITYCONTINUITY in Verlet" << std::endl;
-    //     }
-    // }
-
         { // GPU Array Scope
         ArrayHandle<Scalar4> h_vel(m_pdata->getVelocities(), access_location::host, access_mode::readwrite);
         ArrayHandle<Scalar>  h_density(m_pdata->getDensities(), access_location::host, access_mode::readwrite);
@@ -159,6 +150,8 @@ void KickDriftKickTV::integrateStepOne(uint64_t timestep)
         ArrayHandle<Scalar4> h_pos(m_pdata->getPositions(), access_location::host, access_mode::readwrite);
         ArrayHandle<Scalar3> h_bpc(this->m_pdata->getAuxiliaries2(), access_location::host,access_mode::read); // background pressure contribution to tv
         ArrayHandle<Scalar3> h_tv(this->m_pdata->getAuxiliaries3(), access_location::host,access_mode::readwrite); // transport velocity of the particle tv
+        // aux4.x stores the scalar field T; h_dpedt.z carries dT/dt (SinglePhaseFlowGDGD only).
+        ArrayHandle<Scalar3> h_aux4(this->m_pdata->getAuxiliaries4(), access_location::host, access_mode::readwrite);
 
         // perform the first half step of velocity verlet
         // r(t+deltaT) = r(t) + v(t)*deltaT + (1/2)a(t)*deltaT^2
@@ -167,48 +160,19 @@ void KickDriftKickTV::integrateStepOne(uint64_t timestep)
         for (unsigned int group_idx = 0; group_idx < group_size; group_idx++)
             {
             unsigned int j = m_group->getMemberIndex(group_idx);
-            // if (m_zero_force)
-            //     h_accel.data[j].x = h_accel.data[j].y = h_accel.data[j].z = 0.0;
 
-            // Original HOOMD Velocity Verlet Two Step NVE
-            // Scalar dx = h_vel.data[j].x * m_deltaT + Scalar(1.0 / 2.0) * h_accel.data[j].x * m_deltaT * m_deltaT;
-            // Scalar dy = h_vel.data[j].y * m_deltaT + Scalar(1.0 / 2.0) * h_accel.data[j].y * m_deltaT * m_deltaT;
-            // Scalar dz = h_vel.data[j].z * m_deltaT + Scalar(1.0 / 2.0) * h_accel.data[j].z * m_deltaT * m_deltaT;
-
-            // // limit the movement of the particles
-            // if (m_xlimit)
-            //     {
-            //     Scalar len = sqrt(dx * dx + dy * dy + dz * dz);
-            //     if (len > m_xlimit_val)
-            //         {
-            //         dx = dx / len * m_xlimit_val;
-            //         dy = dy / len * m_xlimit_val;
-            //         dz = dz / len * m_xlimit_val;
-            //         }
-            //     }
-
-            // h_pos.data[j].x += dx;
-            // h_pos.data[j].y += dy;
-            // h_pos.data[j].z += dz;
-
-            // David 
             // dpe(t+deltaT/2) = dpe(t) + (1/2)*dpedt(t)*deltaT
             temp0 = Scalar(1.0 / 2.0) * m_deltaT;
             h_density.data[j]  += temp0 * h_dpedt.data[j].x;
             h_pressure.data[j] += temp0 * h_dpedt.data[j].y;
-            // DK: Energy change can be ignored
-            // h_dpe.data[j].z += Scalar(1.0/2.0)*h_dpedt.data[j].z*m_deltaT;
+            // Scalar field half-step: T(t+dt/2) = T(t) + (1/2)*dT/dt*dt
+            // h_dpedt.data[j].z holds dT/dt set by SinglePhaseFlowGDGD (zero for all other solvers).
+            h_aux4.data[j].x   += temp0 * h_dpedt.data[j].z;
 
             // Original HOOMD Velocity Verlet Two Step NVE
             h_vel.data[j].x += temp0 * h_accel.data[j].x;
             h_vel.data[j].y += temp0 * h_accel.data[j].y;
             h_vel.data[j].z += temp0 * h_accel.data[j].z;
-
-            // David 
-            // r(t+deltaT) = r(t) + v(t+deltaT/2)*deltaT
-            // h_pos.data[j].x += h_vel.data[j].x*m_deltaT;
-            // h_pos.data[j].y += h_vel.data[j].y*m_deltaT;
-            // h_pos.data[j].z += h_vel.data[j].z*m_deltaT;
 
             // Advection Velocity
             // temp0 = Scalar(1.0 / 2.0) * 1.0/h_vel.data[j].w * m_deltaT;
@@ -223,20 +187,16 @@ void KickDriftKickTV::integrateStepOne(uint64_t timestep)
             Scalar dz = h_tv.data[j].z * m_deltaT;
 
             // limit the movement of the particles
+            // Note: use !(fabs(d) <= limit) rather than fabs(d) > limit so that
+            // NaN displacements are caught (NaN comparisons always return false).
             if (m_xlimit)
                 {
-                if (sqrt(dx*dx) > m_xlimit_val)
-                    {
-                    dx = m_xlimit_val;
-                    }
-                if (sqrt(dy*dy) > m_xlimit_val)
-                    {
-                    dy = m_xlimit_val;
-                    }
-                if (sqrt(dz*dz) > m_xlimit_val)
-                    {
-                    dz = m_xlimit_val;
-                    }
+                if (!(fabs(dx) <= m_xlimit_val))
+                    dx = (dx > Scalar(0)) ? m_xlimit_val : -m_xlimit_val;
+                if (!(fabs(dy) <= m_xlimit_val))
+                    dy = (dy > Scalar(0)) ? m_xlimit_val : -m_xlimit_val;
+                if (!(fabs(dz) <= m_xlimit_val))
+                    dz = (dz > Scalar(0)) ? m_xlimit_val : -m_xlimit_val;
                 }
 
             // Update position with transport veloicity
@@ -270,12 +230,14 @@ void KickDriftKickTV::integrateStepTwo(uint64_t timestep)
     const GPUArray<Scalar4>& net_force = m_pdata->getNetForce();
 
         { // GPU Array Scope
-        // ArrayHandle<Scalar4> h_pos(m_pdata->getPositions(), access_location::host, access_mode::readwrite);
         ArrayHandle<Scalar4> h_vel(m_pdata->getVelocities(), access_location::host, access_mode::readwrite);
         ArrayHandle<Scalar3> h_accel(m_pdata->getAccelerations(), access_location::host, access_mode::readwrite);
         ArrayHandle<Scalar> h_density(m_pdata->getDensities(), access_location::host, access_mode::readwrite);
         ArrayHandle<Scalar> h_pressure(m_pdata->getPressures(), access_location::host, access_mode::readwrite);
         ArrayHandle<Scalar3> h_dpedt(m_pdata->getDPEdts(), access_location::host, access_mode::readwrite);
+        // aux4.x stores the scalar field T (temperature / concentration).
+        // Advanced here with dT/dt set by SinglePhaseFlowGDGD; zero for all other solvers.
+        ArrayHandle<Scalar3> h_aux4(m_pdata->getAuxiliaries4(), access_location::host, access_mode::readwrite);
 
         ArrayHandle<Scalar4> h_net_force(net_force, access_location::host, access_mode::read);
         ArrayHandle<Scalar4> h_net_ratedpe(m_pdata->getNetRateDPEArray(), access_location::host, access_mode::read);
@@ -288,67 +250,43 @@ void KickDriftKickTV::integrateStepTwo(uint64_t timestep)
             {
             unsigned int j = m_group->getMemberIndex(group_idx);
 
-            // Original HOOMD Velocity Verlet Two Step NVE
-            // if (m_zero_force)
-            //     {
-            //     h_accel.data[j].x = h_accel.data[j].y = h_accel.data[j].z = 0.0;
-            //     }
-            // else
-            //     {
-            //     // first, calculate acceleration from the net force
-            //     Scalar minv = Scalar(1.0) / h_vel.data[j].w;
-            //     h_accel.data[j].x = h_net_force.data[j].x * minv;
-            //     h_accel.data[j].y = h_net_force.data[j].y * minv;
-            //     h_accel.data[j].z = h_net_force.data[j].z * minv;
-            //     }
-
-            // David 
             // first, calculate acceleration from the net force
             minv = Scalar(1.0) / h_vel.data[j].w;
             h_accel.data[j].x = h_net_force.data[j].x * minv;
             h_accel.data[j].y = h_net_force.data[j].y * minv;
             h_accel.data[j].z = h_net_force.data[j].z * minv;
 
-            // actually not necessary to compute the next 6 lines if m_densitymethod == DENSITYSUMMATION and j_isfluid 
+            // Copy net rates from the accumulated force/rate arrays into the per-particle
+            // rate array (used for the half-step on the NEXT timestep's step 1).
+            // The .z component carries dT/dt when SinglePhaseFlowGDGD is active; zero otherwise.
             h_dpedt.data[j].x = h_net_ratedpe.data[j].x;
             h_dpedt.data[j].y = h_net_ratedpe.data[j].y;
-            // h_dpedt.data[j].z = h_net_ratedpe.data[j].z;
+            h_dpedt.data[j].z = h_net_ratedpe.data[j].z; // dT/dt (zero for non-GDGD solvers)
 
             temp0 = Scalar(1.0/2.0) * m_deltaT;
             // dpe(t+deltaT) = dpe(t+deltaT/2) + 1/2 * dpedt(t+deltaT)*deltaT
-            h_density.data[j]  += temp0 *h_dpedt.data[j].x;
-            h_pressure.data[j] += temp0 *h_dpedt.data[j].y;
-            // h_dpe.data[j].z += Scalar(1.0/2.0)*h_dpedt.data[j].z*m_deltaT;
+            h_density.data[j]  += temp0 * h_dpedt.data[j].x;
+            h_pressure.data[j] += temp0 * h_dpedt.data[j].y;
+            // Second scalar half-step: T(t+dt) = T(t+dt/2) + (1/2)*dT/dt*dt
+            h_aux4.data[j].x   += temp0 * h_dpedt.data[j].z;
 
-
-            // not done in original VV Algorithm
-            // // r(t+deltaT) = r(t+deltaT/2) + v(t+deltaT/2)*deltaT/2
-            // h_pos.data[j].x += Scalar(1.0/2.0)*h_vel.data[j].x*m_deltaT;
-            // h_pos.data[j].y += Scalar(1.0/2.0)*h_vel.data[j].y*m_deltaT;
-            // h_pos.data[j].z += Scalar(1.0/2.0)*h_vel.data[j].z*m_deltaT;
-
-            // Original HOOMD Velocity Verlet Two Step NVE
-            // then, update the velocity
             // v(t+deltaT) = v(t+deltaT/2) + 1/2 * a(t+deltaT) deltaT
             h_vel.data[j].x += temp0 * h_accel.data[j].x;
             h_vel.data[j].y += temp0 * h_accel.data[j].y;
             h_vel.data[j].z += temp0 * h_accel.data[j].z;
 
-            // limit the movement of the particles
+            // limit the velocity of the particles
+            // Note: use !(fabs(v) <= limit) rather than fabs(v) > limit so that
+            // NaN velocities are caught (NaN comparisons always return false, so
+            // fabs(NaN) > limit is false and NaN would bypass the clamp).
             if (m_vlimit)
                 {
-                if ( sqrt( h_vel.data[j].x * h_vel.data[j].x ) > m_vlimit_val )
-                    {
-                    h_vel.data[j].x = m_vlimit_val;
-                    }
-                if ( sqrt( h_vel.data[j].y * h_vel.data[j].y ) > m_vlimit_val )
-                    {
-                    h_vel.data[j].y = m_vlimit_val;
-                    }
-                if ( sqrt( h_vel.data[j].z * h_vel.data[j].z ) > m_vlimit_val )
-                    {
-                    h_vel.data[j].z = m_vlimit_val;
-                    }
+                if (!(fabs(h_vel.data[j].x) <= m_vlimit_val))
+                    h_vel.data[j].x = (h_vel.data[j].x > Scalar(0)) ? m_vlimit_val : -m_vlimit_val;
+                if (!(fabs(h_vel.data[j].y) <= m_vlimit_val))
+                    h_vel.data[j].y = (h_vel.data[j].y > Scalar(0)) ? m_vlimit_val : -m_vlimit_val;
+                if (!(fabs(h_vel.data[j].z) <= m_vlimit_val))
+                    h_vel.data[j].z = (h_vel.data[j].z > Scalar(0)) ? m_vlimit_val : -m_vlimit_val;
                 }
             }
         } // End GPU Array Scope
@@ -368,7 +306,6 @@ void export_KickDriftKickTV(pybind11::module& m)
         .def("getxLimit", &KickDriftKickTV::getxLimit)
         .def("setvLimit", &KickDriftKickTV::setvLimit)
         .def("setxLimit", &KickDriftKickTV::setxLimit)
-        // .def_property("limit", &KickDriftKickTV::getLimit, &KickDriftKickTV::setLimit)
         .def_property("zero_force", &KickDriftKickTV::getZeroForce, &KickDriftKickTV::setZeroForce);
     }
     } // end namespace detail

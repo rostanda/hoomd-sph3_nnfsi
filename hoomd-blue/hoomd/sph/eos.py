@@ -38,8 +38,6 @@ from hoomd.sph import _sph
 from hoomd.operation import _HOOMDBaseObject
 import numpy
 
-# Hier in zukunft auch super verwenden
-
 class _StateEquation(_HOOMDBaseObject):
     r"""
     Constructs the equation of state meta class
@@ -79,35 +77,42 @@ class _StateEquation(_HOOMDBaseObject):
         self.SpeedOfSound       = c.item()    if isinstance(c, numpy.generic)    else c
         self.cpp_stateequation.setParams(self.RestDensity,self.SpeedOfSound,self.BackgroundPressure,self.TransportVelocityPressure)
 
-    def pressure(self,rho):
-        self.check_initialization();
-        mrho = rho.item()if isinstance(rho, numpy.generic) else rho
-        return self.cpp_stateequation.Pressure(rho)
+    def pressure(self, rho):
+        self.check_initialization()
+        mrho = rho.item() if isinstance(rho, numpy.generic) else rho
+        return self.cpp_stateequation.Pressure(mrho)
 
 
 class Tait(_StateEquation):
-    R""" Tait Equation of state
+    R"""Tait (weakly-compressible) equation of state.
+
+    .. math::
+
+        p(\rho) = \frac{\rho_0 c_0^2}{\gamma}
+                  \left[\left(\frac{\rho}{\rho_0}\right)^\gamma - 1\right]
+                  + p_b
+
+    where :math:`\rho_0` is the rest density, :math:`c_0` is the reference
+    speed of sound, :math:`\gamma = 7` (water-like exponent), and :math:`p_b`
+    is the background pressure.
     """
     def __init__(self):
-        # hoomd.util.print_status_line();
-
-        # Initialize base class
-        _StateEquation.__init__(self, "Tait");
-
-        # create the c++ mirror class
-        self.cpp_stateequation = _sph.Tait();
+        _StateEquation.__init__(self, "Tait")
+        self.cpp_stateequation = _sph.Tait()
 
 class Linear(_StateEquation):
-    R""" Linear Equation of state
+    R"""Linear (acoustic) equation of state.
+
+    .. math::
+
+        p(\rho) = c_0^2 (\rho - \rho_0) + p_b
+
+    where :math:`\rho_0` is the rest density, :math:`c_0` is the reference
+    speed of sound, and :math:`p_b` is the background pressure.
     """
     def __init__(self):
-        # hoomd.util.print_status_line();
-
-        # Initialize base class
-        _StateEquation.__init__(self, "Linear");
-
-        # create the c++ mirror class
-        self.cpp_stateequation = _sph.Linear();
+        _StateEquation.__init__(self, "Linear")
+        self.cpp_stateequation = _sph.Linear()
 
 __all__ = [
     "Tait",

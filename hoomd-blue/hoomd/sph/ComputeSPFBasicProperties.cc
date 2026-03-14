@@ -100,30 +100,17 @@ void ComputeSPFBasicProperties::computeProperties()
 
     assert(m_pdata);
 
-    // PDataFlags flags = m_pdata->getFlags();
-        { // GPU Array Scope 
+        { // GPU Array Scope
         // access the particle data
         ArrayHandle<Scalar4> h_velocity(m_pdata->getVelocities(), access_location::host, access_mode::read);
         ArrayHandle<Scalar> h_density(m_pdata->getDensities(), access_location::host, access_mode::read);
-
-        // ArrayHandle<unsigned int> h_body(m_pdata->getBodies(),
-        //                                  access_location::host,
-        //                                  access_mode::read);
-        // ArrayHandle<unsigned int> h_tag(m_pdata->getTags(), access_location::host, access_mode::read);
-        // tag evtl needed for group wise logging
-
-        // if (flags[pdata_flag::kinetic_energy]){
-        // TO DO, add flags and use them in the future
-        // }
 
         double fluid_vel_x_sum  = 0.0;
         double fluid_vel_y_sum  = 0.0;
         double fluid_vel_z_sum  = 0.0;
         double sum_density      = 0.0;
-        // double fluid_prtl = 0;
         double abs_velocity     = 0.0;
         double e_kin_fluid      = 0.0;
-        // double adaptive_tstep = 0.0;
         
         for (unsigned int group_idx = 0; group_idx < group_size; group_idx++)
             {
@@ -148,7 +135,6 @@ void ComputeSPFBasicProperties::computeProperties()
         h_properties.data[singlephaseflow_logger_index::sum_fluid_density]     = Scalar(sum_density);
         h_properties.data[singlephaseflow_logger_index::abs_velocity]          = Scalar(abs_velocity);
         h_properties.data[singlephaseflow_logger_index::e_kin_fluid]           = Scalar(e_kin_fluid);
-        // h_properties.data[singlephaseflow_logger_index::dt_adapt] = Scalar(adaptive_tstep);
 
 #ifdef ENABLE_MPI
         // in MPI, reduce extensive quantities only when they're needed

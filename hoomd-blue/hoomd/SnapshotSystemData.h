@@ -48,11 +48,7 @@ template<class Real> struct SnapshotSystemData
     std::shared_ptr<BoxDim> global_box;       //!< The dimensions of the simulation box
     SnapshotParticleData<Real> particle_data; //!< The particle data
     BondData::Snapshot bond_data;             //!< The bond data
-    // AngleData::Snapshot angle_data;           //!< The angle data
-    // DihedralData::Snapshot dihedral_data;     //!< The dihedral data
-    // ImproperData::Snapshot improper_data;     //!< The improper data
     ConstraintData::Snapshot constraint_data; //!< The constraint data
-    // PairData::Snapshot pair_data;             //!< The pair data
 #ifdef BUILD_MPCD
     mpcd::ParticleDataSnapshot mpcd_data; //!< The MPCD particle data
 #endif

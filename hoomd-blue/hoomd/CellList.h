@@ -139,13 +139,6 @@ class PYBIND11_EXPORT CellList : public Compute
         m_params_changed = true;
         }
 
-    // //! Specify if the orientation cell list is to be computed
-    // void setComputeOrientation(bool compute_orientation)
-    //     {
-    //     m_compute_orientation = compute_orientation;
-    //     m_params_changed = true;
-    //     }
-
     //! Specify if the index cell list is to be computed
     void setComputeIdx(bool compute_idx)
         {
@@ -153,18 +146,9 @@ class PYBIND11_EXPORT CellList : public Compute
         m_params_changed = true;
         }
 
-    // //! Specify that the flag is to be filled with the particle charge
-    // void setFlagCharge()
-    //     {
-    //     m_flag_charge = true;
-    //     m_flag_type = false;
-    //     m_params_changed = true;
-    //     }
-
     //! Specify that the flag is to be filled with the particle type
     void setFlagType()
         {
-        // m_flag_charge = false;
         m_flag_type = true;
         m_params_changed = true;
         }
@@ -173,7 +157,6 @@ class PYBIND11_EXPORT CellList : public Compute
     //! variable)
     void setFlagIndex()
         {
-        // m_flag_charge = false;
         m_flag_type = false;
         m_params_changed = true;
         }
@@ -344,10 +327,7 @@ class PYBIND11_EXPORT CellList : public Compute
     unsigned int m_radius;      //!< Radius of adjacency bins to list
     bool m_compute_xyzf;        //!< true if the xyzf list should be computed
     bool m_compute_type_body;   //!< true if the TypeBody list should be computed
-    // bool m_compute_orientation; //!< true if the orientation list should be computed
     bool m_compute_idx;         //!< true if the idx list should be computed
-    // bool m_flag_charge;      //!< true if the flag should be set to the charge, it will be index (or
-                             //!< type) otherwise
     Scalar m_kappa;              //!< Kernel scaling factor kappa
 
     bool m_flag_type;        //!< true if the flag should be set to type, it will be index otherwise

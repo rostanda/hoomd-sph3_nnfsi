@@ -31,8 +31,7 @@ namespace nsearch
 */
 NeighborList::NeighborList(std::shared_ptr<SystemDefinition> sysdef, Scalar r_buff)
     : Compute(sysdef), m_typpair_idx(m_pdata->getNTypes()), m_rcut_max_max(0.0), m_rcut_min(0.0),
-      m_r_buff(r_buff), m_kappa(3.0), m_filter_body(false), m_storage_mode(half), 
-      // m_meshbond_data(NULL), 
+      m_r_buff(r_buff), m_kappa(3.0), m_filter_body(false), m_storage_mode(half),
       m_rcut_changed(true), m_updates(0),
       m_forced_updates(0), m_dangerous_updates(0), m_force_update(true), m_dist_check(true),
       m_has_been_updated_once(false)
@@ -607,36 +606,11 @@ void NeighborList::setExclusions(pybind11::list exclusions)
 
 void NeighborList::setSingleExclusion(std::string exclusion)
     {
-    // if (exclusion == "bond")
-    //     {
-    //     addExclusionsFromBonds();
-    //     m_exclusions.insert("bond");
-    //     }
-    // else if (exclusion == "meshbond" && m_meshbond_data)
-    //     {
-    //     addExclusionsFromMeshBonds();
-    //     m_exclusions.insert("meshbond");
-    //     }
-    // else if (exclusion == "special_pair")
-    //     {
-    //     addExclusionsFromPairs();
-    //     m_exclusions.insert("special_pair");
-    //     }
     if (exclusion == "constraint")
         {
         addExclusionsFromConstraints();
         m_exclusions.insert("constraint");
         }
-    // else if (exclusion == "angle")
-    //     {
-    //     addExclusionsFromAngles();
-    //     m_exclusions.insert("angle");
-    //     }
-    // else if (exclusion == "dihedral")
-    //     {
-    //     addExclusionsFromDihedrals();
-    //     m_exclusions.insert("dihedral");
-    //     }
     else if (exclusion == "body")
         {
         setFilterBody(true);
@@ -724,142 +698,6 @@ void NeighborList::countExclusions()
         }
     }
 
-/*! After calling addExclusionsFromBonds() all bonds specified in the attached ParticleData will be
-    added as exclusions. Any additional bonds added after this will not be automatically added as
-   exclusions.
-*/
-// void NeighborList::addExclusionsFromBonds()
-//     {
-//     std::shared_ptr<BondData> bond_data = m_sysdef->getBondData();
-
-//     // access bond data by snapshot
-//     BondData::Snapshot snapshot;
-//     bond_data->takeSnapshot(snapshot);
-
-//     // broadcast global bond list
-//     std::vector<BondData::members_t> bonds;
-
-// #ifdef ENABLE_MPI
-//     if (m_pdata->getDomainDecomposition())
-//         {
-//         if (m_exec_conf->getRank() == 0)
-//             bonds = snapshot.groups;
-
-//         bcast(bonds, 0, m_exec_conf->getMPICommunicator());
-//         }
-//     else
-// #endif
-//         {
-//         bonds = snapshot.groups;
-//         }
-
-//     // for each bond
-//     for (unsigned int i = 0; i < bonds.size(); i++)
-//         // add an exclusion
-//         addExclusion(bonds[i].tag[0], bonds[i].tag[1]);
-//     }
-
-/*! After calling addExclusionsFromMeshBonds() all meshbonds specified in the attached Mesh will be
-    added as exclusions. Any additional meshbonds added after this will not be automatically added
-   as exclusions.
-*/
-// void NeighborList::addExclusionsFromMeshBonds()
-//     {
-//     // access bond data by snapshot
-//     BondData::Snapshot snapshot;
-//     m_meshbond_data->takeSnapshot(snapshot);
-
-//     // broadcast global bond list
-//     std::vector<BondData::members_t> bonds;
-
-// #ifdef ENABLE_MPI
-//     if (m_pdata->getDomainDecomposition())
-//         {
-//         if (m_exec_conf->getRank() == 0)
-//             bonds = snapshot.groups;
-
-//         bcast(bonds, 0, m_exec_conf->getMPICommunicator());
-//         }
-//     else
-// #endif
-//         {
-//         bonds = snapshot.groups;
-//         }
-
-//     // for each bond
-//     for (unsigned int i = 0; i < bonds.size(); i++)
-//         // add an exclusion
-//         addExclusion(bonds[i].tag[0], bonds[i].tag[1]);
-//     }
-
-// /*! After calling addExclusionsFromAngles(), all angles specified in the attached ParticleData will
-//    be added to the exclusion list. Only the two end particles in the angle are excluded from
-//    interacting.
-// */
-// void NeighborList::addExclusionsFromAngles()
-//     {
-//     std::shared_ptr<AngleData> angle_data = m_sysdef->getAngleData();
-
-//     // access angle data by snapshot
-//     AngleData::Snapshot snapshot;
-//     angle_data->takeSnapshot(snapshot);
-
-//     // broadcast global angle list
-//     std::vector<AngleData::members_t> angles;
-
-// #ifdef ENABLE_MPI
-//     if (m_pdata->getDomainDecomposition())
-//         {
-//         if (m_exec_conf->getRank() == 0)
-//             angles = snapshot.groups;
-
-//         bcast(angles, 0, m_exec_conf->getMPICommunicator());
-//         }
-//     else
-// #endif
-//         {
-//         angles = snapshot.groups;
-//         }
-
-//     // for each angle
-//     for (unsigned int i = 0; i < angles.size(); i++)
-//         addExclusion(angles[i].tag[0], angles[i].tag[2]);
-//     }
-
-// /*! After calling addExclusionsFromDihedrals(), all dihedrals specified in the attached ParticleData
-//    will be added to the exclusion list. Only the two end particles in the dihedral are excluded from
-//    interacting.
-// */
-// void NeighborList::addExclusionsFromDihedrals()
-//     {
-//     std::shared_ptr<DihedralData> dihedral_data = m_sysdef->getDihedralData();
-
-//     // access dihedral data by snapshot
-//     DihedralData::Snapshot snapshot;
-//     dihedral_data->takeSnapshot(snapshot);
-
-//     // broadcast global dihedral list
-//     std::vector<DihedralData::members_t> dihedrals;
-
-// #ifdef ENABLE_MPI
-//     if (m_pdata->getDomainDecomposition())
-//         {
-//         if (m_exec_conf->getRank() == 0)
-//             dihedrals = snapshot.groups;
-
-//         bcast(dihedrals, 0, m_exec_conf->getMPICommunicator());
-//         }
-//     else
-// #endif
-//         {
-//         dihedrals = snapshot.groups;
-//         }
-
-//     // for each dihedral
-//     for (unsigned int i = 0; i < dihedrals.size(); i++)
-//         addExclusion(dihedrals[i].tag[0], dihedrals[i].tag[3]);
-//     }
-
 /*! After calling addExclusionFromConstraints() all constraints specified in the attached
    ConstraintData will be added as exclusions. Any additional constraints added after this will not
    be automatically added as exclusions.
@@ -894,41 +732,6 @@ void NeighborList::addExclusionsFromConstraints()
         // add an exclusion
         addExclusion(constraints[i].tag[0], constraints[i].tag[1]);
     }
-
-/*! After calling addExclusionFromPairs() all pairs specified in the attached ParticleData will be
-    added as exclusions. Any additional pairs added after this will not be automatically added as
-   exclusions.
-*/
-// void NeighborList::addExclusionsFromPairs()
-//     {
-//     std::shared_ptr<PairData> pair_data = m_sysdef->getPairData();
-
-//     // access pair data by snapshot
-//     PairData::Snapshot snapshot;
-//     pair_data->takeSnapshot(snapshot);
-
-//     // broadcast global bond list
-//     std::vector<PairData::members_t> pairs;
-
-// #ifdef ENABLE_MPI
-//     if (m_pdata->getDomainDecomposition())
-//         {
-//         if (m_exec_conf->getRank() == 0)
-//             pairs = snapshot.groups;
-
-//         bcast(pairs, 0, m_exec_conf->getMPICommunicator());
-//         }
-//     else
-// #endif
-//         {
-//         pairs = snapshot.groups;
-//         }
-
-//     // for each pair
-//     for (unsigned int i = 0; i < pairs.size(); i++)
-//         // add an exclusion
-//         addExclusion(pairs[i].tag[0], pairs[i].tag[1]);
-//     }
 
 /*! \param tag1 First particle tag in the pair
     \param tag2 Second particle tag in the pair
@@ -1841,7 +1644,6 @@ void export_NeighborList(pybind11::module& m)
         .def_property("check_dist", &NeighborList::getDistCheck, &NeighborList::setDistCheck)
         .def("setStorageMode", &NeighborList::setStorageMode)
         .def_property("exclusions", &NeighborList::getExclusions, &NeighborList::setExclusions)
-        // .def("addMesh", &NeighborList::AddMesh)
         .def("setKernelFactor", &NeighborList::setKernelFactor)
         .def("getKernelFactor", &NeighborList::getKernelFactor)
         .def("getMaxRCut", &NeighborList::getMaxRCut)

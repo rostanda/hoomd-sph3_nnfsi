@@ -39,9 +39,6 @@ SystemDefinition::SystemDefinition(unsigned int N,
                                    const std::shared_ptr<BoxDim> box,
                                    unsigned int n_types,
                                    unsigned int n_bond_types,
-                                   // unsigned int n_angle_types,
-                                   // unsigned int n_dihedral_types,
-                                   // unsigned int n_improper_types,
                                    std::shared_ptr<ExecutionConfiguration> exec_conf,
                                    std::shared_ptr<DomainDecomposition> decomposition,
                                    bool distributed)
@@ -54,14 +51,7 @@ SystemDefinition::SystemDefinition(unsigned int N,
     m_particle_data = std::shared_ptr<ParticleData>(
         new ParticleData(N, box, n_types, exec_conf, decomposition));
     m_bond_data = std::shared_ptr<BondData>(new BondData(m_particle_data, n_bond_types));
-
-    // m_angle_data = std::shared_ptr<AngleData>(new AngleData(m_particle_data, n_angle_types));
-    // m_dihedral_data
-    //     = std::shared_ptr<DihedralData>(new DihedralData(m_particle_data, n_dihedral_types));
-    // m_improper_data
-    //     = std::shared_ptr<ImproperData>(new ImproperData(m_particle_data, n_improper_types));
     m_constraint_data = std::shared_ptr<ConstraintData>(new ConstraintData(m_particle_data, 0));
-    // m_pair_data = std::shared_ptr<PairData>(new PairData(m_particle_data, 0));
     }
 
 // Mostly exists as test pass a plain box rather than a std::shared_ptr.
@@ -83,9 +73,6 @@ SystemDefinition::SystemDefinition(unsigned int N,
                                    const BoxDim& box,
                                    unsigned int n_types,
                                    unsigned int n_bond_types,
-                                   // unsigned int n_angle_types,
-                                   // unsigned int n_dihedral_types,
-                                   // unsigned int n_improper_types,
                                    std::shared_ptr<ExecutionConfiguration> exec_conf,
                                    std::shared_ptr<DomainDecomposition> decomposition,
                                    bool distributed)
@@ -93,9 +80,6 @@ SystemDefinition::SystemDefinition(unsigned int N,
                                          std::make_shared<BoxDim>(box),
                                          n_types,
                                          n_bond_types,
-                                         // n_angle_types,
-                                         // n_dihedral_types,
-                                         // n_improper_types,
                                          exec_conf,
                                          decomposition,
                                          distributed)
@@ -124,18 +108,8 @@ SystemDefinition::SystemDefinition(std::shared_ptr<SnapshotSystemData<Real>> sna
 #endif
 
     m_bond_data = std::shared_ptr<BondData>(new BondData(m_particle_data, snapshot->bond_data));
-
-    // m_angle_data = std::shared_ptr<AngleData>(new AngleData(m_particle_data, snapshot->angle_data));
-
-    // m_dihedral_data
-    //     = std::shared_ptr<DihedralData>(new DihedralData(m_particle_data, snapshot->dihedral_data));
-
-    // m_improper_data
-    //     = std::shared_ptr<ImproperData>(new ImproperData(m_particle_data, snapshot->improper_data));
-
     m_constraint_data = std::shared_ptr<ConstraintData>(
         new ConstraintData(m_particle_data, snapshot->constraint_data));
-    // m_pair_data = std::shared_ptr<PairData>(new PairData(m_particle_data, snapshot->pair_data));
 
 #ifdef BUILD_MPCD
     m_mpcd_data = std::make_shared<mpcd::ParticleData>(snapshot->mpcd_data,
@@ -180,11 +154,7 @@ template<class Real> std::shared_ptr<SnapshotSystemData<Real>> SystemDefinition:
 
     m_particle_data->takeSnapshot(snap->particle_data);
     m_bond_data->takeSnapshot(snap->bond_data);
-    // m_angle_data->takeSnapshot(snap->angle_data);
-    // m_dihedral_data->takeSnapshot(snap->dihedral_data);
-    // m_improper_data->takeSnapshot(snap->improper_data);
     m_constraint_data->takeSnapshot(snap->constraint_data);
-    // m_pair_data->takeSnapshot(snap->pair_data);
 #ifdef BUILD_MPCD
     if (m_mpcd_data)
         {
@@ -212,11 +182,7 @@ void SystemDefinition::initializeFromSnapshot(std::shared_ptr<SnapshotSystemData
     m_particle_data->setGlobalBox(snapshot->global_box);
     m_particle_data->initializeFromSnapshot(snapshot->particle_data);
     m_bond_data->initializeFromSnapshot(snapshot->bond_data);
-    // m_angle_data->initializeFromSnapshot(snapshot->angle_data);
-    // m_dihedral_data->initializeFromSnapshot(snapshot->dihedral_data);
-    // m_improper_data->initializeFromSnapshot(snapshot->improper_data);
     m_constraint_data->initializeFromSnapshot(snapshot->constraint_data);
-    // m_pair_data->initializeFromSnapshot(snapshot->pair_data);
 #ifdef BUILD_MPCD
     if (!m_mpcd_data)
         {
@@ -293,11 +259,7 @@ void export_SystemDefinition(pybind11::module& m)
         .def("getNDimensions", &SystemDefinition::getNDimensions)
         .def("getParticleData", &SystemDefinition::getParticleData)
         .def("getBondData", &SystemDefinition::getBondData)
-        // .def("getAngleData", &SystemDefinition::getAngleData)
-        // .def("getDihedralData", &SystemDefinition::getDihedralData)
-        // .def("getImproperData", &SystemDefinition::getImproperData)
         .def("getConstraintData", &SystemDefinition::getConstraintData)
-        // .def("getPairData", &SystemDefinition::getPairData)
 #ifdef BUILD_MPCD
         .def("getMPCDParticleData", &SystemDefinition::getMPCDParticleData)
 #endif

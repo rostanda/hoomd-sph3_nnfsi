@@ -121,11 +121,35 @@ struct StateEquation
          */
         HOSTDEVICE Scalar Pressure(const Scalar rho);
 
+        /*! Derivative of pressure with respect to density: \f$\mathrm{d}p/\mathrm{d}\rho\f$
+         *  Used to propagate \f$\mathrm{d}\rho/\mathrm{d}t \rightarrow \mathrm{d}p/\mathrm{d}t\f$ via the chain rule.
+         * \param rho Density
+         */
+        HOSTDEVICE Scalar dPressuredDensity(const Scalar rho);
 
         /*! Inverse equation of state
          * \param p Pressure
          */
         HOSTDEVICE Scalar Density(const Scalar p);
+
+        /*! Variable-reference-density (VRD) equation of state.
+         *  Evaluates the EOS with a per-particle rest density rho0_local instead
+         *  of the global m_rho0.  Used by SinglePhaseFlowGDGD to implement
+         *  buoyancy-driven flows where rho0_i = rho0 * (1 - beta * (T_i - T_ref)).
+         *
+         * \param rho        Local density of the particle
+         * \param rho0_local Per-particle rest density (temperature-dependent)
+         */
+        HOSTDEVICE Scalar PressureVRD(const Scalar rho, const Scalar rho0_local);
+
+        /*! Derivative \f$\mathrm{d}p/\mathrm{d}\rho\f$ for the VRD equation of state.
+         *  Used in the DENSITYCONTINUITY chain rule:
+         *      \f$\mathrm{d}p/\mathrm{d}t = (\mathrm{d}p/\mathrm{d}\rho)|_{\rho_{0,\mathrm{local}}} \cdot \mathrm{d}\rho/\mathrm{d}t\f$
+         *
+         * \param rho        Local density of the particle
+         * \param rho0_local Per-particle rest density
+         */
+        HOSTDEVICE Scalar dPressureVRDdDensity(const Scalar rho, const Scalar rho0_local);
 
     protected:
         Scalar m_bpfactor; //!< Back pressure scaling factor
@@ -136,8 +160,6 @@ struct StateEquation
         Scalar m_c; //!< Numerical speed of sound
         bool m_params_set; //!< True if parameters are set
     };
-
-// template<StateEquationType SET_> std::string get_SE_name();
 
 namespace detail
 {

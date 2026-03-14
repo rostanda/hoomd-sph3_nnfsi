@@ -133,11 +133,9 @@ class PYBIND11_EXPORT BeforeTrigger : public Trigger
         {
         return m_timestep;
         }
-    const
 
-        /// Set the timestep before which the trigger is active.
-        void
-        setTimestep(uint64_t timestep)
+    /// Set the timestep before which the trigger is active.
+    void setTimestep(uint64_t timestep)
         {
         m_timestep = timestep;
         }
@@ -165,11 +163,9 @@ class PYBIND11_EXPORT OnTrigger : public Trigger
         {
         return m_timestep;
         }
-    const
 
-        /// Set the timestep when the trigger is active.
-        void
-        setTimestep(uint64_t timestep)
+    /// Set the timestep when the trigger is active.
+    void setTimestep(uint64_t timestep)
         {
         m_timestep = timestep;
         }
@@ -197,11 +193,9 @@ class PYBIND11_EXPORT AfterTrigger : public Trigger
         {
         return m_timestep;
         }
-    const
 
-        /// Set the timestep after which the trigger is active.
-        void
-        setTimestep(uint64_t timestep)
+    /// Set the timestep after which the trigger is active.
+    void setTimestep(uint64_t timestep)
         {
         m_timestep = timestep;
         }

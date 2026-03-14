@@ -77,6 +77,7 @@ SinglePhaseFlowTV<KT_, SET_>::SinglePhaseFlowTV(std::shared_ptr<SystemDefinition
         this->m_densityreinitfreq = 1;
 
         this->m_solid_removed = false;
+        this->m_pressure_initialized = false;
 
         // Sanity checks
         assert(this->m_pdata);
@@ -214,7 +215,6 @@ void SinglePhaseFlowTV<KT_, SET_>::forcecomputation(uint64_t timestep)
         // access the neighbor list
         ArrayHandle<unsigned int> h_n_neigh(this->m_nlist->getNNeighArray(), access_location::host, access_mode::read);
         ArrayHandle<unsigned int> h_nlist(this->m_nlist->getNListArray(), access_location::host, access_mode::read);
-        // ArrayHandle<unsigned int> h_head_list(this->m_nlist->getHeadList(), access_location::host, access_mode::read);
         ArrayHandle<size_t> h_head_list(this->m_nlist->getHeadList(), access_location::host, access_mode::read);
         ArrayHandle<unsigned int> h_type_property_map(this->m_type_property_map, access_location::host, access_mode::read);
 
@@ -402,7 +402,16 @@ void SinglePhaseFlowTV<KT_, SET_>::forcecomputation(uint64_t timestep)
                 h_force.data[i].z -= vijsqr * ( temp0 + avc )* dwdr_r * dx.z;
 
                 // Evaluate viscous interaction forces
-                temp0 = this->m_mu * vijsqr * dwdr_r;
+                {
+                Scalar dvnorm    = sqrt(dot(dv, dv));
+                Scalar gamma_dot = dvnorm / (r + sqrt(epssqr));
+                Scalar mu_eff    = computeNNViscosity(this->m_mu, gamma_dot, this->m_nn_model,
+                                                      this->m_nn_K, this->m_nn_n,
+                                                      this->m_nn_mu0, this->m_nn_muinf,
+                                                      this->m_nn_lambda, this->m_nn_tauy,
+                                                      this->m_nn_m, this->m_nn_mu_min);
+                temp0 = mu_eff * vijsqr * dwdr_r;
+                }
                 h_force.data[i].x  += temp0 * dv.x;
                 h_force.data[i].y  += temp0 * dv.y;
                 h_force.data[i].z  += temp0 * dv.z;
@@ -455,6 +464,11 @@ void SinglePhaseFlowTV<KT_, SET_>::forcecomputation(uint64_t timestep)
 
                 } // Closing Neighbor Loop
 
+            // Compute $\mathrm{d}p/\mathrm{d}t = (\mathrm{d}p/\mathrm{d}\rho) \cdot \mathrm{d}\rho/\mathrm{d}t$ via the chain rule so the integrator
+            // can time-march pressure consistently with density (DENSITYCONTINUITY only).
+            if ( this->m_density_method == DENSITYCONTINUITY )
+                h_ratedpe.data[i].y = this->m_eos->dPressuredDensity(rhoi) * h_ratedpe.data[i].x;
+
             } // Closing Fluid Particle Loop
 
         this->m_timestep_list[5] = max_vel;
@@ -495,39 +509,47 @@ void SinglePhaseFlowTV<KT_, SET_>::computeForces(uint64_t timestep)
         this->m_solid_removed = true;
         }
 
-    // Apply density renormalization if requested
+    // Apply Shepard density renormalization if requested.
+    // Density is reset from scratch, so pressure must also be reinitialized from EOS.
     if ( this->m_shepard_renormalization && timestep % this->m_shepardfreq == 0 )
         {
         this->renormalize_density(timestep);
+        this->compute_pressure(timestep);
+        this->m_pressure_initialized = true;
 #ifdef ENABLE_MPI
-         // Update ghost particle densities and pressures.
         this->update_ghost_density(timestep);
 #endif
         }
 
-    // Apply density renormalization if requested (only with CONTINUITY)
+    // Apply density reinitialization from summation if requested (DENSITYCONTINUITY only).
+    // Density is reset from scratch, so pressure must also be reinitialized from EOS.
     if ( this->m_density_reinitialization && timestep % this->m_densityreinitfreq == 0 )
         {
-        // Make sure DENSITYCONTINUITY is chosen - Eventually delete this (Apparently not working anyway)
         if ( this->m_density_method == DENSITYSUMMATION )
             this->m_exec_conf->msg->error() << "sph.models.SinglePhaseFlowTV: Density reinitialization only possible with Continuity approach" << std::endl;
         this->compute_ndensity(timestep);
-    // Apparently not necessary - Same for shepard renormalization
-// #ifdef ENABLE_MPI
-//          // Update ghost particle densities and pressures.
-//         update_ghost_density(timestep);
-// #endif
+        this->compute_pressure(timestep);
+        this->m_pressure_initialized = true;
         }
 
     if (this->m_density_method == DENSITYSUMMATION)
-    {
+        {
+        // Density is re-evaluated from kernel summation every step; derive pressure from EOS.
         this->compute_ndensity(timestep);
-        // compute_particlenumberdensity(timestep);
-    }
-
-    // Compute fluid pressure based on m_eos;
-    // Only working on the fluidgroup
-    this->compute_pressure(timestep);
+        this->compute_pressure(timestep);
+        }
+    else // DENSITYCONTINUITY
+        {
+        // Density is time-integrated via the continuity equation ($\mathrm{d}\rho/\mathrm{d}t$ computed in
+        // forcecomputation). Pressure is propagated by $\mathrm{d}p/\mathrm{d}t = (\mathrm{d}p/\mathrm{d}\rho) \cdot (\mathrm{d}\rho/\mathrm{d}t)$, so the
+        // integrator keeps pressure consistent with density without recomputing from EOS
+        // every step. Only the very first call needs an EOS-based initialization.
+        if ( !this->m_pressure_initialized )
+            {
+            this->compute_pressure(timestep);
+            this->m_pressure_initialized = true;
+            }
+        }
 
 #ifdef ENABLE_MPI
     // Update ghost particle densities and pressures.
@@ -585,6 +607,16 @@ void export_SinglePhaseFlowTV(pybind11::module& m, std::string name)
         .def("deactivateShepardRenormalization", &SinglePhaseFlowTV<KT_, SET_>::deactivateShepardRenormalization)
         .def("activateDensityReinitialization", &SinglePhaseFlowTV<KT_, SET_>::activateDensityReinitialization)
         .def("deactivateDensityReinitialization", &SinglePhaseFlowTV<KT_, SET_>::deactivateDensityReinitialization)
+        .def("activatePowerLaw", &SinglePhaseFlowTV<KT_, SET_>::activatePowerLaw,
+             pybind11::arg("K"), pybind11::arg("n"), pybind11::arg("mu_min") = Scalar(0))
+        .def("activateCarreau", &SinglePhaseFlowTV<KT_, SET_>::activateCarreau)
+        .def("activateBingham", &SinglePhaseFlowTV<KT_, SET_>::activateBingham,
+             pybind11::arg("mu_p"), pybind11::arg("tauy"), pybind11::arg("m_reg"),
+             pybind11::arg("mu_min") = Scalar(0))
+        .def("activateHerschelBulkley", &SinglePhaseFlowTV<KT_, SET_>::activateHerschelBulkley,
+             pybind11::arg("K"), pybind11::arg("n"), pybind11::arg("tauy"), pybind11::arg("m_reg"),
+             pybind11::arg("mu_min") = Scalar(0))
+        .def("deactivateNonNewtonian", &SinglePhaseFlowTV<KT_, SET_>::deactivateNonNewtonian)
         .def("setAcceleration", &SPHBaseClass<KT_, SET_>::setAcceleration)
         .def("setRCut", &SinglePhaseFlowTV<KT_, SET_>::setRCutPython)
         ;

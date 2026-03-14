@@ -41,7 +41,6 @@ using namespace hoomd::nsearch::detail;
 PYBIND11_MODULE(_nsearch, m)
     {
 
-    // export_CustomForceCompute(m);
     export_NeighborList(m);
     export_NeighborListBinned(m);
     export_NeighborListStencil(m);

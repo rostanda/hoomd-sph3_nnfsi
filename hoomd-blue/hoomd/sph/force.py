@@ -15,7 +15,6 @@ from hoomd.data.typeparam import TypeParameter
 from hoomd.data.typeconverter import OnlyTypes
 from hoomd.data.parameterdicts import ParameterDict, TypeParameterDict
 from hoomd.filter import ParticleFilter
-# from hoomd.md.manifold import Manifold
 import numpy
 
 
@@ -107,49 +106,6 @@ class Force(Compute):
         """
         self._cpp_obj.compute(self._simulation.timestep)
         return self._cpp_obj.getForces()
-
-    # @log(category="particle", requires_run=True)
-    # def torques(self):
-    #     """(*N_particles*, 3) `numpy.ndarray` of ``float``: The torque \
-    #     :math:`\\vec{\\tau}_i` applied to each particle \
-    #     :math:`[\\mathrm{force} \\cdot \\mathrm{length}]`.
-
-    #     Attention:
-    #         In MPI parallel execution, the array is available on rank 0 only.
-    #         `torques` is `None` on ranks >= 1.
-    #     """
-    #     self._cpp_obj.compute(self._simulation.timestep)
-    #     return self._cpp_obj.getTorques()
-
-    # @log(category="particle", requires_run=True)
-    # def virials(self):
-    #     """(*N_particles*, 6) `numpy.ndarray` of ``float``: Virial tensor \
-    #     contribution :math:`W_i` from each particle :math:`[\\mathrm{energy}]`.
-
-    #     Attention:
-    #         To improve performance `Force` objects only compute virials when
-    #         needed. When not computed, `virials` is `None`. Virials are computed
-    #         on every step when using a `md.methods.NPT` or `md.methods.NPH`
-    #         integrator, on steps where a writer is triggered (such as
-    #         `write.GSD` which may log pressure or virials), or when
-    #         `Simulation.always_compute_pressure` is `True`.
-
-    #     Attention:
-    #         In MPI parallel execution, the array is available on rank 0 only.
-    #         `virials` is `None` on ranks >= 1.
-    #     """
-    #     self._cpp_obj.compute(self._simulation.timestep)
-    #     return self._cpp_obj.getVirials()
-
-    # @log(category="sequence", requires_run=True)
-    # def additional_virial(self):
-    #     """(1, 6) `numpy.ndarray` of ``float``: Additional virial tensor \
-    #     term :math:`W_\\mathrm{additional}` :math:`[\\mathrm{energy}]`."""
-    #     self._cpp_obj.compute(self._simulation.timestep)
-    #     virial = []
-    #     for i in range(6):
-    #         virial.append(self._cpp_obj.getExternalVirial(i))
-    #     return numpy.array(virial, dtype=numpy.float64)
 
     @property
     def cpu_local_force_arrays(self):
@@ -291,16 +247,14 @@ class Custom(Force):
         calling the user-provided `set_forces`.
     """
 
-    def __init__(self): # , aniso=False):
+    def __init__(self):
         super().__init__()
-        # self._aniso = aniso
-
         self._state = None  # to be set on attaching
 
     def _attach_hook(self):
         self._state = self._simulation.state
         self._cpp_obj = _sph.CustomForceCompute(self._state._cpp_sys_def,
-                                               self.set_forces) # , self._aniso)
+                                               self.set_forces)
 
     @abstractmethod
     def set_forces(self, timestep):

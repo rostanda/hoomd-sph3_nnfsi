@@ -18,7 +18,7 @@ from hoomd.sph.half_step_hook import HalfStepHook
 
 __all__ = [
     "Integrator",
-    "froce",
+    "force",
     "eos",
     "sphmodel",
     "constrain",

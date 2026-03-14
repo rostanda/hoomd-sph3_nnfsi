@@ -118,9 +118,6 @@ class __attribute__((visibility("default"))) CachedAllocator
     //! Free all allocated blocks
     void free_all()
         {
-        //            m_exec_conf->msg->notice(5) << "CachedAllocator: Cleaning up after ourselves"
-        //                << std::endl;
-
         // deallocate all outstanding blocks in both lists
         for (free_blocks_type::iterator i = m_free_blocks.begin(); i != m_free_blocks.end(); ++i)
             {
@@ -181,9 +178,6 @@ template<typename T> T* CachedAllocator::getTemporaryBuffer(size_t num_elements)
     if (free_block != m_free_blocks.end()
         && free_block->first <= (num_bytes + (unsigned int)((float)num_bytes * m_cache_reltol)))
         {
-        //        m_exec_conf->msg->notice(10) << "CachedAllocator: found a hit "
-        //            << "(" << float(num_bytes)/1024.0f/1024.0f << " MB)" << std::endl;
-
         // get the pointer
         result = free_block->second;
 
@@ -196,9 +190,6 @@ template<typename T> T* CachedAllocator::getTemporaryBuffer(size_t num_elements)
         {
         // no allocation of the right size exists
         // create a new one with cudaMalloc
-        //        m_exec_conf->msg->notice(10) << "CachedAllocator: no free block found;"
-        //            << " allocating " << float(num_bytes)/1024.0f/1024.0f << " MB" << std::endl;
-
         if (m_managed)
             hipMallocManaged((void**)&result, num_bytes);
         else
@@ -211,10 +202,6 @@ template<typename T> T* CachedAllocator::getTemporaryBuffer(size_t num_elements)
             {
             // eliminate largest cached block
             free_blocks_type::reverse_iterator i = m_free_blocks.rbegin();
-
-            //            m_exec_conf->msg->notice(10) << "CachedAllocator: maximum cache size "
-            //                << "reached; removing unused block ("
-            //                << float(i->first)/1024.0f/1024.0f << " MB)" << std::endl;
 
             hipFree((void*)i->second);
 

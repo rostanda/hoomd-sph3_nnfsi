@@ -18,8 +18,7 @@ namespace hoomd
  */
 CellList::CellList(std::shared_ptr<SystemDefinition> sysdef)
     : Compute(sysdef), m_nominal_width(Scalar(1.0)), m_radius(1), m_compute_xyzf(true),
-      m_compute_type_body(false), 
-      // m_compute_orientation(false), m_compute_idx(false), m_flag_charge(false), 
+      m_compute_type_body(false),
       m_kappa(3), m_flag_type(false), m_sort_cell_list(false), m_compute_adj_list(true)
     {
     m_exec_conf->msg->notice(5) << "Constructing CellList" << endl;
@@ -309,18 +308,6 @@ void CellList::initializeMemory()
         m_type_body.swap(type_body);
         }
 
-    // if (m_compute_orientation)
-    //     {
-    //     GPUArray<Scalar4> orientation(m_cell_list_indexer.getNumElements(), m_exec_conf);
-    //     m_orientation.swap(orientation);
-    //     }
-    // else
-    //     {
-    //     // array is no longer needed, discard it
-    //     GPUArray<Scalar4> orientation;
-    //     m_orientation.swap(orientation);
-    //     }
-
     if (m_compute_idx || m_sort_cell_list)
         {
         GPUArray<unsigned int> idx(m_cell_list_indexer.getNumElements(), m_exec_conf);
@@ -400,10 +387,6 @@ void CellList::computeCellList()
     {
     // acquire the particle data
     ArrayHandle<Scalar4> h_pos(m_pdata->getPositions(), access_location::host, access_mode::read);
-    // ArrayHandle<Scalar4> h_orientation(m_pdata->getOrientationArray(),
-    //                                    access_location::host,
-    //                                    access_mode::read);
-    // ArrayHandle<Scalar> h_charge(m_pdata->getCharges(), access_location::host, access_mode::read);
     ArrayHandle<unsigned int> h_body(m_pdata->getBodies(),
                                      access_location::host,
                                      access_mode::read);
@@ -456,9 +439,6 @@ void CellList::computeCellList()
         int kb = (int)(f.z * m_dim.z);
 
         // check if the particle is inside the unit cell + ghost layer in all dimensions
-        // if ((f.x < Scalar(-0.00001) || f.x >= Scalar(1.00001))
-        //     || (f.y < Scalar(-0.00001) || f.y >= Scalar(1.00001))
-        //     || (f.z < Scalar(-0.00001) || f.z >= Scalar(1.00001)))
         if ((f.x < Scalar(-0.0001) || f.x >= Scalar(1.0001))
             || (f.y < Scalar(-0.0001) || f.y >= Scalar(1.0001))
             || (f.z < Scalar(-0.0001) || f.z >= Scalar(1.0001)))
@@ -496,8 +476,6 @@ void CellList::computeCellList()
 
         // setup the flag value to store
         Scalar flag;
-        // if (m_flag_charge)
-        //     flag = h_charge.data[n];
         if (m_flag_type)
             flag = h_pos.data[n].w;
         else
@@ -514,32 +492,12 @@ void CellList::computeCellList()
                     = make_scalar4(h_pos.data[n].x, h_pos.data[n].y, h_pos.data[n].z, flag);
                 }
 
-            // if (m_compute_tdb)
-            //     {
-            //     h_tdb.data[cli(offset, bin)] = make_scalar4(h_pos.data[n].w,
-            //                                                 h_diameter.data[n],
-            //                                                 __int_as_scalar(h_body.data[n]),
-            //                                                 Scalar(0.0));
-            //     }
-
-            // if (m_compute_type_body)
-            //     {
-            //     h_type_body.data[cli(offset, bin)] = make_scalar4(h_pos.data[n].w,
-            //                                                 m_kappa*Scalar(2)*h_slength.data[n],
-            //                                                 __int_as_scalar(h_body.data[n]),
-            //                                                 Scalar(0.0));
-            //     }
-
             if (m_compute_type_body)
                 {
                 h_type_body.data[cli(offset, bin)]
                     = make_uint2(__scalar_as_int(h_pos.data[n].w), h_body.data[n]);
                 }
 
-            // if (m_compute_orientation)
-            //     {
-            //     h_cell_orientation.data[cli(offset, bin)] = h_orientation.data[n];
-            //     }
 
             if (m_compute_idx)
                 {

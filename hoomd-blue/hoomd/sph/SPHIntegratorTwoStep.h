@@ -35,8 +35,6 @@ maintainer: dkrach, david.krach@mib.uni-stuttgart.de
 #include "SPHIntegrationMethodTwoStep.h"
 #include "hoomd/Integrator.h"
 
-// #include "ForceComposite.h"
-
 #pragma once
 
 #ifdef __HIPCC__
@@ -90,15 +88,6 @@ class PYBIND11_EXPORT SPHIntegratorTwoStep : public Integrator
     /// Get the number of degrees of freedom granted to a given group
     virtual Scalar getTranslationalDOF(std::shared_ptr<ParticleGroup> group);
 
-    // /// Get the number of degrees of freedom granted to a given group
-    // virtual Scalar getRotationalDOF(std::shared_ptr<ParticleGroup> group);
-
-    // /// Set the integrate orientation flag
-    // virtual void setIntegrateRotationalDOF(bool integrate_rotational_dofs);
-
-    // /// Set the integrate orientation flag
-    // virtual const bool getIntegrateRotationalDOF();
-
     /// Prepare for the run
     virtual void prepRun(uint64_t timestep);
 
@@ -118,25 +107,11 @@ class PYBIND11_EXPORT SPHIntegratorTwoStep : public Integrator
     virtual CommFlags determineFlags(uint64_t timestep);
 #endif
 
-    /// Updates the rigid body constituent particles
-    // virtual void updateRigidBodies(uint64_t timestep);
-
     /// Start autotuning kernel launch parameters
     virtual void startAutotuning();
 
     /// Check if autotuning is complete.
     virtual bool isAutotuningComplete();
-
-    // /// Getter and setter for accessing rigid body objects in Python
-    // std::shared_ptr<ForceComposite> getRigid()
-    //     {
-    //     return m_rigid_bodies;
-    //     }
-
-    // void setRigid(std::shared_ptr<ForceComposite> new_rigid)
-    //     {
-    //     m_rigid_bodies = new_rigid;
-    //     }
 
     /// Validate method groups.
     void validateGroups();
@@ -145,19 +120,8 @@ class PYBIND11_EXPORT SPHIntegratorTwoStep : public Integrator
     std::vector<std::shared_ptr<SPHIntegrationMethodTwoStep>>
         m_methods; //!< List of all the integration methods
 
-    // std::shared_ptr<ForceComposite> m_rigid_bodies; /// definition and updater for rigid bodies
-
     bool m_prepared;     //!< True if preprun has been called
-
-    /// True when orientation degrees of freedom should be integrated
-    // bool m_integrate_rotational_dof = false;
     };
 
-// namespace detail
-//     {
-// /// Exports the SPHIntegratorTwoStep class to python
-// void export_SPHIntegratorTwoStep(pybind11::module& m);
-
-//     } // end namespace detail
     } // end namespace sph
     } // end namespace hoomd

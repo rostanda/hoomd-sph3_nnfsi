@@ -170,18 +170,6 @@ class PYBIND11_EXPORT System
         return m_computes;
         }
 
-    /// Set pressure computation particle data flag
-    // void setPressureFlag(bool flag)
-    //     {
-    //     m_default_flags[pdata_flag::pressure_tensor] = flag;
-    //     }
-
-    // /// Get the pressure computation particle data flag
-    // bool getPressureFlag()
-    //     {
-    //     return m_default_flags[pdata_flag::pressure_tensor];
-    //     }
-
     /// Get the particle group cache.
     std::vector<std::shared_ptr<ParticleGroup>>& getGroupCache()
         {

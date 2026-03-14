@@ -56,9 +56,6 @@ from hoomd.version_config import (
     compile_date,
     git_branch,
     git_sha1,
-    #hpmc_built,
-    #md_built,
-    #mpcd_built,
 )
 
 version = _hoomd.BuildInfo.getVersion()
@@ -83,10 +80,7 @@ __all__ = [
     "gpu_api_version",
     "gpu_enabled",
     "gpu_platform",
-    "hpmc_built",
     "install_dir",
-    "md_built",
-    "mpcd_built",
     "mpi_enabled",
     "source_dir",
     "version",

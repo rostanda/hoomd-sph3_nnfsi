@@ -75,15 +75,6 @@ class PYBIND11_EXPORT ConstantForceCompute : public ForceCompute
     /// Gets constant force vector for a given particle type
     pybind11::tuple getConstantForce(const std::string& type_name);
 
-    /** Sets constant torque vector for a given particle type
-        @param typ Particle type to set constant torque vector
-        @param v The constant torque vector value to set (a 3-tuple)
-    */
-    // void setConstantTorque(const std::string& type_name, pybind11::tuple v);
-
-    /// Gets constant torque vector for a given particle type
-    // pybind11::tuple getConstantTorque(const std::string& type_name);
-
     std::shared_ptr<ParticleGroup>& getGroup()
         {
         return m_group;

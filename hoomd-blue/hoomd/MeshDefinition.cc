@@ -5,8 +5,6 @@
     \brief Defines MeshDefinition
 */
 
-// #include "MeshDefinition.h"
-
 #ifdef ENABLE_MPI
 #include "Communicator.h"
 #endif
@@ -139,7 +137,6 @@ void MeshDefinition::setTriangulationData(pybind11::dict triangulation)
         auto comm = comm_weak.lock();
 
         // register this class with the communicator
-        // comm->updateMeshDefinition();
         }
 #endif
     }

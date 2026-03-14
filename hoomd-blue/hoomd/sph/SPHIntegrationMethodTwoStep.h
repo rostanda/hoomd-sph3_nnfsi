@@ -144,11 +144,6 @@ class PYBIND11_EXPORT SPHIntegrationMethodTwoStep : public Autotuned
      */
     virtual void integrateStepTwo(uint64_t timestep) { }
 
-    //! Calculates force which keeps paricles on manifold in RATTLE integrators
-    /*! \param timestep Current time step
-     */
-    // virtual void includeRATTLEForce(uint64_t timestep) { }
-
     //! Change the timestep
     virtual void setDeltaT(Scalar deltaT);
 
@@ -174,25 +169,6 @@ class PYBIND11_EXPORT SPHIntegrationMethodTwoStep : public Autotuned
     //! not)
     virtual void validateGroup();
 
-    //! Set (an-)isotropic integration mode
-    /*! \param aniso True if anisotropic integration is requested
-     */
-    // void setAnisotropic(bool aniso)
-    //     {
-    //     m_aniso = aniso;
-    //     }
-
-    // //! Return if we are integrating anisotropically
-    // bool getAnisotropic() const
-    //     {
-    //     return m_aniso;
-    //     }
-
-    //! Compute rotational degrees of freedom
-    /*! \param query_group The group of particles to compute rotational DOF for
-     */
-    // virtual Scalar getRotationalDOF(std::shared_ptr<ParticleGroup> query_group);
-
     //! Return true if the method is momentum conserving
     virtual bool isMomentumConserving() const
         {
@@ -207,17 +183,10 @@ class PYBIND11_EXPORT SPHIntegrationMethodTwoStep : public Autotuned
         m_pdata; //!< The particle data this method is associated with
     std::shared_ptr<const ExecutionConfiguration>
         m_exec_conf; //!< Stored shared ptr to the execution configuration
-    // bool m_aniso;    //!< True if anisotropic integration is requested
 
     Scalar m_deltaT; //!< The time step
     };
 
-// namespace detail
-//     {
-// //! Exports the SPHIntegrationMethodTwoStep class to python
-// void export_SPHIntegrationMethodTwoStep(pybind11::module& m);
-
-//     } // end namespace detail
     } // end namespace sph
     } // end namespace hoomd
 

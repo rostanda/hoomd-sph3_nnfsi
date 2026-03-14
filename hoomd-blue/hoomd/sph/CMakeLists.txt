@@ -18,7 +18,10 @@ set(_${COMPONENT_NAME}_sources
     SPHBaseClass.cc
     SinglePhaseFlow.cc
     SinglePhaseFlowTV.cc
+    SinglePhaseFlowGDGD.cc
+    SinglePhaseFlowFS.cc
     TwoPhaseFlow.cc
+    TwoPhaseFlowTV.cc
 #     SmoothingKernelExport.cc
     SmoothingKernel.cc
     CustomForceCompute.cc
@@ -35,13 +38,16 @@ set(_${COMPONENT_NAME}_headers
 #     TwoPhaseFlowGPU.cuh
 #     GeneralGPUFunctions.cuh
     SinglePhaseFlow.h     
-    SinglePhaseFlowTV.h     
+    SinglePhaseFlowTV.h
+    SinglePhaseFlowGDGD.h
+    SinglePhaseFlowFS.h
     SPHIntegratorTwoStep.h            
 #     TwoPhaseFlowGPU.h
 #     RigidBodyIntegratorGPU.cuh     
     SmoothingKernel.h     
     StateEquations.h                  
     TwoPhaseFlow.h
+    TwoPhaseFlowTV.h
 #     RigidBodyIntegratorGPU.h       
 #     SolidFluidTypeBit.h   
 #     SuspendedObjectIntegratorGPU.cuh  

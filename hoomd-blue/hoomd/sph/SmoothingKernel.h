@@ -117,19 +117,14 @@ struct PYBIND11_EXPORT SmoothingKernel
         //! Get kernel kappa
         Scalar getKernelKappa();
 
-        //!Set neighbor list instance
-        //void setNeighborList(const boost::shared_ptr<nsearch::NeighborList> nlist);
-
         //! Return kernel self density
         /*! \param h Smoothing length
         */
-        // HOSTDEVICE Scalar w0(const Scalar h);
         Scalar w0(const Scalar h);
 
         //! Return kernel normalization factor
         /*! \param h Smoothing length
         */
-        // HOSTDEVICE Scalar normalizationfactor(const Scalar h);
         Scalar normalizationfactor(const Scalar h);
 
     private:
