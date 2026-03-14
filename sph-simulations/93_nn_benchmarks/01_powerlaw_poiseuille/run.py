@@ -184,13 +184,18 @@ def run_powerlaw(label, gsd_file, K, n, mu_rep, v_ref, fx_val, U_wall,
     model.activatePowerLaw(K=K, n=n, mu_min=mu_min)
 
     gw = hoomd.write.GSD(filename=dumpname,
-                          trigger=hoomd.trigger.Periodic(max(steps//10, 1)),
+                          trigger=hoomd.trigger.Periodic(1000),
                           mode='wb', dynamic=['property', 'momentum'])
     sim.operations.writers.append(gw)
     log = hoomd.logging.Logger(categories=['scalar', 'string'])
     log.add(sim, quantities=['timestep', 'tps', 'walltime'])
     sim.operations.writers.append(
-        hoomd.write.Table(trigger=hoomd.trigger.Periodic(max(steps//10, 1)),
+        hoomd.write.Table(trigger=hoomd.trigger.Periodic(100),
+                          logger=log, max_header_len=10))
+    log_file = open(dumpname.replace('_run.gsd', '_run.log'), mode='w+', newline='\n')
+    sim.operations.writers.append(
+        hoomd.write.Table(output=log_file,
+                          trigger=hoomd.trigger.Periodic(100),
                           logger=log, max_header_len=10))
 
     print(f'  Running {steps} steps ...')
